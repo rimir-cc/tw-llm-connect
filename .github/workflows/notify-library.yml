@@ -1,0 +1,24 @@
+name: Notify Plugin Library
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger library rebuild
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.LIBRARY_DISPATCH_TOKEN }}" \
+            https://api.github.com/repos/rimir-cc/tw-plugin-library/dispatches \
+            -d '{"event_type":"plugin-updated","client_payload":{"plugin":"${{ github.event.repository.name }}"}}'
+      - name: Trigger demo rebuild
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.LIBRARY_DISPATCH_TOKEN }}" \
+            https://api.github.com/repos/rimir-cc/tw-demo/dispatches \
+            -d '{"event_type":"plugin-updated","client_payload":{"plugin":"${{ github.event.repository.name }}"}}'
