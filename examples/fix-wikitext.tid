@@ -1,0 +1,26 @@
+title: $:/plugins/rimir/llm-connect/examples/fix-wikitext
+tags: $:/tags/rimir/llm-connect/example
+example-name: Fix my wikitext
+example-description: Send raw wikitext to the LLM and write the corrected version back
+type: text/vnd.tiddlywiki
+
+!! Fix my wikitext
+
+The LLM receives raw wikitext (not rendered text) via the `raw-wikitext` context template with `output-mode: markup`. The corrected version is written back to the tiddler's `text` field.
+
+''Settings covered:'' action mode, `output-mode: markup`, `output-target: field:text`, widget attribute precedence
+
+```
+<$button>
+  Fix wikitext
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    prompt="Fix any syntax errors in this wikitext. Return only the corrected wikitext, no explanation."
+    contextTemplate="$:/plugins/rimir/llm-connect/context-templates/raw-wikitext"
+    outputTarget="field:text"
+    outputMode="markup"
+  />
+</$button>
+```
+
+> ''Warning:'' This writes directly to the `text` field — the tiddler content will be replaced.

@@ -1,0 +1,40 @@
+title: $:/plugins/rimir/llm-connect/examples/explain-for-beginners
+tags: $:/tags/rimir/llm-connect/example
+example-name: Explain for beginners
+example-description: Generate a beginner-friendly explanation as a child tiddler using tiddler-level template precedence
+type: text/vnd.tiddlywiki
+
+!! Explain for beginners
+
+Uses tiddler-level precedence: add `llm-context-template: $:/plugins/rimir/llm-connect/context-templates/with-metadata` as a field on your tiddler, and the resolver picks it up automatically — no `contextTemplate` attribute needed on the widget.
+
+The `with-metadata` template sets `output-target: new-tiddler` with `output-title-template`, `output-tags`, and `output-fields`.
+
+''Settings covered:'' action mode, `output-mode: text`, `output-target: new-tiddler`, `output-title-template`, `output-tags`, `output-fields`, tiddler field precedence
+
+```
+<$button>
+  Explain for beginners
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    prompt="Explain this topic for someone completely new to TiddlyWiki. Use simple language and concrete examples."
+  />
+</$button>
+```
+
+!!! Setup
+
+Add this field to any tiddler you want to use this pattern with:
+
+|!Field |!Value |
+|`llm-context-template` |`$:/plugins/rimir/llm-connect/context-templates/with-metadata` |
+
+!!! Live demo
+
+<$button>
+  Explain for beginners
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    promptTemplate="$:/plugins/rimir/llm-connect/prompts/explain"
+  />
+</$button>

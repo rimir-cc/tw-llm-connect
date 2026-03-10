@@ -1,0 +1,11 @@
+title: $:/plugins/rimir/llm-connect/context-templates/raw-wikitext
+tags: $:/tags/rimir/llm-connect/context-template
+template-name: Raw wikitext
+template-description: Send the raw wikitext source of the tiddler
+output-mode: markup
+inject-as: user-message
+
+Title: <$text text=<<currentTiddler>>/>
+Wikitext source:
+---
+<$transclude field="text" mode="inline"/>

@@ -1,0 +1,19 @@
+title: $:/plugins/rimir/llm-connect/context-templates/thread
+tags: $:/tags/rimir/llm-connect/context-template
+template-name: Discussion thread
+template-description: Walks parent chain to reconstruct a conversation thread
+output-mode: text
+output-target: new-tiddler
+output-title-template: $(currentTiddler)$/Reply Draft
+output-tags: llm-generated draft
+output-fields: {"parent": "$(currentTiddler)$", "author": "llm-draft"}
+inject-as: user-message
+
+Discussion thread (oldest first):
+
+<$list filter="[all[current]tagging[]sort[created]]">
+[<$transclude field="author" mode="inline"/>] <$transclude field="text" mode="inline"/>
+</$list>
+
+Latest message:
+[<$transclude field="author" mode="inline"/>] <$transclude field="text" mode="inline"/>

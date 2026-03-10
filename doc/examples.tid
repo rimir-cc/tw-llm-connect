@@ -1,0 +1,41 @@
+created: 20260310120000000
+modified: 20260310120000000
+rdt.order: 4
+rdt.plugin-key: llm-connect
+rdt.plugin-name: llm connect
+rdt.plugin-subtitle: In-browser LLM integration with tool use
+rdt.section: Examples
+title: $:/plugins/rimir/llm-connect/doc/examples
+type: text/vnd.tiddlywiki
+
+<$transclude $tiddler="$:/plugins/rimir/doc-template/templates/page">
+<$fill $name="body">
+
+!! Bundled examples
+
+The plugin ships with 12 examples covering every combination of settings. Each example includes a live demo and the source code.
+
+<$list filter="[tag[$:/tags/rimir/llm-connect/example]sort[title]]">
+<div style="margin-bottom: 8px;">
+* ''<$link><$transclude field="example-name"/></$link>'' — <$transclude field="example-description"/>
+</div>
+</$list>
+
+!! Coverage matrix
+
+|!# |!Example |!Mode |!Output mode |!Output target |!Inject as |!Multi-tiddler |
+|1 |Quick summarize |action |text |display |user-message |no |
+|2 |Summarize to field |action |text |field |user-message |no |
+|3 |Fix my wikitext |action |markup |field:text |user-message |no |
+|4 |Explain for beginners |action |text |new-tiddler |user-message |no |
+|5 |Project status report |action |text |new-tiddler |user-message |yes (tag) |
+|6 |Thread reply draft |action |text |new-tiddler |user-message |yes (parent) |
+|7 |Tag suggestions |action |text |field |system-prompt |no |
+|8 |Wiki assistant chat |chat |text |display |system-prompt |no |
+|9 |Tiddler Q&A chat |chat |text |display |user-message |no |
+|10 |Refactor wikitext chat |chat |markup |display |user-message |no |
+|11 |Collect & classify |action |text |filter |user-message |yes (filter) |
+|12 |Smart tiddler actions |action |text |field |user-message |no |
+
+</$fill>
+</$transclude>

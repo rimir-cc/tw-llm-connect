@@ -1,0 +1,6 @@
+title: $:/plugins/rimir/llm-connect/tools/delete-tiddler
+tags: $:/tags/rimir/llm-connect/tool
+tool-name: delete_tiddler
+tool-description: Delete a tiddler by title. Write operation — may require confirmation.
+tool-schema: {"type":"object","properties":{"title":{"type":"string","description":"The exact title of the tiddler to delete"}},"required":["title"]}
+tool-handler: delete-tiddler

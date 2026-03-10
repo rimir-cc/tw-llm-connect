@@ -1,0 +1,35 @@
+title: $:/plugins/rimir/llm-connect/examples/tag-suggestions
+tags: $:/tags/rimir/llm-connect/example
+example-name: Tag suggestions
+example-description: Suggest tags based on content and existing wiki taxonomy (injected via system prompt)
+type: text/vnd.tiddlywiki
+
+!! Tag suggestions
+
+The wiki's tag taxonomy is injected via `inject-as: system-prompt`, so the LLM has persistent awareness of existing tags. The tiddler content goes as the user message (built-in default). Result written to `field:suggested-tags`.
+
+''Settings covered:'' action mode, `output-mode: text`, `output-target: field:suggested-tags`, `inject-as: system-prompt`, prompt template precedence
+
+```
+<$button>
+  Suggest tags
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    promptTemplate="$:/plugins/rimir/llm-connect/prompts/tag-suggestions"
+  />
+</$button>
+```
+
+!!! Live demo
+
+<$button>
+  Suggest tags
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    promptTemplate="$:/plugins/rimir/llm-connect/prompts/tag-suggestions"
+  />
+</$button>
+
+<$list filter="[all[current]has[suggested-tags]]">
+''Suggested:'' <$text text={{!!suggested-tags}}/>
+</$list>

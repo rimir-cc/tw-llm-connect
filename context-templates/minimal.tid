@@ -1,0 +1,10 @@
+title: $:/plugins/rimir/llm-connect/context-templates/minimal
+tags: $:/tags/rimir/llm-connect/context-template
+template-name: Minimal
+template-description: Just the title and tags — LLM uses tools to fetch what it needs
+output-mode: text
+output-target: field:llm-actions-log
+inject-as: user-message
+
+Tiddler: <$text text=<<currentTiddler>>/>
+Tags: <$text text={{{ [all[current]tags[]join[, ]] }}}/>

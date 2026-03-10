@@ -1,0 +1,101 @@
+created: 20260310120000000
+modified: 20260310120000000
+rdt.order: 3
+rdt.plugin-key: llm-connect
+rdt.plugin-name: llm connect
+rdt.plugin-subtitle: In-browser LLM integration with tool use
+rdt.section: Reference
+title: $:/plugins/rimir/llm-connect/doc/reference
+type: text/vnd.tiddlywiki
+
+<$transclude $tiddler="$:/plugins/rimir/doc-template/templates/page">
+<$fill $name="body">
+
+!! Widget: `<$llm-chat>`
+
+|!Attribute |!Description |!Default |
+|`chatTiddler` |Tiddler to store conversation messages |required |
+|`tiddler` |Source tiddler (sets `currentTiddler` for context) | |
+|`systemPrompt` |System prompt text |global config |
+|`tools` |Filter for tool tiddlers |none |
+|`contextTemplate` |Context template tiddler title |precedence chain |
+
+!! Widget: `<$llm-action>`
+
+|!Attribute |!Description |!Default |
+|`tiddler` |Source tiddler |none |
+|`prompt` |Inline prompt text |none |
+|`promptTemplate` |Prompt template tiddler title |none |
+|`contextTemplate` |Context template override |precedence chain |
+|`outputTarget` |Override template's output target |template value |
+|`outputMode` |Override `text` / `markup` |template value |
+|`tools` |Filter for tool tiddlers |none (no tools) |
+|`systemPrompt` |Override system prompt |global config |
+
+!! Context template fields
+
+Tag: `$:/tags/rimir/llm-connect/context-template`
+
+|!Field |!Values |!Description |
+|`template-name` |string |Display name |
+|`template-description` |string |Description |
+|`output-mode` |`text` / `markup` |How to render output |
+|`output-target` |`display` / `field:<name>` / `new-tiddler` / filter |Where response goes |
+|`inject-as` |`user-message` / `system-prompt` |How context is injected |
+|`output-title-template` |string |Title pattern for new tiddlers (`$(currentTiddler)$` substitution) |
+|`output-tags` |string |Tags for new tiddlers |
+|`output-fields` |JSON |Additional fields for new tiddlers |
+
+!! Prompt template fields
+
+Tag: `$:/tags/rimir/llm-connect/prompt`
+
+|!Field |!Description |
+|`prompt-name` |Display name |
+|`prompt-template` |The prompt text |
+|`context-template` |Default context template for this prompt |
+|`output-mode` |Default output mode |
+|`output-target` |Default output target |
+
+!! Tool definition fields
+
+Tag: `$:/tags/rimir/llm-connect/tool`
+
+|!Field |!Description |
+|`tool-name` |Name sent to LLM (e.g. `search_tiddlers`) |
+|`tool-description` |Description sent to LLM |
+|`tool-schema` |JSON Schema for input parameters |
+|`tool-handler` |`filter` / `get-tiddler` / `set-field` / `create-tiddler` / `delete-tiddler` / `navigate` / `wikitext-render` / `wikitext` |
+
+!! Built-in tools
+
+|!Tool name |!Handler |!Description |
+|`search_tiddlers` |`filter` |Run a filter and return matching titles |
+|`get_tiddler` |`get-tiddler` |Read a tiddler's fields and text |
+|`set_field` |`set-field` |Set a field value on an existing tiddler (audit logged) |
+|`create_tiddler` |`create-tiddler` |Create a new tiddler (audit logged) |
+|`delete_tiddler` |`delete-tiddler` |Delete a tiddler (audit logged) |
+|`navigate_to_tiddler` |`navigate` |Open a tiddler in the story river so the user can see it |
+|`wikitext_render` |`wikitext-render` |Render wikitext and return the text output |
+
+Write tools (`set_field`, `create_tiddler`, `delete_tiddler`) execute immediately and append an entry to the audit log at `$:/temp/rimir/llm-connect/write-log`.
+
+!! Bundled context templates
+
+|!Template |!Tiddler |!Description |
+|Pair editing |`$:/plugins/rimir/llm-connect/context-templates/pair-edit` |Sends the tiddler's raw wikitext for collaborative editing; output-mode `markup`, inject-as `user-message` |
+
+!! Config tiddlers
+
+|!Tiddler |!Default |!Description |
+|`$:/config/rimir/llm-connect/provider` |`claude` |Active provider |
+|`$:/config/rimir/llm-connect/providers/<name>/api-key` | |API key |
+|`$:/config/rimir/llm-connect/providers/<name>/model` |varies |Model ID |
+|`$:/config/rimir/llm-connect/providers/<name>/max-tokens` |`4096` |Max response tokens |
+|`$:/config/rimir/llm-connect/system-prompt` |default text |Global system prompt |
+|`$:/config/rimir/llm-connect/confirm-writes` |`yes` |Currently unused — writes execute immediately with audit log |
+|`$:/config/rimir/llm-connect/max-tool-result-length` |`4000` |Truncation limit |
+|`$:/config/rimir/llm-connect/default-context-template` | |Global default template |
+
+</$fill>
+</$transclude>

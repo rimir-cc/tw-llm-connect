@@ -1,0 +1,20 @@
+title: $:/plugins/rimir/llm-connect/ui/pair-edit-panel
+tags: $:/tags/ViewTemplate
+list-after: $:/core/ui/ViewTemplate/body
+
+\whitespace trim
+<$reveal state={{{ [[$:/state/rimir/llm-connect/pair-edit/]addsuffix<currentTiddler>] }}} type="match" text="yes" animate="yes">
+<div class="llm-pair-edit-panel">
+<div class="llm-pair-edit-header">
+<span>Pair editing: <$text text=<<currentTiddler>>/></span>
+<$button set={{{ [[$:/state/rimir/llm-connect/pair-edit/]addsuffix<currentTiddler>] }}} setTo="no" class="tc-btn-invisible">&times;</$button>
+</div>
+<$llm-chat
+  chatTiddler={{{ [[$:/temp/rimir/llm-connect/pair-edit/]addsuffix<currentTiddler>] }}}
+  tiddler=<<currentTiddler>>
+  systemPrompt="You are a TiddlyWiki wikitext expert helping the user edit a tiddler. You can read the current version with get_tiddler and apply changes with set_field (field: 'text'). Always show the complete updated wikitext before applying. When the user says 'apply' or 'do it', use set_field to write the changes. After writing, re-read the tiddler to confirm."
+  tools="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]]"
+  contextTemplate="$:/plugins/rimir/llm-connect/context-templates/pair-edit"
+/>
+</div>
+</$reveal>

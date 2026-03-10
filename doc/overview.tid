@@ -1,0 +1,63 @@
+created: 20260310120000000
+modified: 20260310120000000
+rdt.hub-category: integration
+rdt.hub-category-name: Integration
+rdt.hub-order: 1
+rdt.order: 1
+rdt.plugin-key: llm-connect
+rdt.plugin-name: llm connect
+rdt.plugin-subtitle: In-browser LLM integration with tool use
+rdt.section: Overview
+title: $:/plugins/rimir/llm-connect/doc/overview
+type: text/vnd.tiddlywiki
+
+<$transclude $tiddler="$:/plugins/rimir/doc-template/templates/page">
+<$fill $name="body">
+
+!! What it does
+
+llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI) directly from the browser. The wiki acts as the orchestrator: sends prompts, receives tool calls, executes them against `$tw.wiki`, and returns results — all without a server.
+
+!! Features
+
+* ''Two modes'' — interactive chat (multi-turn with tools) and one-shot actions (context template → LLM → output target)
+* ''Pair editing'' — toolbar button opens an embedded chat panel on any tiddler for collaborative editing with the LLM
+* ''Provider adapters'' — Claude and OpenAI out of the box, extensible adapter interface
+* ''Tool system'' — search, read, navigate, create, modify, delete tiddlers; user-defined tools via wikitext
+* ''Context templates'' — wikitext templates that render input from source tiddlers before sending to the LLM
+* ''Output targets'' — display only, write to field, create new tiddler, or filter-resolved target
+* ''Template precedence'' — tiddler field → prompt template → widget attribute → global default
+* ''Audit logging'' — write operations execute immediately with an audit log to `$:/temp/rimir/llm-connect/write-log`
+
+!! Prerequisites
+
+* API key for a supported provider (Claude or OpenAI)
+* Modern browser (async/await, XMLHttpRequest)
+
+!! Quick start
+
+# Install the plugin
+# Go to Settings and enter your API key
+# Open the chat from the page toolbar button
+# Click the pair-edit button ({{$:/plugins/rimir/llm-connect/icon}}) in any tiddler's toolbar for collaborative editing
+# Or add action buttons to tiddlers:
+
+```
+<$button>
+  Summarize
+  <$llm-action tiddler=<<currentTiddler>> prompt="Summarize in 3 bullets."/>
+</$button>
+```
+
+!! Pair editing
+
+Click the pair-edit toolbar button on any tiddler to open an embedded chat panel below the tiddler body. The LLM receives the tiddler's current wikitext as context and can read and write the tiddler using tools. Use it to collaboratively refine content, fix wikitext, or restructure a tiddler — say "apply" and the LLM writes the changes directly.
+
+<$transclude $tiddler="$:/plugins/rimir/doc-template/templates/callout" type="info">
+<$fill $name="body">
+API keys are stored in wiki tiddlers — visible to anyone with file access. Suitable for personal wikis or server wikis with authentication.
+</$fill>
+</$transclude>
+
+</$fill>
+</$transclude>

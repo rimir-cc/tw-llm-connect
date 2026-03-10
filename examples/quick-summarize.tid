@@ -1,0 +1,41 @@
+title: $:/plugins/rimir/llm-connect/examples/quick-summarize
+tags: $:/tags/rimir/llm-connect/example
+example-name: Quick summarize
+example-description: Summarize any tiddler with one click — no configuration needed
+type: text/vnd.tiddlywiki
+
+!! Quick summarize
+
+Zero-config example. No context template, no prompt template — uses the built-in default (renders source tiddler text as plain text). Result displayed only.
+
+''Settings covered:'' action mode, default behavior (no template), `output-mode: text`, `output-target: display`
+
+```
+<$button>
+  Summarize this
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    prompt="Summarize the most important points in 3 bullet points."
+  />
+</$button>
+```
+
+!!! Live demo
+
+<$button>
+  Summarize this
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    prompt="Summarize the most important points in 3 bullet points."
+  />
+</$button>
+
+<$list filter="[[$:/temp/rimir/llm-connect/action-result]has[text]]">
+<div class="rr-settings-info-card">
+<$transclude tiddler="$:/temp/rimir/llm-connect/action-result" mode="block"/>
+</div>
+</$list>
+
+<$list filter="[[$:/temp/rimir/llm-connect/action-status]has[text]]">
+//{{$:/temp/rimir/llm-connect/action-status}}//
+</$list>

@@ -1,0 +1,9 @@
+title: $:/plugins/rimir/llm-connect/context-templates/default
+tags: $:/tags/rimir/llm-connect/context-template
+template-name: Default
+template-description: Sends the rendered text of the current tiddler
+output-mode: text
+output-target: display
+inject-as: user-message
+
+<$transclude field="text" mode="block"/>

@@ -1,0 +1,51 @@
+title: $:/plugins/rimir/llm-connect/examples/smart-actions
+tags: $:/tags/rimir/llm-connect/example
+example-name: Smart tiddler actions
+example-description: Action mode with read-only tools — LLM can explore the wiki before responding
+type: text/vnd.tiddlywiki
+
+!! Smart tiddler actions
+
+Action mode with tools enabled. The `tools` filter excludes write tools — only read-only tools are available. The `minimal` context template sends just the title and tags; the LLM uses tools to fetch what it needs.
+
+''Settings covered:'' action mode with tools, `output-mode: text`, `output-target: field:llm-actions-log`, tiddler field precedence
+
+!!! Setup
+
+Add this field to any tiddler:
+
+|!Field |!Value |
+|`llm-context-template` |`$:/plugins/rimir/llm-connect/context-templates/minimal` |
+
+The resolver picks it up via tiddler field precedence (highest priority).
+
+```
+<$button>
+  Analyze & suggest
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    prompt="Read this tiddler and any related tiddlers. Suggest 3 improvements."
+    tools="[tag[$:/tags/rimir/llm-connect/tool]!match[$:/plugins/rimir/llm-connect/tools/delete-tiddler]!match[$:/plugins/rimir/llm-connect/tools/set-field]!match[$:/plugins/rimir/llm-connect/tools/create-tiddler]]"
+  />
+</$button>
+```
+
+!!! Live demo
+
+<$button>
+  Analyze & suggest
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    prompt="Read this tiddler and any related tiddlers you find relevant. Then suggest 3 concrete improvements: better title, missing links, or structural changes. Be specific."
+    contextTemplate="$:/plugins/rimir/llm-connect/context-templates/minimal"
+    outputTarget="field:llm-actions-log"
+    tools="[tag[$:/tags/rimir/llm-connect/tool]!match[$:/plugins/rimir/llm-connect/tools/delete-tiddler]!match[$:/plugins/rimir/llm-connect/tools/set-field]!match[$:/plugins/rimir/llm-connect/tools/create-tiddler]]"
+  />
+</$button>
+
+<$list filter="[all[current]has[llm-actions-log]]">
+''Analysis:''
+<div class="rr-settings-info-card">
+<$transclude field="llm-actions-log" mode="block"/>
+</div>
+</$list>

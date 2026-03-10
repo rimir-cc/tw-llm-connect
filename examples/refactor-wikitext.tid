@@ -1,0 +1,31 @@
+title: $:/plugins/rimir/llm-connect/examples/refactor-wikitext
+tags: $:/tags/rimir/llm-connect/example
+example-name: Refactor wikitext chat
+example-description: Interactive wikitext refactoring — LLM sees raw markup and can suggest changes
+type: text/vnd.tiddlywiki
+
+!! Refactor wikitext chat
+
+Chat mode with `output-mode: markup` — the LLM receives raw wikitext source via the `raw-wikitext` context template. Interactive session for refactoring wiki templates.
+
+''Settings covered:'' chat mode, `output-mode: markup`, `output-target: display`, `inject-as: user-message`, tools enabled
+
+```
+<$llm-chat
+  chatTiddler="$:/temp/rimir/llm-connect/examples/refactor-chat"
+  tiddler=<<currentTiddler>>
+  systemPrompt="You are a TiddlyWiki expert. Help refactor and improve wikitext."
+  tools="[tag[$:/tags/rimir/llm-connect/tool]]"
+  contextTemplate="$:/plugins/rimir/llm-connect/context-templates/raw-wikitext"
+/>
+```
+
+!!! Live demo
+
+<$llm-chat
+  chatTiddler="$:/temp/rimir/llm-connect/examples/refactor-chat"
+  tiddler=<<currentTiddler>>
+  systemPrompt="You are a TiddlyWiki expert. The user will share wikitext source. Help them refactor, improve, or fix it. Always show the complete corrected wikitext in code blocks."
+  tools="[tag[$:/tags/rimir/llm-connect/tool]]"
+  contextTemplate="$:/plugins/rimir/llm-connect/context-templates/raw-wikitext"
+/>

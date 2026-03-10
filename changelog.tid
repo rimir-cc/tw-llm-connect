@@ -1,0 +1,9 @@
+created: 20260310120000000
+modified: 20260310120000000
+title: $:/plugins/rimir/llm-connect/changelog
+type: text/vnd.tiddlywiki
+
+! Changelog
+
+|!Version |!Date |!Changes |
+|v0.1.0 |2026-03-10 |Initial release — provider adapters (Claude, OpenAI), tool system (search, read, set-field, create, delete, navigate), orchestrator, chat widget, action widget, context templates, pair editing (toolbar button + embedded panel), draggable chat panel, audit logging for write operations, 12 bundled examples |

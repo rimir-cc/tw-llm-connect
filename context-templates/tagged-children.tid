@@ -1,0 +1,23 @@
+title: $:/plugins/rimir/llm-connect/context-templates/tagged-children
+tags: $:/tags/rimir/llm-connect/context-template
+template-name: Tagged children
+template-description: Collects all tiddlers tagged with the current tiddler
+output-mode: text
+output-target: new-tiddler
+output-title-template: $(currentTiddler)$/Status Report
+output-tags: llm-generated status-report
+output-fields: {"parent": "$(currentTiddler)$"}
+inject-as: user-message
+
+Project: <$text text=<<currentTiddler>>/>
+Project description: <$transclude field="text" mode="inline"/>
+
+=== Tasks/Items (tagged with this project) ===
+
+<$list filter="[tag<currentTiddler>sort[created]]">
+--- <$text text=<<currentTiddler>>/> ---
+Status: <$transclude field="status" mode="inline"/>
+Created: <$text text={{{ [all[current]get[created]format:date[YYYY-0MM-0DD]] }}}/>
+<$transclude field="text" mode="block"/>
+
+</$list>

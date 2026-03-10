@@ -1,0 +1,12 @@
+title: $:/plugins/rimir/llm-connect/context-templates/wiki-overview
+tags: $:/tags/rimir/llm-connect/context-template
+template-name: Wiki overview
+template-description: Injects wiki structure summary into system prompt for orientation
+output-mode: text
+inject-as: system-prompt
+
+This TiddlyWiki contains <$count filter="[!is[system]]"/> user tiddlers.
+
+Top tags: <$list filter="[tags[]sort[]first[20]]"><$text text=<<currentTiddler>>/> (<$count filter="[tag<currentTiddler>]"/>), </$list>
+
+Recent tiddlers: <$list filter="[!is[system]sort[modified]last[10]]"><$text text=<<currentTiddler>>/>, </$list>

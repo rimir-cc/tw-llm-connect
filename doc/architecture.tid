@@ -1,0 +1,101 @@
+created: 20260310120000000
+modified: 20260310120000000
+rdt.order: 2
+rdt.plugin-key: llm-connect
+rdt.plugin-name: llm connect
+rdt.plugin-subtitle: In-browser LLM integration with tool use
+rdt.section: Architecture
+title: $:/plugins/rimir/llm-connect/doc/architecture
+type: text/vnd.tiddlywiki
+
+<$transclude $tiddler="$:/plugins/rimir/doc-template/templates/page">
+<$fill $name="body">
+
+!! Two modes
+
+|!Mode |!Widget |!Description |!Tools |
+|Chat |`<$llm-chat>` |Multi-turn conversation with message history |Yes (configurable) |
+|Action |`<$llm-action>` |One-shot invocation: context → LLM → output |Optional |
+
+!! Data flow — Chat mode
+
+```
+User types message
+    ↓
+Chat widget reads context template (first message only)
+    ↓
+Context rendered (text or markup mode)
+    ↓
+Messages + tools sent to LLM via adapter
+    ↓
+Response parsed → tool calls? → execute → send results → loop
+    ↓
+Final text response → save to chat tiddler → UI refresh
+```
+
+!! Data flow — Action mode
+
+```
+Button triggers <$llm-action>
+    ↓
+Context resolver: find template (precedence chain)
+    ↓
+Render template with currentTiddler
+    ↓
+Single API call (or tool loop if tools enabled)
+    ↓
+Write response to output target (field / new tiddler / display / filter)
+```
+
+!! Components
+
+|!Module |!Type |!Description |
+|`orchestrator.js` |library |Tool-use loop, conversation management, HTTP requests |
+|`adapter-claude.js` |library |Claude API: request building, response parsing, tool results |
+|`adapter-openai.js` |library |OpenAI API: same interface, different format |
+|`tool-executor.js` |library |Tool dispatch, built-in handlers, custom wikitext tools |
+|`context-resolver.js` |library |Template precedence, rendering (text/markup), output target resolution |
+|`chat-widget.js` |widget |`<$llm-chat>` — chat UI, message management |
+|`action-widget.js` |widget |`<$llm-action>` — one-shot invocation, output writing |
+|`startup.js` |startup |Module verification on browser load |
+|`ui/chat-panel.tid` |PageTemplate |Global chat panel, toggled from page toolbar |
+|`ui/pair-edit.tid` |ViewToolbar |Per-tiddler pair-edit toggle button |
+|`ui/pair-edit-panel.tid` |ViewTemplate |Embedded chat panel below tiddler body for pair editing |
+|`ui/drag-panel.js` |startup |Makes the chat panel draggable by its header |
+|`context-templates/pair-edit.tid` |context-template |Sends raw wikitext source for collaborative editing |
+
+!! Data flow — Pair editing
+
+```
+User clicks pair-edit toolbar button
+    ↓
+$reveal panel opens below tiddler body (ViewTemplate)
+    ↓
+<$llm-chat> initialised with currentTiddler + pair-edit context template
+    ↓
+First message sends tiddler's raw wikitext as context
+    ↓
+LLM reads/edits via get_tiddler + set_field tools → immediate execution + audit log
+    ↓
+User sees changes live (filesystem-watcher or syncer refresh)
+```
+
+!! Chat panel
+
+The global chat panel is rendered via `$:/tags/PageTemplate` (not a popup). It is toggled by the page toolbar button and made draggable by `drag-panel.js`, which switches from bottom/right to top/left positioning on mousedown and constrains the panel to the viewport.
+
+!! Context template precedence
+
+# ''Tiddler field'' — `llm-context-template` on the source tiddler
+# ''Prompt template'' — `context-template` field on the prompt template tiddler
+# ''Widget attribute'' — `contextTemplate` on `<$llm-chat>` or `<$llm-action>`
+# ''Global default'' — `$:/config/rimir/llm-connect/default-context-template`
+# ''Built-in'' — render source tiddler's text as plain text
+
+!! Output modes
+
+* ''text'' — wikify template output to plain text (for content-level help)
+* ''markup'' — preserve raw wikitext/HTML (for wiki-programming help)
+
+</$fill>
+</$transclude>

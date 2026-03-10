@@ -1,0 +1,16 @@
+title: $:/plugins/rimir/llm-connect/ui/chat-panel
+tags: $:/tags/PageTemplate
+
+\whitespace trim
+<$reveal state="$:/state/rimir/llm-connect/chat-open" type="match" text="yes" animate="yes">
+<div class="llm-chat-panel">
+<div class="llm-chat-panel-header">
+<span>LLM Chat</span>
+<$button set="$:/state/rimir/llm-connect/chat-open" setTo="no" class="tc-btn-invisible">&times;</$button>
+</div>
+<$llm-chat
+  chatTiddler="$:/temp/rimir/llm-connect/toolbar-chat"
+  tools="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]]"
+/>
+</div>
+</$reveal>

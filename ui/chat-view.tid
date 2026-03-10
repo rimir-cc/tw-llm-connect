@@ -1,0 +1,13 @@
+created: 20260310120000000
+modified: 20260310120000000
+title: $:/plugins/rimir/llm-connect/ui/chat-view
+type: text/vnd.tiddlywiki
+
+\procedure llm-chat-view()
+<$llm-chat
+  chatTiddler="$:/temp/rimir/llm-connect/default-chat"
+  tools="[tag[$:/tags/rimir/llm-connect/tool]]"
+/>
+\end
+
+<<llm-chat-view>>

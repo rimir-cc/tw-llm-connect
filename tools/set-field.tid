@@ -1,0 +1,6 @@
+title: $:/plugins/rimir/llm-connect/tools/set-field
+tags: $:/tags/rimir/llm-connect/tool
+tool-name: set_field
+tool-description: Set a field on an existing tiddler. Can modify text, tags, or custom fields. Write operation — may require confirmation.
+tool-schema: {"type":"object","properties":{"title":{"type":"string","description":"The tiddler to modify"},"field":{"type":"string","description":"The field name to set (e.g. text, tags, or a custom field)"},"value":{"type":"string","description":"The new value for the field"}},"required":["title","field","value"]}
+tool-handler: set-field

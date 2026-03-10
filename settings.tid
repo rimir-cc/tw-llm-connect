@@ -1,0 +1,61 @@
+created: 20260310120000000
+modified: 20260310120000000
+title: $:/plugins/rimir/llm-connect/settings
+type: text/vnd.tiddlywiki
+
+!! Provider
+
+<div class="rr-input-row">
+Provider: <$select tiddler="$:/config/rimir/llm-connect/provider" default="claude">
+<option value="claude">Claude (Anthropic)</option>
+<option value="openai">OpenAI</option>
+</$select>
+</div>
+
+!!! Claude
+
+<div class="rr-input-row">
+API key: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/claude/api-key" tag="input" default="" class="rr-input" size="40" type="password"/> <span class="rr-muted">stored in wiki — visible to anyone with file access</span>
+</div>
+
+<div class="rr-input-row">
+Model: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/claude/model" tag="input" default="claude-sonnet-4-20250514" class="rr-input" size="30"/>
+</div>
+
+<div class="rr-input-row">
+Max tokens: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/claude/max-tokens" tag="input" default="4096" class="rr-input" size="10"/>
+</div>
+
+!!! OpenAI
+
+<div class="rr-input-row">
+API key: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/openai/api-key" tag="input" default="" class="rr-input" size="40" type="password"/> <span class="rr-muted">stored in wiki — visible to anyone with file access</span>
+</div>
+
+<div class="rr-input-row">
+Model: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/openai/model" tag="input" default="gpt-4o" class="rr-input" size="30"/>
+</div>
+
+<div class="rr-input-row">
+Max tokens: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/openai/max-tokens" tag="input" default="4096" class="rr-input" size="10"/>
+</div>
+
+!! Safety
+
+<div class="rr-input-row">
+<$checkbox tiddler="$:/config/rimir/llm-connect/confirm-writes" field="text" checked="yes" unchecked="no" default="yes"> Confirm before write operations <span class="rr-muted">(currently unused — writes execute immediately with audit log to `$:/temp/rimir/llm-connect/write-log`)</span></$checkbox>
+</div>
+
+<div class="rr-input-row">
+Max tool result length: <$edit-text tiddler="$:/config/rimir/llm-connect/max-tool-result-length" tag="input" default="4000" class="rr-input" size="10"/> <span class="rr-muted">characters — truncates long tool results to fit context</span>
+</div>
+
+!! Context
+
+<div class="rr-input-row">
+Default context template: <$edit-text tiddler="$:/config/rimir/llm-connect/default-context-template" tag="input" default="" class="rr-input" size="50"/> <span class="rr-muted">leave empty for built-in default (render source tiddler text)</span>
+</div>
+
+!! System prompt
+
+<$edit-text tiddler="$:/config/rimir/llm-connect/system-prompt" class="rr-textarea" tag="textarea" default="You are a helpful TiddlyWiki assistant. You can search, read, and modify tiddlers using the available tools."/>

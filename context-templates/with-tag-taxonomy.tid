@@ -1,0 +1,12 @@
+title: $:/plugins/rimir/llm-connect/context-templates/with-tag-taxonomy
+tags: $:/tags/rimir/llm-connect/context-template
+template-name: With tag taxonomy
+template-description: Injects the wiki's full tag list into the system prompt
+output-mode: text
+output-target: field:suggested-tags
+inject-as: system-prompt
+
+The wiki uses the following tags (with tiddler counts):
+<$list filter="[tags[]sort[]]">
+- <$text text=<<currentTiddler>>/> (<$count filter="[tag<currentTiddler>]"/>)
+</$list>

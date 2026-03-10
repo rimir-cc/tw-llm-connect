@@ -1,0 +1,39 @@
+title: $:/plugins/rimir/llm-connect/examples/thread-reply
+tags: $:/tags/rimir/llm-connect/example
+example-name: Thread reply draft
+example-description: Reconstruct a discussion from parent/child tiddlers and draft a reply
+type: text/vnd.tiddlywiki
+
+!! Thread reply draft
+
+Multi-tiddler context via parent hierarchy: the `thread` template walks the tagging chain to reconstruct a conversation. The reply is created as a new child tiddler with `author: llm-draft`.
+
+''Settings covered:'' action mode, multi-tiddler context (parent hierarchy), `output-mode: text`, `output-target: new-tiddler`, `output-fields`, widget attribute precedence
+
+!!! Setup
+
+# Create a discussion root tiddler
+# Tag reply tiddlers with the root and add an `author` field
+# Invoke from the root tiddler
+
+```
+<$button>
+  Draft reply
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    prompt="Based on this discussion thread, draft a thoughtful reply that addresses the latest points raised. Keep a professional but conversational tone."
+    contextTemplate="$:/plugins/rimir/llm-connect/context-templates/thread"
+  />
+</$button>
+```
+
+!!! Live demo
+
+<$button>
+  Draft reply
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    prompt="Based on this discussion thread, draft a thoughtful reply that addresses the latest points raised."
+    contextTemplate="$:/plugins/rimir/llm-connect/context-templates/thread"
+  />
+</$button>

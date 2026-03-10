@@ -1,0 +1,16 @@
+title: $:/plugins/rimir/llm-connect/context-templates/pair-edit
+tags: $:/tags/rimir/llm-connect/context-template
+template-name: Pair editing
+template-description: Sends raw wikitext source for collaborative editing — LLM can read and write the tiddler
+output-mode: markup
+inject-as: user-message
+
+You are helping me edit this tiddler. Here is its current state:
+
+Title: <$text text=<<currentTiddler>>/>
+Tags: <$text text={{{ [all[current]tags[]join[, ]] }}}/>
+
+Current wikitext:
+```
+<$transclude field="text" mode="inline"/>
+```

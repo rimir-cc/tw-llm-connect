@@ -1,0 +1,31 @@
+title: $:/plugins/rimir/llm-connect/examples/tiddler-qa
+tags: $:/tags/rimir/llm-connect/example
+example-name: Tiddler Q&A chat
+example-description: Chat about a specific tiddler — its content is injected as the first message
+type: text/vnd.tiddlywiki
+
+!! Tiddler Q&A chat
+
+Chat mode with the current tiddler's content injected as the first user message (`inject-as: user-message`, the default). The LLM can answer follow-up questions and use tools.
+
+''Settings covered:'' chat mode, `output-mode: text`, `output-target: display`, `inject-as: user-message`, widget attribute precedence, tools enabled
+
+```
+<$llm-chat
+  chatTiddler="$:/temp/rimir/llm-connect/examples/qa-chat"
+  tiddler=<<currentTiddler>>
+  systemPrompt="You are a helpful assistant. The user will share a tiddler's content."
+  tools="[tag[$:/tags/rimir/llm-connect/tool]]"
+  contextTemplate="$:/plugins/rimir/llm-connect/context-templates/default"
+/>
+```
+
+!!! Live demo
+
+<$llm-chat
+  chatTiddler="$:/temp/rimir/llm-connect/examples/qa-chat"
+  tiddler=<<currentTiddler>>
+  systemPrompt="You are a helpful assistant. The user will share a tiddler's content, then ask questions about it."
+  tools="[tag[$:/tags/rimir/llm-connect/tool]]"
+  contextTemplate="$:/plugins/rimir/llm-connect/context-templates/default"
+/>

@@ -1,0 +1,18 @@
+title: $:/plugins/rimir/llm-connect/context-templates/with-metadata
+tags: $:/tags/rimir/llm-connect/context-template
+template-name: With metadata
+template-description: Tiddler text plus key metadata (tags, fields)
+output-mode: text
+output-target: new-tiddler
+output-title-template: $(currentTiddler)$/Explanation
+output-tags: llm-generated explanation
+output-fields: {"parent": "$(currentTiddler)$", "generated-by": "llm-connect"}
+inject-as: user-message
+
+Title: <$text text=<<currentTiddler>>/>
+Tags: <$text text={{{ [all[current]tags[]join[, ]] }}}/>
+Fields: <$list filter="[all[current]fields[]!match[text]!match[tags]!match[title]sort[]]" variable="f"><$text text=<<f>>/>: <$transclude $field=<<f>> mode="inline"/>
+</$list>
+
+Content:
+<$transclude field="text" mode="block"/>

@@ -1,0 +1,38 @@
+title: $:/plugins/rimir/llm-connect/examples/summarize-to-field
+tags: $:/tags/rimir/llm-connect/example
+example-name: Summarize to field
+example-description: Summarize a tiddler and store the result in its llm-summary field
+type: text/vnd.tiddlywiki
+
+!! Summarize to field
+
+Uses a prompt template that references the default context template and sets `output-target: field:llm-summary`. The summary is persisted on the tiddler.
+
+''Settings covered:'' action mode, `output-mode: text`, `output-target: field:llm-summary`, precedence via prompt template
+
+```
+<$button>
+  Summarize to field
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    promptTemplate="$:/plugins/rimir/llm-connect/prompts/summarize"
+  />
+</$button>
+```
+
+!!! Live demo
+
+<$button>
+  Summarize to field
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    promptTemplate="$:/plugins/rimir/llm-connect/prompts/summarize"
+  />
+</$button>
+
+<$list filter="[all[current]has[llm-summary]]">
+''Stored summary:''
+<div class="rr-settings-info-card">
+<$transclude field="llm-summary" mode="block"/>
+</div>
+</$list>

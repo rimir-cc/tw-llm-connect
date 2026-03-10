@@ -1,0 +1,6 @@
+title: $:/plugins/rimir/llm-connect/tools/get-tiddler
+tags: $:/tags/rimir/llm-connect/tool
+tool-name: get_tiddler
+tool-description: Get the full content and all fields of a specific tiddler by title.
+tool-schema: {"type":"object","properties":{"title":{"type":"string","description":"The exact title of the tiddler to retrieve"}},"required":["title"]}
+tool-handler: get-tiddler

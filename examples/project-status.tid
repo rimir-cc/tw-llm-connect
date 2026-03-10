@@ -1,0 +1,37 @@
+title: $:/plugins/rimir/llm-connect/examples/project-status
+tags: $:/tags/rimir/llm-connect/example
+example-name: Project status report
+example-description: Collect all tasks under a project and generate a status report as a new tiddler
+type: text/vnd.tiddlywiki
+
+!! Project status report
+
+Multi-tiddler context: the `tagged-children` template collects all tiddlers tagged with the current tiddler (treating it as a project). The status report is created as a new child tiddler.
+
+''Settings covered:'' action mode, multi-tiddler context (by tag), `output-mode: text`, `output-target: new-tiddler`, `output-title-template` with date, prompt template precedence
+
+!!! Setup
+
+# Create a project tiddler (e.g. "My Project")
+# Tag task tiddlers with the project name
+# Optionally add a `status` field to each task (e.g. `done`, `in-progress`, `blocked`)
+
+```
+<$button>
+  Generate status report
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    promptTemplate="$:/plugins/rimir/llm-connect/prompts/status-report"
+  />
+</$button>
+```
+
+!!! Live demo
+
+<$button>
+  Generate status report
+  <$llm-action
+    tiddler=<<currentTiddler>>
+    promptTemplate="$:/plugins/rimir/llm-connect/prompts/status-report"
+  />
+</$button>

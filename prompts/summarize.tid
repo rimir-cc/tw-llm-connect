@@ -1,0 +1,7 @@
+title: $:/plugins/rimir/llm-connect/prompts/summarize
+tags: $:/tags/rimir/llm-connect/prompt
+prompt-name: Summarize tiddler
+prompt-template: Summarize the most important things in 3 bullet points. Be concise.
+context-template: $:/plugins/rimir/llm-connect/context-templates/default
+output-mode: text
+output-target: field:llm-summary

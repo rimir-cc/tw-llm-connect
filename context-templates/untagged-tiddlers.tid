@@ -1,0 +1,15 @@
+title: $:/plugins/rimir/llm-connect/context-templates/untagged-tiddlers
+tags: $:/tags/rimir/llm-connect/context-template
+template-name: Untagged tiddlers
+template-description: Collects all tiddlers with no tags for classification
+output-mode: text
+output-target: [[$:/temp/rimir/llm-connect/classification-result]]
+inject-as: user-message
+
+The following tiddlers have no tags:
+
+<$list filter="[!is[system]!has[tags]sort[title]limit[30]]">
+--- <$text text=<<currentTiddler>>/> ---
+<$transclude field="text" mode="inline" length="200"/>
+
+</$list>

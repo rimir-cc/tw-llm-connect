@@ -1,0 +1,9 @@
+title: $:/plugins/rimir/llm-connect/ui/pair-edit
+tags: $:/tags/ViewToolbar
+caption: Pair edit with LLM
+description: Open an LLM chat panel for collaboratively editing this tiddler
+
+\whitespace trim
+<$button set={{{ [[$:/state/rimir/llm-connect/pair-edit/]addsuffix<currentTiddler>] }}} setTo={{{ [[$:/state/rimir/llm-connect/pair-edit/]addsuffix<currentTiddler>get[text]match[yes]then[no]else[yes]] }}} tooltip="Pair edit with LLM" class="tc-btn-invisible">
+{{$:/plugins/rimir/llm-connect/icon}}
+</$button>

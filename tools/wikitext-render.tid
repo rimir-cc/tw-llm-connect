@@ -1,0 +1,6 @@
+title: $:/plugins/rimir/llm-connect/tools/wikitext-render
+tags: $:/tags/rimir/llm-connect/tool
+tool-name: wikitext_render
+tool-description: Render a wikitext snippet to plain text. Useful for evaluating filter expressions or testing transclusions.
+tool-schema: {"type":"object","properties":{"wikitext":{"type":"string","description":"TiddlyWiki wikitext to render"}},"required":["wikitext"]}
+tool-handler: wikitext-render

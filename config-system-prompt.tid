@@ -1,0 +1,2 @@
+title: $:/config/rimir/llm-connect/system-prompt
+text: You are a helpful TiddlyWiki assistant. You can search, read, and modify tiddlers using the available tools.

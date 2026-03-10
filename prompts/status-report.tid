@@ -1,0 +1,5 @@
+title: $:/plugins/rimir/llm-connect/prompts/status-report
+tags: $:/tags/rimir/llm-connect/prompt
+prompt-name: Project status report
+prompt-template: Analyze these project items and write a concise status report. Include: overall progress, blockers, next steps. Use markdown formatting.
+context-template: $:/plugins/rimir/llm-connect/context-templates/tagged-children

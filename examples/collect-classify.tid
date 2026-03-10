@@ -1,0 +1,36 @@
+title: $:/plugins/rimir/llm-connect/examples/collect-classify
+tags: $:/tags/rimir/llm-connect/example
+example-name: Collect & classify
+example-description: Find untagged tiddlers and ask the LLM to suggest tags — result written to a temp tiddler
+type: text/vnd.tiddlywiki
+
+!! Collect & classify
+
+Multi-tiddler context via arbitrary filter: the `untagged-tiddlers` template collects tiddlers with no tags. The `output-target` is a filter expression `[[$:/temp/rimir/llm-connect/classification-result]]` that resolves to a temp tiddler.
+
+''Settings covered:'' action mode, multi-tiddler context (arbitrary filter), `output-mode: text`, `output-target: <filter>`, `inject-as: user-message`, prompt template precedence
+
+```
+<$button>
+  Classify untagged tiddlers
+  <$llm-action
+    promptTemplate="$:/plugins/rimir/llm-connect/prompts/classify"
+  />
+</$button>
+```
+
+!!! Live demo
+
+<$button>
+  Classify untagged tiddlers
+  <$llm-action
+    promptTemplate="$:/plugins/rimir/llm-connect/prompts/classify"
+  />
+</$button>
+
+<$list filter="[[$:/temp/rimir/llm-connect/classification-result]has[text]]">
+''Classification results:''
+<div class="rr-settings-info-card">
+<$transclude tiddler="$:/temp/rimir/llm-connect/classification-result" mode="block"/>
+</div>
+</$list>

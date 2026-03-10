@@ -1,0 +1,5 @@
+title: $:/plugins/rimir/llm-connect/prompts/tag-suggestions
+tags: $:/tags/rimir/llm-connect/prompt
+prompt-name: Suggest tags
+prompt-template: Based on this tiddler's content and the existing tag taxonomy (in your system context), suggest 3-5 appropriate tags. Return only the tag names, space-separated, using existing tags where possible.
+context-template: $:/plugins/rimir/llm-connect/context-templates/with-tag-taxonomy

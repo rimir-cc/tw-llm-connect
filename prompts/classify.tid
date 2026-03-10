@@ -1,0 +1,5 @@
+title: $:/plugins/rimir/llm-connect/prompts/classify
+tags: $:/tags/rimir/llm-connect/prompt
+prompt-name: Classify untagged tiddlers
+prompt-template: For each tiddler listed, suggest 1-3 tags from the wiki's existing taxonomy. Format as: "Title: tag1 tag2 tag3" — one tiddler per line.
+context-template: $:/plugins/rimir/llm-connect/context-templates/untagged-tiddlers

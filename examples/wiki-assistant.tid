@@ -1,0 +1,29 @@
+title: $:/plugins/rimir/llm-connect/examples/wiki-assistant
+tags: $:/tags/rimir/llm-connect/example
+example-name: Wiki assistant chat
+example-description: General-purpose chat with wiki overview in system prompt and full tool access
+type: text/vnd.tiddlywiki
+
+!! Wiki assistant chat
+
+Chat mode with wiki overview injected into the system prompt (`inject-as: system-prompt`). The LLM knows the wiki structure and can use tools to dig deeper.
+
+''Settings covered:'' chat mode, `output-mode: text`, `output-target: display`, `inject-as: system-prompt`, widget attribute precedence, tools enabled
+
+```
+<$llm-chat
+  chatTiddler="$:/temp/rimir/llm-connect/examples/wiki-assistant-chat"
+  systemPrompt="You are a helpful TiddlyWiki assistant."
+  tools="[tag[$:/tags/rimir/llm-connect/tool]]"
+  contextTemplate="$:/plugins/rimir/llm-connect/context-templates/wiki-overview"
+/>
+```
+
+!!! Live demo
+
+<$llm-chat
+  chatTiddler="$:/temp/rimir/llm-connect/examples/wiki-assistant-chat"
+  systemPrompt="You are a helpful TiddlyWiki assistant. You have tools to search, read, and modify tiddlers."
+  tools="[tag[$:/tags/rimir/llm-connect/tool]]"
+  contextTemplate="$:/plugins/rimir/llm-connect/context-templates/wiki-overview"
+/>
