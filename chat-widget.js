@@ -179,8 +179,23 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 	// Plain user message
 	if (msg.role === "user") {
 		var userDiv = doc.createElement("div");
-		userDiv.className = "llm-chat-message llm-chat-message-user";
-		userDiv.textContent = typeof msg.content === "string" ? msg.content : "";
+		if (msg._context) {
+			userDiv.className = "llm-chat-message llm-chat-message-context";
+			userDiv.textContent = "\u{1F4CB} Context injected (click to expand)";
+			userDiv.title = typeof msg.content === "string" ? msg.content.substring(0, 500) : "";
+			userDiv.addEventListener("click", function() {
+				if (userDiv.classList.contains("llm-chat-context-expanded")) {
+					userDiv.classList.remove("llm-chat-context-expanded");
+					userDiv.textContent = "\u{1F4CB} Context injected (click to expand)";
+				} else {
+					userDiv.classList.add("llm-chat-context-expanded");
+					userDiv.textContent = typeof msg.content === "string" ? msg.content : "";
+				}
+			});
+		} else {
+			userDiv.className = "llm-chat-message llm-chat-message-user";
+			userDiv.textContent = typeof msg.content === "string" ? msg.content : "";
+		}
 		elements.push(userDiv);
 		return elements;
 	}
@@ -263,7 +278,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 			if (rendered.injectAs === "system-prompt") {
 				this.systemPromptOverride = (this.systemPromptAttr ? this.systemPromptAttr + "\n\n" : "") + rendered.text;
 			} else {
-				messages.push({ role: "user", content: rendered.text });
+				messages.push({ role: "user", content: rendered.text, _context: true });
 			}
 		}
 		this.contextInjected = true;

@@ -11,6 +11,4 @@ Title: <$text text=<<currentTiddler>>/>
 Tags: <$text text={{{ [all[current]tags[]join[, ]] }}}/>
 
 Current wikitext:
-```
-<$transclude field="text" mode="inline"/>
-```
+<$codeblock code={{{ [all[current]get[text]] }}}/>

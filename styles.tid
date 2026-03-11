@@ -45,6 +45,24 @@ type: text/vnd.tiddlywiki
 	border-bottom-left-radius: 2px;
 }
 
+.llm-chat-message-context {
+	background: <<colour code-background>>;
+	color: <<colour muted-foreground>>;
+	margin-left: auto;
+	font-size: 0.8em;
+	cursor: pointer;
+	border: 1px dashed <<colour muted-foreground>>;
+}
+
+.llm-chat-message-context.llm-chat-context-expanded {
+	font-size: 0.75em;
+	color: <<colour code-foreground>>;
+	font-family: {{$:/themes/tiddlywiki/vanilla/settings/codefontfamily}};
+	max-height: 200px;
+	overflow-y: auto;
+	cursor: pointer;
+}
+
 .llm-chat-message-tool {
 	background: <<colour code-background>>;
 	color: <<colour code-foreground>>;
