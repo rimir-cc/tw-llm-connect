@@ -116,14 +116,59 @@ exports.buildAssistantMessage = function(parsed) {
 	return { role: "assistant", content: content };
 };
 
+exports.buildModelListRequest = function(config) {
+	return {
+		url: "https://api.anthropic.com/v1/models?limit=100",
+		headers: {
+			"x-api-key": config.apiKey,
+			"anthropic-version": "2023-06-01",
+			"anthropic-dangerous-direct-browser-access": "true"
+		}
+	};
+};
+
+exports.parseModelListResponse = function(responseText) {
+	var data = JSON.parse(responseText);
+	return (data.data || [])
+		.map(function(m) { return { id: m.id, label: m.display_name || m.id }; })
+		.sort(function(a, b) { return a.label.localeCompare(b.label); });
+};
+
 function convertMessages(messages) {
 	var result = [];
 	for (var i = 0; i < messages.length; i++) {
 		var msg = messages[i];
-		if (msg.role === "user") {
+		if (msg.role === "assistant") {
+			// Normalize OpenAI-format assistant messages to Claude format
+			if (msg.tool_calls && msg.tool_calls.length > 0) {
+				var content = [];
+				if (msg.content) {
+					content.push({ type: "text", text: msg.content });
+				}
+				for (var t = 0; t < msg.tool_calls.length; t++) {
+					var tc = msg.tool_calls[t];
+					content.push({
+						type: "tool_use",
+						id: tc.id,
+						name: tc["function"].name,
+						input: typeof tc["function"].arguments === "string" ? JSON.parse(tc["function"].arguments) : tc["function"].arguments
+					});
+				}
+				result.push({ role: "assistant", content: content });
+			} else {
+				result.push({ role: "assistant", content: msg.content || "" });
+			}
+		} else if (msg.role === "tool") {
+			// Convert OpenAI tool result to Claude format
+			var prev = result.length > 0 ? result[result.length - 1] : null;
+			var toolResult = { type: "tool_result", tool_use_id: msg.tool_call_id, content: msg.content || "" };
+			if (prev && prev.role === "user" && Array.isArray(prev.content) && prev.content[0] && prev.content[0].type === "tool_result") {
+				prev.content.push(toolResult);
+			} else {
+				result.push({ role: "user", content: [toolResult] });
+			}
+		} else if (msg.role === "user") {
 			result.push({ role: "user", content: msg.content });
-		} else if (msg.role === "assistant") {
-			result.push({ role: "assistant", content: msg.content });
 		}
 	}
 	return result;

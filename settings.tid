@@ -83,41 +83,87 @@ type: text/vnd.tiddlywiki
 </$let>
 \end
 
-!! Provider
+!! Default model
 
 <div class="rr-input-row">
-Provider: <$select tiddler="$:/config/rimir/llm-connect/provider" default="claude">
+<$select tiddler="$:/config/rimir/llm-connect/provider" field="text" default="claude" class="llm-default-model-provider-select">
 <option value="claude">Claude (Anthropic)</option>
 <option value="openai">OpenAI</option>
+<option value="azure">Azure OpenAI</option>
 </$select>
+/
+<$let curProvider={{{ [[$:/config/rimir/llm-connect/provider]get[text]else[claude]] }}} modelCache={{{ [[$:/temp/rimir/llm-connect/models/]addsuffix<curProvider>] }}} hasModels={{{ [<modelCache>get[text]minlength[3]then[yes]else[no]] }}}>
+<$list filter="[<hasModels>match[no]]" variable="_">
+<$edit-text tiddler={{{ [[$:/config/rimir/llm-connect/providers/]addsuffix<curProvider>addsuffix[/model]] }}} tag="input" default="" class="rr-input" size="30" placeholder="model id"/>
+</$list>
+<$list filter="[<hasModels>match[yes]]" variable="_">
+<$select tiddler={{{ [[$:/config/rimir/llm-connect/providers/]addsuffix<curProvider>addsuffix[/model]] }}} default="">
+<$list filter="[<modelCache>get[text]jsonindexes[]] :map[<modelCache>get[text]jsonget<currentTiddler>jsonget[id]]" variable="modelId">
+<option value=<<modelId>>><$text text=<<modelId>>/></option>
+</$list>
+</$select>
+</$list>
+</$let>
+<span class="rr-muted" style="margin-left:4px;">active provider + model for all chats</span>
 </div>
+
+!! Providers
 
 !!! Claude
 
 <div class="rr-input-row">
-API key: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/claude/api-key" tag="input" default="" class="rr-input" size="40" type="password"/> <span class="rr-muted">stored in wiki — visible to anyone with file access</span>
-</div>
-
-<div class="rr-input-row">
-Model: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/claude/model" tag="input" default="claude-sonnet-4-20250514" class="rr-input" size="30"/>
+API key: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/claude/api-key" tag="input" default="" class="rr-input" size="40" type="password"/> <span class="rr-muted">stored in wiki</span>
 </div>
 
 <div class="rr-input-row">
 Max tokens: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/claude/max-tokens" tag="input" default="4096" class="rr-input" size="10"/>
+<$button class="tc-btn-invisible llm-fetch-models-btn" tooltip="Fetch available models from API">
+<$action-sendmessage $message="tm-llm-fetch-models" provider="claude"/>
+&#x21bb; Fetch models
+</$button>
+<span class="rr-muted rr-small"><$text text={{{ [[$:/temp/rimir/llm-connect/fetch-status/claude]get[text]] }}}/></span>
 </div>
 
 !!! OpenAI
 
 <div class="rr-input-row">
-API key: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/openai/api-key" tag="input" default="" class="rr-input" size="40" type="password"/> <span class="rr-muted">stored in wiki — visible to anyone with file access</span>
-</div>
-
-<div class="rr-input-row">
-Model: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/openai/model" tag="input" default="gpt-4o" class="rr-input" size="30"/>
+API key: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/openai/api-key" tag="input" default="" class="rr-input" size="40" type="password"/> <span class="rr-muted">stored in wiki</span>
 </div>
 
 <div class="rr-input-row">
 Max tokens: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/openai/max-tokens" tag="input" default="4096" class="rr-input" size="10"/>
+<$button class="tc-btn-invisible llm-fetch-models-btn" tooltip="Fetch available models from API">
+<$action-sendmessage $message="tm-llm-fetch-models" provider="openai"/>
+&#x21bb; Fetch models
+</$button>
+<span class="rr-muted rr-small"><$text text={{{ [[$:/temp/rimir/llm-connect/fetch-status/openai]get[text]] }}}/></span>
+</div>
+
+!!! Azure OpenAI
+
+<div class="rr-input-row">
+Endpoint: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/azure/endpoint" tag="input" default="" class="rr-input" size="50" placeholder="https://myresource.openai.azure.com"/>
+</div>
+
+<div class="rr-input-row">
+API key: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/azure/api-key" tag="input" default="" class="rr-input" size="40" type="password"/> <span class="rr-muted">stored in wiki</span>
+</div>
+
+<div class="rr-input-row">
+Deployment: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/azure/deployment" tag="input" default="" class="rr-input" size="30" placeholder="my-gpt4o-deployment"/>
+</div>
+
+<div class="rr-input-row">
+API version: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/azure/api-version" tag="input" default="2024-10-21" class="rr-input" size="15"/>
+</div>
+
+<div class="rr-input-row">
+Max tokens: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/azure/max-tokens" tag="input" default="4096" class="rr-input" size="10"/>
+<$button class="tc-btn-invisible llm-fetch-models-btn" tooltip="Fetch available models from API">
+<$action-sendmessage $message="tm-llm-fetch-models" provider="azure"/>
+&#x21bb; Fetch models
+</$button>
+<span class="rr-muted rr-small"><$text text={{{ [[$:/temp/rimir/llm-connect/fetch-status/azure]get[text]] }}}/></span>
 </div>
 
 !! Safety

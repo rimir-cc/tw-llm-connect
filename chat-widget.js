@@ -64,10 +64,47 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	var buttonRow = this.document.createElement("div");
 	buttonRow.className = "llm-chat-button-row";
 
-	var providerInfo = this.document.createElement("span");
-	providerInfo.className = "llm-chat-provider-info";
-	providerInfo.textContent = this.provider + " / " + this.model;
-	buttonRow.appendChild(providerInfo);
+	var modelSelector = this.document.createElement("div");
+	modelSelector.className = "llm-model-selector-wrapper";
+
+	var modelBtn = this.document.createElement("button");
+	modelBtn.className = "llm-model-selector-btn";
+	this.modelBtn = modelBtn;
+	this.updateModelDisplay();
+	modelSelector.appendChild(modelBtn);
+
+	var modelDropdown = this.document.createElement("div");
+	modelDropdown.className = "llm-model-selector-dropdown";
+	modelDropdown.style.display = "none";
+	this.modelDropdown = modelDropdown;
+	modelSelector.appendChild(modelDropdown);
+
+	modelBtn.addEventListener("click", function(e) {
+		e.stopPropagation();
+		// Don't allow switching if chat has messages (model is locked)
+		var msgs = self.getMessages();
+		if (msgs.length > 0) {
+			return;
+		}
+		if (modelDropdown.style.display === "none") {
+			self.populateModelDropdown();
+			modelDropdown.style.display = "block";
+			// Close on outside click
+			var closeHandler = function(ev) {
+				if (!modelSelector.contains(ev.target)) {
+					modelDropdown.style.display = "none";
+					self.document.removeEventListener("mousedown", closeHandler, true);
+				}
+			};
+			setTimeout(function() {
+				self.document.addEventListener("mousedown", closeHandler, true);
+			}, 0);
+		} else {
+			modelDropdown.style.display = "none";
+		}
+	});
+
+	buttonRow.appendChild(modelSelector);
 
 	var stopBtn = this.document.createElement("button");
 	stopBtn.className = "llm-chat-btn llm-chat-btn-stop";
@@ -80,6 +117,15 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 		}
 	});
 	buttonRow.appendChild(stopBtn);
+
+	var clearBtn = this.document.createElement("button");
+	clearBtn.className = "llm-chat-btn llm-chat-btn-clear";
+	clearBtn.textContent = "Clear";
+	clearBtn.title = "Clear conversation and unlock model";
+	clearBtn.addEventListener("click", function() {
+		self.clearChat();
+	});
+	buttonRow.appendChild(clearBtn);
 
 	var sendBtn = this.document.createElement("button");
 	sendBtn.className = "llm-chat-btn llm-chat-btn-send";
@@ -103,9 +149,17 @@ LlmChatWidget.prototype.execute = function() {
 	this.contextTemplateAttr = this.getAttribute("contextTemplate", "");
 	this.sourceTiddler = this.getAttribute("tiddler", "");
 
-	var config = this.getOrchestratorModule().getProviderConfig();
-	this.provider = config.provider;
-	this.model = config.model;
+	// Use chat tiddler's locked provider/model if conversation has started, otherwise global config
+	var chatTid = this.chatTiddler ? this.wiki.getTiddler(this.chatTiddler) : null;
+	var hasMessages = chatTid && chatTid.fields["llm-messages"] && chatTid.fields["llm-messages"] !== "[]";
+	if (hasMessages && chatTid.fields["llm-provider"] && chatTid.fields["llm-model"]) {
+		this.provider = chatTid.fields["llm-provider"];
+		this.model = chatTid.fields["llm-model"];
+	} else {
+		var config = this.getOrchestratorModule().getProviderConfig();
+		this.provider = config.provider;
+		this.model = config.model;
+	}
 	this.contextInjected = false;
 };
 
@@ -287,6 +341,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 	messages.push({ role: "user", content: text });
 	this.saveMessages(messages);
 	this.renderMessages(this.messagesDiv);
+	this.updateModelDisplay();
 
 	this.setStatus("Thinking...");
 	this.stopBtn.style.display = "inline-block";
@@ -294,15 +349,17 @@ LlmChatWidget.prototype.sendMessage = function() {
 
 	var orchestrator = this.getOrchestratorModule();
 	var toolExecutor = this.getToolExecutorModule();
-	var config = orchestrator.getProviderConfig();
+	var config = orchestrator.getProviderConfig(this.provider);
 
 	if (this.systemPromptOverride) {
 		config.systemPrompt = this.systemPromptOverride;
 	} else if (this.systemPromptAttr) {
 		config.systemPrompt = this.systemPromptAttr;
 	}
+	// Ensure we use the locked model
+	config.model = this.model;
 
-	var adapter = orchestrator.getAdapter(config.provider);
+	var adapter = orchestrator.getAdapter(this.provider);
 	var tools = [];
 	if (this.toolsFilter) {
 		var chatTid = this.wiki.getTiddler(this.chatTiddler);
@@ -345,6 +402,21 @@ LlmChatWidget.prototype.setStatus = function(text) {
 	}
 };
 
+LlmChatWidget.prototype.clearChat = function() {
+	if (!this.chatTiddler) return;
+	// Clear messages and unlock provider/model
+	this.saveMessages([]);
+	this.contextInjected = false;
+	this.systemPromptOverride = null;
+	// Reset to global config
+	var config = this.getOrchestratorModule().getProviderConfig();
+	this.provider = config.provider;
+	this.model = config.model;
+	this.renderMessages(this.messagesDiv);
+	this.updateModelDisplay();
+	this.setStatus("");
+};
+
 LlmChatWidget.prototype.getOrchestratorModule = function() {
 	return require("$:/plugins/rimir/llm-connect/orchestrator");
 };
@@ -357,9 +429,105 @@ LlmChatWidget.prototype.getContextResolverModule = function() {
 	return require("$:/plugins/rimir/llm-connect/context-resolver");
 };
 
+LlmChatWidget.prototype.populateModelDropdown = function() {
+	var dropdown = this.modelDropdown;
+	var self = this;
+	dropdown.innerHTML = "";
+
+	var orchestrator = this.getOrchestratorModule();
+	var providers = orchestrator.getConfiguredProviders();
+
+	if (providers.length === 0) {
+		dropdown.textContent = "No providers configured";
+		return;
+	}
+
+	var hasModels = false;
+	for (var p = 0; p < providers.length; p++) {
+		var provName = providers[p];
+		var models = orchestrator.getCachedModels(provName);
+
+		if (models.length === 0) continue;
+		hasModels = true;
+
+		var header = this.document.createElement("div");
+		header.className = "llm-model-selector-provider-header";
+		header.textContent = provName;
+		dropdown.appendChild(header);
+
+		for (var m = 0; m < models.length; m++) {
+			var item = this.document.createElement("div");
+			item.className = "llm-model-selector-item";
+			if (models[m].id === self.model && provName === self.provider) {
+				item.classList.add("llm-model-selector-item-active");
+			}
+			item.textContent = models[m].label;
+			item.setAttribute("data-provider", provName);
+			item.setAttribute("data-model", models[m].id);
+			item.addEventListener("click", function() {
+				var prov = this.getAttribute("data-provider");
+				var mod = this.getAttribute("data-model");
+				self.wiki.setText("$:/config/rimir/llm-connect/provider", "text", null, prov);
+				self.wiki.setText("$:/config/rimir/llm-connect/providers/" + prov + "/model", "text", null, mod);
+				self.provider = prov;
+				self.model = mod;
+				self.updateModelDisplay();
+				self.modelDropdown.style.display = "none";
+			});
+			dropdown.appendChild(item);
+		}
+	}
+
+	if (!hasModels) {
+		var fetchBtn = this.document.createElement("div");
+		fetchBtn.className = "llm-model-selector-empty llm-model-selector-fetch";
+		fetchBtn.textContent = "No models cached — click to fetch";
+		fetchBtn.style.cursor = "pointer";
+		fetchBtn.addEventListener("click", function(e) {
+			e.stopPropagation();
+			fetchBtn.textContent = "Fetching models…";
+			fetchBtn.style.cursor = "default";
+			var promises = [];
+			for (var i = 0; i < providers.length; i++) {
+				promises.push(orchestrator.fetchModels(providers[i]));
+			}
+			Promise.all(promises).then(function() {
+				self.populateModelDropdown();
+			}).catch(function() {
+				self.populateModelDropdown();
+			});
+		});
+		dropdown.appendChild(fetchBtn);
+	}
+};
+
+LlmChatWidget.prototype.updateModelDisplay = function() {
+	if (!this.modelBtn) return;
+	var msgs = this.getMessages();
+	var locked = msgs.length > 0;
+	this.modelBtn.textContent = this.provider + " / " + this.model + (locked ? " \uD83D\uDD12" : "");
+	this.modelBtn.title = locked ? "Model locked for this conversation \u2014 clear chat to switch" : "Click to select model";
+	this.modelBtn.style.cursor = locked ? "default" : "pointer";
+	if (locked) {
+		this.modelBtn.classList.add("llm-model-selector-btn-locked");
+	} else {
+		this.modelBtn.classList.remove("llm-model-selector-btn-locked");
+	}
+};
+
 LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 	if (changedTiddlers[this.chatTiddler]) {
 		this.renderMessages(this.messagesDiv);
+	}
+	// Update provider/model display if config changed — but only if chat is empty (not locked)
+	var msgs = this.getMessages();
+	if (msgs.length === 0 &&
+		(changedTiddlers["$:/config/rimir/llm-connect/provider"] ||
+		changedTiddlers["$:/config/rimir/llm-connect/providers/" + this.provider + "/model"])) {
+		var config = this.getOrchestratorModule().getProviderConfig();
+		this.provider = config.provider;
+		this.model = config.model;
+		this.updateModelDisplay();
 	}
 	return false;
 };

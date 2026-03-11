@@ -1,26 +1,26 @@
 /*\
-title: $:/plugins/rimir/llm-connect/adapter-openai
+title: $:/plugins/rimir/llm-connect/adapter-azure
 type: application/javascript
 module-type: library
 
-OpenAI API adapter
+Azure OpenAI API adapter
 
 \*/
 (function() {
 
 "use strict";
 
-exports.name = "openai";
+exports.name = "azure";
 
 exports.buildRequest = function(messages, tools, config) {
-	var apiKey = config.apiKey;
-	var model = config.model || "gpt-4o";
+	var endpoint = (config.endpoint || "").replace(/\/+$/, "");
+	var deployment = config.deployment || "";
+	var apiVersion = config.apiVersion || "2024-10-21";
 	var maxTokens = parseInt(config.maxTokens) || 4096;
 
 	var openaiMessages = convertMessages(messages, config.systemPrompt);
 
 	var body = {
-		model: model,
 		max_completion_tokens: maxTokens,
 		messages: openaiMessages
 	};
@@ -39,9 +39,9 @@ exports.buildRequest = function(messages, tools, config) {
 	}
 
 	return {
-		url: "https://api.openai.com/v1/chat/completions",
+		url: endpoint + "/openai/deployments/" + deployment + "/chat/completions?api-version=" + apiVersion,
 		headers: {
-			"Authorization": "Bearer " + apiKey,
+			"api-key": config.apiKey,
 			"Content-Type": "application/json"
 		},
 		body: JSON.stringify(body)
@@ -102,18 +102,18 @@ exports.buildAssistantMessage = function(parsed) {
 };
 
 exports.buildModelListRequest = function(config) {
+	var endpoint = (config.endpoint || "").replace(/\/+$/, "");
+	var apiVersion = config.apiVersion || "2024-10-21";
 	return {
-		url: "https://api.openai.com/v1/models",
-		headers: { "Authorization": "Bearer " + config.apiKey }
+		url: endpoint + "/openai/models?api-version=" + apiVersion,
+		headers: { "api-key": config.apiKey }
 	};
 };
 
 exports.parseModelListResponse = function(responseText) {
 	var data = JSON.parse(responseText);
 	return (data.data || [])
-		.filter(function(m) {
-			return /^(gpt-|o[134]-|chatgpt-)/.test(m.id) && !/(-instruct|-realtime|-audio|-transcri)/.test(m.id);
-		})
+		.filter(function(m) { return m.capabilities && m.capabilities.chat_completion; })
 		.map(function(m) { return { id: m.id, label: m.id }; })
 		.sort(function(a, b) { return a.label.localeCompare(b.label); });
 };
