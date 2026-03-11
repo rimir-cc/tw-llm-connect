@@ -54,10 +54,18 @@ exports.getToolDefinitions = function(filter, activeTitles) {
 	return tools;
 };
 
-exports.executeTool = function(toolCall) {
+exports.executeTool = function(toolCall, protectionFilter) {
 	var toolTiddler = exports.findToolByName(toolCall.name);
 	if (!toolTiddler) {
 		return "Error: Unknown tool: " + toolCall.name;
+	}
+
+	// Check title-based protection
+	if (protectionFilter && toolCall.input && toolCall.input.title) {
+		var protectedTitles = $tw.wiki.filterTiddlers(protectionFilter);
+		if (protectedTitles.indexOf(toolCall.input.title) !== -1) {
+			return "Error: Access denied \u2014 tiddler '" + toolCall.input.title + "' is protected by filter rules";
+		}
 	}
 
 	var mode = toolTiddler.fields["tool-mode"] || "read";
@@ -70,7 +78,7 @@ exports.executeTool = function(toolCall) {
 
 	var result;
 	try {
-		result = executeWikitext(wikitext, toolCall.input, mode);
+		result = executeWikitext(wikitext, toolCall.input, mode, protectionFilter);
 	} catch(e) {
 		result = "Error: " + (e.message || String(e));
 	}
@@ -85,16 +93,91 @@ exports.executeTool = function(toolCall) {
 	return result;
 };
 
-function executeWikitext(wikitext, input, mode) {
+function createRestrictedWiki(protectionFilter) {
+	if (!protectionFilter) return $tw.wiki;
+	var protectedArray = $tw.wiki.filterTiddlers(protectionFilter);
+	if (protectedArray.length === 0) return $tw.wiki;
+
+	var protectedSet = Object.create(null);
+	for (var i = 0; i < protectedArray.length; i++) {
+		protectedSet[protectedArray[i]] = true;
+	}
+
+	var wiki = Object.create($tw.wiki);
+
+	wiki.getTiddler = function(title) {
+		if (protectedSet[title]) return undefined;
+		return $tw.wiki.getTiddler(title);
+	};
+
+	wiki.getTiddlerText = function(title, defaultText) {
+		if (protectedSet[title]) return defaultText !== undefined ? defaultText : undefined;
+		return $tw.wiki.getTiddlerText(title, defaultText);
+	};
+
+	wiki.tiddlerExists = function(title) {
+		if (protectedSet[title]) return false;
+		return $tw.wiki.tiddlerExists(title);
+	};
+
+	wiki.isShadowTiddler = function(title) {
+		if (protectedSet[title]) return false;
+		return $tw.wiki.isShadowTiddler(title);
+	};
+
+	wiki.filterTiddlers = function(filter, widget, source) {
+		var results = $tw.wiki.filterTiddlers(filter, widget, source);
+		return results.filter(function(title) {
+			return !protectedSet[title];
+		});
+	};
+
+	wiki.each = function(callback) {
+		$tw.wiki.each(function(tiddler, title) {
+			if (!protectedSet[title]) {
+				callback(tiddler, title);
+			}
+		});
+	};
+
+	wiki.forEachTiddler = function(options, callback) {
+		if (typeof options === "function") {
+			callback = options;
+			options = undefined;
+		}
+		$tw.wiki.forEachTiddler(options, function(tiddler, title) {
+			if (!protectedSet[title]) {
+				callback(tiddler, title);
+			}
+		});
+	};
+
+	wiki.addTiddler = function(tiddler) {
+		var title = typeof tiddler === "string" ? tiddler : (tiddler.fields ? tiddler.fields.title : tiddler.title);
+		if (protectedSet[title]) return;
+		return $tw.wiki.addTiddler(tiddler);
+	};
+
+	wiki.deleteTiddler = function(title) {
+		if (protectedSet[title]) return;
+		return $tw.wiki.deleteTiddler(title);
+	};
+
+	return wiki;
+}
+
+function executeWikitext(wikitext, input, mode, protectionFilter) {
 	var variables = {};
 	for (var key in input) {
 		if (input.hasOwnProperty(key)) {
 			variables[key] = typeof input[key] === "object" ? JSON.stringify(input[key]) : String(input[key]);
 		}
 	}
+	variables.protectionFilter = protectionFilter || "";
 
-	var parser = $tw.wiki.parseText("text/vnd.tiddlywiki", wikitext);
-	var widgetNode = $tw.wiki.makeWidget(parser, {
+	var wiki = createRestrictedWiki(protectionFilter);
+	var parser = wiki.parseText("text/vnd.tiddlywiki", wikitext);
+	var widgetNode = wiki.makeWidget(parser, {
 		document: $tw.fakeDocument,
 		variables: variables
 	});

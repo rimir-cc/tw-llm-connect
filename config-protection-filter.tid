@@ -1,0 +1,3 @@
+title: $:/config/rimir/llm-connect/protection-filter
+
+[tag[sensitive]] [all[shadows+tiddlers]prefix[$:/plugins/rimir/]]

@@ -61,6 +61,37 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	});
 	inputArea.appendChild(textarea);
 
+	// Protection filter row (hidden by default)
+	var protectionRow = this.document.createElement("div");
+	protectionRow.className = "llm-chat-protection-row";
+	protectionRow.style.display = "none";
+	this.protectionRow = protectionRow;
+
+	var protectionInput = this.document.createElement("input");
+	protectionInput.className = "llm-chat-protection-input";
+	protectionInput.type = "text";
+	protectionInput.placeholder = "e.g. [tag[sensitive]] [prefix[Private/]]";
+	// Load existing per-chat filter
+	if (this.chatTiddler) {
+		var protTid = this.wiki.getTiddler(this.chatTiddler);
+		if (protTid) protectionInput.value = protTid.fields["llm-protection-filter"] || "";
+	}
+	this.protectionInput = protectionInput;
+	protectionInput.addEventListener("change", function() {
+		if (self.chatTiddler) {
+			var fields = { title: self.chatTiddler, "llm-protection-filter": protectionInput.value };
+			var existing = self.wiki.getTiddler(self.chatTiddler);
+			if (existing) fields = $tw.utils.extend({}, existing.fields, fields);
+			self.wiki.addTiddler(new $tw.Tiddler(fields));
+		}
+	});
+	var protectionLabel = this.document.createElement("span");
+	protectionLabel.className = "llm-chat-protection-label";
+	protectionLabel.textContent = "Protect:";
+	protectionRow.appendChild(protectionLabel);
+	protectionRow.appendChild(protectionInput);
+	inputArea.appendChild(protectionRow);
+
 	var buttonRow = this.document.createElement("div");
 	buttonRow.className = "llm-chat-button-row";
 
@@ -105,6 +136,17 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	});
 
 	buttonRow.appendChild(modelSelector);
+
+	// Shield icon to toggle protection filter
+	var shieldBtn = this.document.createElement("button");
+	shieldBtn.className = "llm-chat-btn-shield";
+	shieldBtn.textContent = "\uD83D\uDEE1\uFE0F";
+	shieldBtn.title = "Toggle per-chat tiddler protection filter";
+	shieldBtn.addEventListener("click", function() {
+		var visible = protectionRow.style.display !== "none";
+		protectionRow.style.display = visible ? "none" : "flex";
+	});
+	buttonRow.appendChild(shieldBtn);
 
 	var stopBtn = this.document.createElement("button");
 	stopBtn.className = "llm-chat-btn llm-chat-btn-stop";
@@ -372,12 +414,22 @@ LlmChatWidget.prototype.sendMessage = function() {
 		tools = toolExecutor.getToolDefinitions(this.toolsFilter, activeTitles);
 	}
 
+	// Compute protection filter (base + per-chat)
+	var baseProtection = this.wiki.getTiddlerText("$:/config/rimir/llm-connect/protection-filter") || "";
+	var chatProtection = "";
+	if (this.chatTiddler) {
+		var protChatTid = this.wiki.getTiddler(this.chatTiddler);
+		if (protChatTid) chatProtection = protChatTid.fields["llm-protection-filter"] || "";
+	}
+	var protectionFilter = (baseProtection + " " + chatProtection).trim();
+
 	orchestrator.runConversation({
 		messages: messages,
 		tools: tools,
 		config: config,
 		adapter: adapter,
 		toolExecutor: toolExecutor,
+		protectionFilter: protectionFilter,
 		signal: this.abortController.signal,
 		onUpdate: function(msgs) {
 			self.saveMessages(msgs);

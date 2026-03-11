@@ -14,6 +14,7 @@ Connect TiddlyWiki to Claude, OpenAI, Azure, and other LLM APIs — the wiki act
 - **Per-chat tool selection** — wrench icon opens a dropdown to toggle individual tools per chat; tool groups as quick presets
 - **Context templates** — wikitext templates that render input for the LLM from one or more source tiddlers
 - **Output targets** — write LLM responses to fields, new tiddlers, or just display in chat
+- **Tiddler protection** — restricted wiki proxy makes protected tiddlers invisible to all tool wikitext; default filter protects `[tag[sensitive]]` and all rimir plugin internals (`$:/plugins/rimir/`); configurable in settings with reset-to-default + per-chat filter via shield icon
 - **Audit logging** — write operations (set-field, create, delete) execute immediately with an audit log
 
 ## Prerequisites

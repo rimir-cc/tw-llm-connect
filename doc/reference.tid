@@ -150,6 +150,7 @@ type: text/vnd.tiddlywiki
 |`$:/config/rimir/llm-connect/providers/<name>/model` |varies |Model ID |
 |`$:/config/rimir/llm-connect/providers/<name>/max-tokens` |`4096` |Max response tokens |
 |`$:/config/rimir/llm-connect/system-prompt` |default text |Global system prompt |
+|`$:/config/rimir/llm-connect/protection-filter` |`[tag[sensitive]] [all[shadows+tiddlers]prefix[$:/plugins/rimir/]]` |Protection filter — matched tiddlers are invisible to LLM tools. Resettable to default in settings |
 |`$:/config/rimir/llm-connect/confirm-writes` |`yes` |Currently unused — writes execute immediately with audit log |
 |`$:/config/rimir/llm-connect/max-tool-result-length` |`4000` |Truncation limit |
 |`$:/config/rimir/llm-connect/default-context-template` | |Global default template |

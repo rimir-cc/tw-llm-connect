@@ -82,6 +82,8 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 	}));
 
 	// Run the action
+	var baseProtection = this.wiki.getTiddlerText("$:/config/rimir/llm-connect/protection-filter") || "";
+
 	orchestrator.runAction({
 		prompt: prompt,
 		contextText: rendered.text,
@@ -89,7 +91,8 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 		tools: tools,
 		config: config,
 		adapter: adapter,
-		toolExecutor: toolExecutor
+		toolExecutor: toolExecutor,
+		protectionFilter: baseProtection
 	}).then(function(responseText) {
 		// Write output
 		self.writeOutput(responseText, rendered, templateTitle);
