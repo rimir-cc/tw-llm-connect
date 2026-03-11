@@ -6,5 +6,6 @@ type: text/vnd.tiddlywiki
 ! Changelog
 
 |!Version |!Date |!Changes |
+|v0.1.2 |2026-03-11 |Tool management settings UI — tool table with expand/collapse detail view (schema, wikitext body), inline editing for custom tools, clone tool, active/inactive toggle (`tool-enabled` field), completeness validation (incomplete tools cannot be activated or cloned). Fixed `get_tiddler` returning rendered content instead of raw source. Documented variables available in tool wikitext |
 |v0.1.1 |2026-03-11 |Wikitext-native tools — tool logic moved from hardcoded JS handlers into tiddler text fields (read mode: render wikitext, action mode: invoke action widgets). Replaced `tool-handler` with `tool-mode` field. Simplified `create_tiddler` schema (explicit `tags` param instead of generic `fields` object). Fixed `<%if%>`/`invokeActions` incompatibility in action tools by using `<$list>`+`emptyMessage` pattern |
 |v0.1.0 |2026-03-10 |Initial release — provider adapters (Claude, OpenAI), tool system (search, read, set-field, create, delete, navigate), orchestrator, chat widget, action widget, context templates, pair editing (toolbar button + embedded panel), draggable chat panel, audit logging for write operations, 12 bundled examples |

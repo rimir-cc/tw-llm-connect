@@ -66,7 +66,10 @@ Tag: `$:/tags/rimir/llm-connect/tool`
 |`tool-description` |Description sent to LLM |
 |`tool-schema` |JSON Schema for input parameters |
 |`tool-mode` |`read` — render wikitext, return text output. `action` — render + invoke action widgets, return confirmation text (audit logged) |
-|`text` (body) |Wikitext implementation. LLM input parameters available as variables (e.g. `<<title>>`, `<<filter>>`). For `read` tools, rendered output = tool result. For `action` tools, action widgets execute side effects and surrounding text = confirmation message |
+|`tool-enabled` |`yes` (default) / `no` — disabled tools are excluded from LLM tool lists and cannot be invoked. Use this to keep work-in-progress tools inactive |
+|`text` (body) |Wikitext implementation (see "Variables in tool wikitext" below). For `read` tools, rendered output = tool result. For `action` tools, action widgets execute side effects and surrounding text = confirmation message |
+
+A tool is considered ''complete'' when `tool-name`, `tool-schema`, and `text` (body) are all non-empty. Incomplete tools cannot be activated or cloned from the settings UI.
 
 !! Built-in tools
 
@@ -81,9 +84,22 @@ Tag: `$:/tags/rimir/llm-connect/tool`
 
 Action-mode tools (`set_field`, `create_tiddler`, `delete_tiddler`, `navigate_to_tiddler`) execute immediately and append an entry to the audit log at `$:/temp/rimir/llm-connect/write-log`.
 
+!! Variables in tool wikitext
+
+The property names from `tool-schema` become widget variables inside the tool's text body. For example, a schema with `"properties": {"title": ..., "filter": ...}` makes `<<title>>` and `<<filter>>` available.
+
+|!Schema property type |!Variable value |
+|`string` |The string as-is |
+|`number` |String representation |
+|`object` |JSON-serialized string |
+
+Variables for parameters the LLM did not provide resolve to empty string.
+
 !! Custom tools
 
-Create your own tool tiddler tagged `$:/tags/rimir/llm-connect/tool` with the fields above. The tiddler body contains wikitext that receives LLM inputs as variables:
+Create custom tools from the Settings > Tools panel using ''Create new tool'' or ''Clone'' (copy icon on any existing tool). Clones start disabled (`tool-enabled: no`) so you can edit them before activation.
+
+Alternatively, create a tool tiddler manually — tag it `$:/tags/rimir/llm-connect/tool` with the fields above. The tiddler body contains wikitext that receives LLM inputs as variables:
 
 ```
 title: $:/my-tools/get-tagged

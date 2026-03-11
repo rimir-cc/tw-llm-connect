@@ -16,7 +16,7 @@ exports.findToolByName = function(name) {
 	var tools = $tw.wiki.filterTiddlers("[all[shadows+tiddlers]tag[" + TAG_TOOL + "]]");
 	for (var i = 0; i < tools.length; i++) {
 		var tiddler = $tw.wiki.getTiddler(tools[i]);
-		if (tiddler && tiddler.fields["tool-name"] === name) {
+		if (tiddler && tiddler.fields["tool-name"] === name && tiddler.fields["tool-enabled"] !== "no") {
 			return tiddler;
 		}
 	}
@@ -36,7 +36,7 @@ exports.getToolDefinitions = function(filter) {
 	var tools = [];
 	for (var i = 0; i < titles.length; i++) {
 		var tiddler = $tw.wiki.getTiddler(titles[i]);
-		if (!tiddler) continue;
+		if (!tiddler || tiddler.fields["tool-enabled"] === "no") continue;
 		var schemaText = tiddler.fields["tool-schema"];
 		var schema;
 		try {

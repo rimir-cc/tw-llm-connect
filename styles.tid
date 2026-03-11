@@ -216,3 +216,112 @@ type: text/vnd.tiddlywiki
 	font-weight: bold;
 	font-size: 0.85em;
 }
+
+.llm-tool-schema-input {
+	min-height: 60px;
+	font-family: {{$:/themes/tiddlywiki/vanilla/settings/codefontfamily}};
+	font-size: 0.85em;
+}
+
+.llm-tool-body-input {
+	min-height: 80px;
+	font-family: {{$:/themes/tiddlywiki/vanilla/settings/codefontfamily}};
+	font-size: 0.85em;
+}
+
+/* Tool list */
+.llm-tool-table td {
+	vertical-align: middle;
+}
+
+.llm-tool-toggle-cell {
+	width: 1%;
+	white-space: nowrap;
+	padding-right: 0 !important;
+}
+
+.llm-tool-enabled-cell {
+	width: 1%;
+	text-align: center;
+}
+
+.llm-tool-actions-cell {
+	width: 1%;
+	white-space: nowrap;
+}
+
+.llm-tool-icon-btn {
+	padding: 2px 4px;
+	color: <<colour muted-foreground>>;
+	vertical-align: middle;
+}
+
+.llm-tool-icon-btn:hover {
+	color: <<colour foreground>>;
+}
+
+.llm-tool-row-disabled {
+	opacity: 0.5;
+}
+
+.llm-tool-divider td {
+	border-bottom: none !important;
+	padding-top: 12px !important;
+	padding-bottom: 2px !important;
+	border-top: 2px solid <<colour tiddler-border>>;
+}
+
+.llm-tool-badge-read {
+	background: <<colour primary>>;
+	color: <<colour background>>;
+}
+
+.llm-tool-badge-action {
+	background: #e67e22;
+	color: #fff;
+}
+
+.llm-tool-badge-incomplete {
+	background: <<colour muted-foreground>>;
+	color: <<colour background>>;
+	font-size: 0.75em;
+}
+
+.llm-tool-detail-cell {
+	padding: 0 !important;
+	background: <<colour page-background>>;
+}
+
+.llm-tool-detail {
+	margin: 6px 6px 6px 24px;
+	padding: 8px 12px;
+	background: <<colour tiddler-background>>;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 4px;
+	border-left: 3px solid <<colour primary>>;
+}
+
+.llm-tool-detail-section {
+	margin-bottom: 6px;
+}
+
+.llm-tool-detail-section:last-child {
+	margin-bottom: 0;
+}
+
+.llm-tool-detail-label {
+	margin-bottom: 2px;
+}
+
+.llm-tool-detail-code {
+	margin: 0;
+	padding: 6px 8px;
+	background: <<colour code-background>>;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 3px;
+	font-size: 0.82em;
+	white-space: pre-wrap;
+	word-break: break-all;
+	max-height: 200px;
+	overflow-y: auto;
+}

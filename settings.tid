@@ -3,6 +3,86 @@ modified: 20260310120000000
 title: $:/plugins/rimir/llm-connect/settings
 type: text/vnd.tiddlywiki
 
+\procedure llm-tool-row()
+<$let
+  detailState={{{ [[$:/state/rimir/llm-connect/tool-detail/]addsuffix<tool>] }}}
+  editState={{{ [[$:/state/rimir/llm-connect/tool-edit/]addsuffix<tool>] }}}
+  isEnabled={{{ [<tool>get[tool-enabled]else[yes]] }}}
+  isComplete={{{ [<tool>get[tool-name]minlength[1]] [<tool>get[tool-schema]minlength[1]] [<tool>get[text]minlength[1]] +[count[]match[3]then[yes]else[no]] }}}
+>
+<tr class={{{ [<isEnabled>match[no]then[llm-tool-row-disabled]] [<isComplete>match[no]then[llm-tool-row-disabled]] +[first[]] }}}>
+<td class="llm-tool-toggle-cell"><$button class="tc-btn-invisible llm-tool-toggle">
+<$action-setfield $tiddler=<<detailState>> text={{{ [<detailState>get[text]match[open]then[closed]else[open]] }}}/>
+<$reveal type="match" state=<<detailState>> text="open" tag="span">&#x25be;</$reveal><$reveal type="nomatch" state=<<detailState>> text="open" tag="span">&#x25b8;</$reveal>
+</$button></td>
+<td><code><$text text={{{ [<tool>get[tool-name]] }}}/></code><%if [<isComplete>match[no]] %> <span class="rr-badge-rect llm-tool-badge-incomplete">incomplete</span><%endif%></td>
+<td><span class={{{ [<tool>get[tool-mode]match[action]then[rr-badge-rect llm-tool-badge-action]else[rr-badge-rect llm-tool-badge-read]] }}}><$text text={{{ [<tool>get[tool-mode]] }}}/></span></td>
+<td><$text text={{{ [<tool>get[tool-description]] }}}/></td>
+<td class="llm-tool-enabled-cell"><%if [<isComplete>match[yes]] %><$checkbox tiddler=<<tool>> field="tool-enabled" checked="yes" unchecked="no" default="yes"/><%endif%></td>
+<td class="llm-tool-actions-cell">
+<%if [<isComplete>match[yes]] %>
+<$button class="tc-btn-invisible llm-tool-icon-btn" tooltip="Clone tool">
+<$action-setfield $tiddler="$:/temp/rimir/llm-connect/new-tool-form" show="yes" new-title={{{ [<tool>addsuffix[/clone]] }}} tool-name={{{ [<tool>get[tool-name]addsuffix[_clone]] }}} tool-description={{{ [<tool>get[tool-description]addprefix[Clone of: ]] }}} tool-mode={{{ [<tool>get[tool-mode]] }}} tool-schema={{{ [<tool>get[tool-schema]] }}} tool-text={{{ [<tool>get[text]] }}} tool-enabled="no"/>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+</$button>
+<%endif%>
+<%if [<tool>!is[shadow]] %>
+<$button class="tc-btn-invisible llm-tool-icon-btn" tooltip="Edit tool inline">
+<$action-setfield $tiddler=<<detailState>> text={{{ [<editState>get[text]match[yes]then[open]else[open]] }}}/>
+<$action-setfield $tiddler=<<editState>> text={{{ [<editState>get[text]match[yes]then[no]else[yes]] }}}/>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+</$button>
+<%endif%>
+</td>
+</tr>
+<$reveal type="match" state=<<detailState>> text="open" tag="tr">
+<td colspan="6" class="llm-tool-detail-cell">
+<div class="llm-tool-detail">
+<$reveal type="nomatch" state=<<editState>> text="yes">
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Tiddler</div>
+<div><$link to=<<tool>>><$text text=<<tool>>/></$link></div>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Schema</div>
+<pre class="llm-tool-detail-code"><$text text={{{ [<tool>get[tool-schema]] }}}/></pre>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Wikitext body</div>
+<pre class="llm-tool-detail-code"><$text text={{{ [<tool>get[text]] }}}/></pre>
+</div>
+</$reveal>
+<$reveal type="match" state=<<editState>> text="yes">
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Tool name</div>
+<$edit-text tiddler=<<tool>> field="tool-name" tag="input" class="rr-input" size="30"/>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Description</div>
+<$edit-text tiddler=<<tool>> field="tool-description" tag="input" class="rr-input" size="60"/>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Mode</div>
+<$select tiddler=<<tool>> field="tool-mode">
+<option value="read">read</option>
+<option value="action">action</option>
+</$select>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Schema (JSON)</div>
+<$edit-text tiddler=<<tool>> field="tool-schema" tag="textarea" class="rr-textarea llm-tool-schema-input"/>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Wikitext body</div>
+<$edit-text tiddler=<<tool>> field="text" tag="textarea" class="rr-textarea llm-tool-body-input"/>
+</div>
+</$reveal>
+</div>
+</td>
+</$reveal>
+</$let>
+\end
+
 !! Provider
 
 <div class="rr-input-row">
@@ -59,3 +139,90 @@ Default context template: <$edit-text tiddler="$:/config/rimir/llm-connect/defau
 !! System prompt
 
 <$edit-text tiddler="$:/config/rimir/llm-connect/system-prompt" class="rr-textarea" tag="textarea" default="You are a helpful TiddlyWiki assistant. You can search, read, and modify tiddlers using the available tools."/>
+
+!! Tools
+
+<$let newToolState="$:/temp/rimir/llm-connect/new-tool-form">
+
+<table class="rr-table llm-tool-table">
+<tr><th></th><th>Name</th><th>Mode</th><th>Description</th><th>Active</th><th>Actions</th></tr>
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]is[shadow]sort[tool-name]]" variable="tool">
+<<llm-tool-row>>
+</$list>
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!is[shadow]limit[1]]" variable="_">
+<tr class="llm-tool-divider"><td colspan="6"><span class="rr-muted rr-small">Custom tools</span></td></tr>
+</$list>
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!is[shadow]sort[tool-name]]" variable="tool">
+<<llm-tool-row>>
+</$list>
+</table>
+
+<$reveal type="nomatch" stateTitle=<<newToolState>> stateField="show" text="yes">
+<$button class="tc-btn-big-green" style="margin-top:8px;">
+<$action-setfield $tiddler=<<newToolState>> show="yes" tool-name="" tool-description="" tool-mode="read" tool-schema='{&#34;type&#34;:&#34;object&#34;,&#34;properties&#34;:{},&#34;required&#34;:[]}' tool-text="" new-title="" tool-enabled="no"/>
+Create new tool
+</$button>
+</$reveal>
+
+<$reveal type="match" stateTitle=<<newToolState>> stateField="show" text="yes" animate="yes">
+<div class="llm-tool-form rr-panel" style="margin-top:8px;">
+<div class="rr-panel-body">
+
+<div class="rr-input-row">
+Tiddler title: <$edit-text tiddler=<<newToolState>> field="new-title" tag="input" class="rr-input" size="50" placeholder="$:/my-tools/tool-name"/>
+</div>
+
+<div class="rr-input-row">
+Tool name: <$edit-text tiddler=<<newToolState>> field="tool-name" tag="input" class="rr-input" size="30" placeholder="my_tool_name"/> <span class="rr-muted">identifier sent to LLM (e.g. `get_tagged`)</span>
+</div>
+
+<div class="rr-input-row">
+Description: <$edit-text tiddler=<<newToolState>> field="tool-description" tag="input" class="rr-input" size="50" placeholder="What this tool does"/>
+</div>
+
+<div class="rr-input-row">
+Mode: <$select tiddler=<<newToolState>> field="tool-mode" default="read">
+<option value="read">read — render wikitext, return text output</option>
+<option value="action">action — execute action widgets + return confirmation</option>
+</$select>
+</div>
+
+<div class="rr-input-row">
+Schema (JSON):
+<$edit-text tiddler=<<newToolState>> field="tool-schema" tag="textarea" class="rr-textarea llm-tool-schema-input" placeholder='{"type":"object","properties":{"param":{"type":"string"}},"required":["param"]}'/>
+</div>
+
+<div class="rr-input-row">
+Wikitext body:
+<$edit-text tiddler=<<newToolState>> field="tool-text" tag="textarea" class="rr-textarea llm-tool-body-input" placeholder="<$list filter=<<param>>>..."/>
+</div>
+
+<div class="rr-input-row" style="display:flex;gap:8px;justify-content:flex-end;">
+<$button class="tc-btn-big-green">
+<$let targetTitle={{{ [<newToolState>get[new-title]] }}}>
+<$action-setfield
+  $tiddler=<<targetTitle>>
+  tool-name={{{ [<newToolState>get[tool-name]] }}}
+  tool-description={{{ [<newToolState>get[tool-description]] }}}
+  tool-mode={{{ [<newToolState>get[tool-mode]] }}}
+  tool-schema={{{ [<newToolState>get[tool-schema]] }}}
+  tool-enabled={{{ [<newToolState>get[tool-enabled]] }}}
+  text={{{ [<newToolState>get[tool-text]] }}}
+  type="text/vnd.tiddlywiki"
+/>
+<$action-listops $tiddler=<<targetTitle>> $tags="$:/tags/rimir/llm-connect/tool"/>
+</$let>
+<$action-deletetiddler $tiddler=<<newToolState>>/>
+Create
+</$button>
+<$button>
+<$action-deletetiddler $tiddler=<<newToolState>>/>
+Cancel
+</$button>
+</div>
+
+</div>
+</div>
+</$reveal>
+
+</$let>

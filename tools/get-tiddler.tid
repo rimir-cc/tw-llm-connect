@@ -6,5 +6,5 @@ tool-schema: {"type":"object","properties":{"title":{"type":"string","descriptio
 tool-mode: read
 type: text/vnd.tiddlywiki
 
-<%if [<title>match[]] %>Error: Missing 'title' parameter<%else%><%if [<title>!is[tiddler]!is[shadow]] %>Error: Tiddler not found: <<title>><%else%><$list filter="[<title>fields[]sort[]]" variable="field"><$text text=<<field>>/>: <$transclude $tiddler=<<title>> $field=<<field>> mode="inline"/>
+<%if [<title>match[]] %>Error: Missing 'title' parameter<%else%><%if [<title>!is[tiddler]!is[shadow]] %>Error: Tiddler not found: <<title>><%else%><$list filter="[<title>fields[]sort[]]" variable="field"><$text text=<<field>>/>: <$text text={{{ [<title>get<field>] }}}/>
 </$list><%endif%><%endif%>
