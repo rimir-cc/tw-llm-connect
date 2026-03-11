@@ -305,7 +305,14 @@ LlmChatWidget.prototype.sendMessage = function() {
 	var adapter = orchestrator.getAdapter(config.provider);
 	var tools = [];
 	if (this.toolsFilter) {
-		tools = toolExecutor.getToolDefinitions(this.toolsFilter);
+		var chatTid = this.wiki.getTiddler(this.chatTiddler);
+		var activeTitles;
+		if (chatTid && chatTid.fields["llm-tools-init"] === "yes") {
+			activeTitles = $tw.utils.parseStringArray(chatTid.fields["llm-active-tools"] || "");
+		} else {
+			activeTitles = $tw.wiki.filterTiddlers("[all[shadows]tag[$:/tags/rimir/llm-connect/tool]]");
+		}
+		tools = toolExecutor.getToolDefinitions(this.toolsFilter, activeTitles);
 	}
 
 	orchestrator.runConversation({

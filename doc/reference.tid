@@ -67,7 +67,29 @@ Tag: `$:/tags/rimir/llm-connect/tool`
 |`tool-schema` |JSON Schema for input parameters |
 |`tool-mode` |`read` — render wikitext, return text output. `action` — render + invoke action widgets, return confirmation text (audit logged) |
 |`tool-enabled` |`yes` (default) / `no` — disabled tools are excluded from LLM tool lists and cannot be invoked. Use this to keep work-in-progress tools inactive |
-|`text` (body) |Wikitext implementation (see "Variables in tool wikitext" below). For `read` tools, rendered output = tool result. For `action` tools, action widgets execute side effects and surrounding text = confirmation message |
+
+!! Per-chat tool selection
+
+Each chat instance stores its active tools in the `llm-active-tools` field on its chat tiddler (a TiddlyWiki title list). Click the wrench icon in the chat header to open the tool selector:
+
+* ''All / None'' — quick select/deselect all tools
+* ''Group buttons'' — apply a tool group preset (replaces current selection)
+* ''Checkboxes'' — toggle individual tools; hover for description
+
+When `llm-active-tools` is not set, all built-in (shadow) tools are used by default. On first open, the selector initializes with built-in tools checked. The dropdown closes automatically when clicking outside it.
+
+The orchestrator enforces tool selection at execution time — even if the LLM attempts to call a tool not in the active set, the call is rejected with an error message.
+
+!! Tool groups
+
+Tag: `$:/tags/rimir/llm-connect/tool-group`
+
+|!Field |!Description |
+|`group-name` |Display name shown in the tool selector |
+|`group-description` |Tooltip text when hovering the group button |
+|`group-tools` |TiddlyWiki title list of tool tiddler titles included in this group |
+
+Groups are presets — clicking a group button in the tool selector replaces the chat's active tools with the group's tool set. Create and manage groups in Settings > Tool Groups.
 
 A tool is considered ''complete'' when `tool-name`, `tool-schema`, and `text` (body) are all non-empty. Incomplete tools cannot be activated or cloned from the settings UI.
 
@@ -131,6 +153,8 @@ type: text/vnd.tiddlywiki
 |`$:/config/rimir/llm-connect/confirm-writes` |`yes` |Currently unused — writes execute immediately with audit log |
 |`$:/config/rimir/llm-connect/max-tool-result-length` |`4000` |Truncation limit |
 |`$:/config/rimir/llm-connect/default-context-template` | |Global default template |
+
+The `llm-active-tools` field on each chat tiddler controls per-chat tool selection. This is a TiddlyWiki title list managed by the tool selector UI — not a config tiddler.
 
 </$fill>
 </$transclude>

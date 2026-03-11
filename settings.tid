@@ -226,3 +226,105 @@ Cancel
 </$reveal>
 
 </$let>
+
+!! Tool Groups
+
+<span class="rr-muted">Groups are presets that can be applied in the per-chat tool selector to quickly switch between tool sets.</span>
+
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool-group]sort[group-name]]" variable="group" emptyMessage="">
+<$let groupDetailState={{{ [[$:/state/rimir/llm-connect/group-detail/]addsuffix<group>] }}}>
+<div class="llm-group-entry">
+<div class="llm-group-header">
+<$button class="tc-btn-invisible llm-tool-toggle">
+<$action-setfield $tiddler=<<groupDetailState>> text={{{ [<groupDetailState>get[text]match[open]then[closed]else[open]] }}}/>
+<$reveal type="match" state=<<groupDetailState>> text="open" tag="span">&#x25be;</$reveal><$reveal type="nomatch" state=<<groupDetailState>> text="open" tag="span">&#x25b8;</$reveal>
+</$button>
+<strong><$text text={{{ [<group>get[group-name]] }}}/></strong>
+<span class="rr-muted rr-small">(<$text text={{{ [<group>get[group-tools]enlist-input[]count[]] }}}/> tools)</span>
+<$button class="tc-btn-invisible llm-tool-icon-btn rr-link-btn-danger" tooltip="Delete group">
+<$action-confirm $message="Delete this tool group?">
+<$action-deletetiddler $tiddler=<<group>>/>
+</$action-confirm>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+</$button>
+</div>
+<$reveal type="match" state=<<groupDetailState>> text="open" animate="yes">
+<div class="llm-group-detail">
+<div class="rr-input-row">
+Name: <$edit-text tiddler=<<group>> field="group-name" tag="input" class="rr-input" size="30"/>
+</div>
+<div class="rr-input-row">
+Description: <$edit-text tiddler=<<group>> field="group-description" tag="input" class="rr-input" size="50"/>
+</div>
+<div class="llm-group-tools-grid">
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]sort[tool-name]]" variable="tool">
+<label class="llm-group-tool-item" title={{{ [<tool>get[tool-description]] }}}>
+<$checkbox tiddler=<<group>> listField="group-tools" checked=<<tool>>/> <$text text={{{ [<tool>get[tool-name]] }}}/>
+</label>
+</$list>
+</div>
+</div>
+</$reveal>
+</div>
+</$let>
+</$list>
+
+<$let newGroupState="$:/temp/rimir/llm-connect/new-group-form">
+
+<$reveal type="nomatch" stateTitle=<<newGroupState>> stateField="show" text="yes">
+<$button class="tc-btn-big-green" style="margin-top:8px;">
+<$action-setfield $tiddler=<<newGroupState>> show="yes" group-name="" group-description="" new-title="" group-tools=""/>
+Create new group
+</$button>
+</$reveal>
+
+<$reveal type="match" stateTitle=<<newGroupState>> stateField="show" text="yes" animate="yes">
+<div class="llm-tool-form rr-panel" style="margin-top:8px;">
+<div class="rr-panel-body">
+
+<div class="rr-input-row">
+Tiddler title: <$edit-text tiddler=<<newGroupState>> field="new-title" tag="input" class="rr-input" size="50" placeholder="$:/config/rimir/llm-connect/groups/my-group"/>
+</div>
+
+<div class="rr-input-row">
+Group name: <$edit-text tiddler=<<newGroupState>> field="group-name" tag="input" class="rr-input" size="30" placeholder="My Group"/>
+</div>
+
+<div class="rr-input-row">
+Description: <$edit-text tiddler=<<newGroupState>> field="group-description" tag="input" class="rr-input" size="50" placeholder="Optional description"/>
+</div>
+
+<div class="rr-input-row">Tools:</div>
+<div class="llm-group-tools-grid">
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]sort[tool-name]]" variable="tool">
+<label class="llm-group-tool-item" title={{{ [<tool>get[tool-description]] }}}>
+<$checkbox tiddler=<<newGroupState>> listField="group-tools" checked=<<tool>>/> <$text text={{{ [<tool>get[tool-name]] }}}/>
+</label>
+</$list>
+</div>
+
+<div class="rr-input-row" style="display:flex;gap:8px;justify-content:flex-end;">
+<$button class="tc-btn-big-green">
+<$let targetTitle={{{ [<newGroupState>get[new-title]] }}}>
+<$action-setfield
+  $tiddler=<<targetTitle>>
+  group-name={{{ [<newGroupState>get[group-name]] }}}
+  group-description={{{ [<newGroupState>get[group-description]] }}}
+  group-tools={{{ [<newGroupState>get[group-tools]] }}}
+/>
+<$action-listops $tiddler=<<targetTitle>> $tags="$:/tags/rimir/llm-connect/tool-group"/>
+</$let>
+<$action-deletetiddler $tiddler=<<newGroupState>>/>
+Create
+</$button>
+<$button>
+<$action-deletetiddler $tiddler=<<newGroupState>>/>
+Cancel
+</$button>
+</div>
+
+</div>
+</div>
+</$reveal>
+
+</$let>

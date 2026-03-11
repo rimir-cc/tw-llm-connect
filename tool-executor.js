@@ -23,7 +23,7 @@ exports.findToolByName = function(name) {
 	return null;
 };
 
-exports.getToolDefinitions = function(filter) {
+exports.getToolDefinitions = function(filter, activeTitles) {
 	var titles;
 	if (filter) {
 		if (filter.indexOf("all[") === -1) {
@@ -37,6 +37,7 @@ exports.getToolDefinitions = function(filter) {
 	for (var i = 0; i < titles.length; i++) {
 		var tiddler = $tw.wiki.getTiddler(titles[i]);
 		if (!tiddler || tiddler.fields["tool-enabled"] === "no") continue;
+		if (activeTitles && activeTitles.indexOf(titles[i]) === -1) continue;
 		var schemaText = tiddler.fields["tool-schema"];
 		var schema;
 		try {

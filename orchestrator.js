@@ -56,6 +56,15 @@ exports.runConversation = function(options) {
 	var onUpdate = options.onUpdate || function() {};
 	var onError = options.onError || function() {};
 
+	// Build allowed tool names set for execution-time enforcement
+	var allowedToolNames = null;
+	if (tools.length > 0) {
+		allowedToolNames = {};
+		for (var t = 0; t < tools.length; t++) {
+			allowedToolNames[tools[t].name] = true;
+		}
+	}
+
 	return new Promise(function(resolve, reject) {
 		var iteration = 0;
 
@@ -90,10 +99,15 @@ exports.runConversation = function(options) {
 					// Add assistant message with tool calls
 					messages.push(adapter.buildAssistantMessage(parsed));
 
-					// Execute each tool call
+					// Execute each tool call (enforce allowed set)
 					for (var i = 0; i < parsed.toolCalls.length; i++) {
 						var tc = parsed.toolCalls[i];
-						var result = toolExecutor.executeTool(tc);
+						var result;
+						if (allowedToolNames && !allowedToolNames[tc.name]) {
+							result = "Error: Tool not available in current chat: " + tc.name;
+						} else {
+							result = toolExecutor.executeTool(tc);
+						}
 						messages.push(adapter.buildToolResult(tc.id, result));
 					}
 

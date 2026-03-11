@@ -10,6 +10,7 @@ Connect TiddlyWiki to Claude, OpenAI, and other LLM APIs — the wiki acts as th
 - **Pair editing** — toolbar button opens an embedded chat panel on any tiddler for collaborative editing with the LLM
 - **Provider adapters** — Claude and OpenAI out of the box, extensible for other providers
 - **Tool system** — built-in tools for searching, reading, navigating, and modifying tiddlers; user-defined tools via wikitext
+- **Per-chat tool selection** — wrench icon opens a dropdown to toggle individual tools per chat; tool groups as quick presets
 - **Context templates** — wikitext templates that render input for the LLM from one or more source tiddlers
 - **Output targets** — write LLM responses to fields, new tiddlers, or just display in chat
 - **Audit logging** — write operations (set-field, create, delete) execute immediately with an audit log

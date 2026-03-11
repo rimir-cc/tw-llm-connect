@@ -1,12 +1,16 @@
 title: $:/plugins/rimir/llm-connect/ui/chat-panel
 tags: $:/tags/PageTemplate
 
+\import [[$:/plugins/rimir/llm-connect/ui/tool-selector]]
 \whitespace trim
 <$reveal state="$:/state/rimir/llm-connect/chat-open" type="match" text="yes" animate="yes">
 <div class="llm-chat-panel">
 <div class="llm-chat-panel-header">
 <span>LLM Chat</span>
+<span class="llm-chat-panel-header-actions">
+<<llm-tool-selector "$:/temp/rimir/llm-connect/toolbar-chat">>
 <$button set="$:/state/rimir/llm-connect/chat-open" setTo="no" class="tc-btn-invisible">&times;</$button>
+</span>
 </div>
 <$llm-chat
   chatTiddler="$:/temp/rimir/llm-connect/toolbar-chat"

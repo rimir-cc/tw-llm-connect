@@ -325,3 +325,117 @@ type: text/vnd.tiddlywiki
 	max-height: 200px;
 	overflow-y: auto;
 }
+
+/* Tool selector dropdown */
+.llm-tool-selector-wrapper {
+	position: relative;
+	display: inline-block;
+}
+
+.llm-tool-selector-btn {
+	padding: 2px 4px;
+	vertical-align: middle;
+}
+
+.llm-tool-selector-dropdown {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	z-index: 100;
+	background: <<colour tiddler-background>>;
+	color: <<colour foreground>>;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+	width: 220px;
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+.llm-tool-selector-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	padding: 6px 8px;
+	border-bottom: 1px solid <<colour tiddler-border>>;
+}
+
+.llm-tool-selector-action-btn {
+	padding: 2px 8px;
+	font-size: 0.8em;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 3px;
+	background: <<colour page-background>>;
+	cursor: pointer;
+}
+
+.llm-tool-selector-action-btn:hover {
+	background: <<colour tag-background>>;
+}
+
+.llm-tool-selector-group-btn {
+	border-color: <<colour primary>>;
+	color: <<colour primary>>;
+}
+
+.llm-tool-selector-list {
+	padding: 4px 8px;
+}
+
+.llm-tool-selector-item {
+	display: block;
+	padding: 2px 0;
+	cursor: pointer;
+	font-size: 0.85em;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.llm-tool-selector-item:hover {
+	background: <<colour tag-background>>;
+}
+
+.llm-tool-selector-bar {
+	margin-bottom: 4px;
+}
+
+/* Chat panel header actions */
+.llm-chat-panel-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+/* Tool groups in settings */
+.llm-group-entry {
+	border-bottom: 1px solid <<colour tiddler-border>>;
+	padding: 4px 0;
+}
+
+.llm-group-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.llm-group-detail {
+	margin: 6px 0 6px 24px;
+	padding: 8px 12px;
+	background: <<colour tiddler-background>>;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 4px;
+	border-left: 3px solid <<colour primary>>;
+}
+
+.llm-group-tools-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px 12px;
+}
+
+.llm-group-tool-item {
+	cursor: pointer;
+	font-size: 0.85em;
+	white-space: nowrap;
+}
