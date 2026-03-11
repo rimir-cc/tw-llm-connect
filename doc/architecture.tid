@@ -53,7 +53,7 @@ Write response to output target (field / new tiddler / display / filter)
 |`orchestrator.js` |library |Tool-use loop, conversation management, HTTP requests |
 |`adapter-claude.js` |library |Claude API: request building, response parsing, tool results |
 |`adapter-openai.js` |library |OpenAI API: same interface, different format |
-|`tool-executor.js` |library |Tool dispatch, built-in handlers, custom wikitext tools |
+|`tool-executor.js` |library |Tool dispatch — renders wikitext from tool tiddler text fields (`read` mode captures output, `action` mode invokes action widgets) |
 |`context-resolver.js` |library |Template precedence, rendering (text/markup), output target resolution |
 |`chat-widget.js` |widget |`<$llm-chat>` — chat UI, message management |
 |`action-widget.js` |widget |`<$llm-action>` — one-shot invocation, output writing |

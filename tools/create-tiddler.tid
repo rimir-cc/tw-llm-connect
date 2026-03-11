@@ -1,6 +1,9 @@
 title: $:/plugins/rimir/llm-connect/tools/create-tiddler
 tags: $:/tags/rimir/llm-connect/tool
 tool-name: create_tiddler
-tool-description: Create a new tiddler with the given title, text, and optional fields. Write operation — may require confirmation.
-tool-schema: {"type":"object","properties":{"title":{"type":"string","description":"Title for the new tiddler"},"text":{"type":"string","description":"Text content of the tiddler"},"fields":{"type":"object","description":"Additional fields as key-value pairs (e.g. tags, custom fields)"}},"required":["title"]}
-tool-handler: create-tiddler
+tool-description: Create a new tiddler with the given title, text, and optional tags. Use set_field to add other fields afterwards. Write operation.
+tool-schema: {"type":"object","properties":{"title":{"type":"string","description":"Title for the new tiddler"},"text":{"type":"string","description":"Text content of the tiddler"},"tags":{"type":"string","description":"Space-separated tags (use [[double brackets]] for multi-word tags)"}},"required":["title"]}
+tool-mode: action
+type: text/vnd.tiddlywiki
+
+<$list filter="[<title>minlength[1]]" variable="_" emptyMessage="Error: Missing 'title' parameter"><$action-setfield $tiddler=<<title>> text=<<text>> tags=<<tags>>/>Done — created tiddler '<<title>>'</$list>

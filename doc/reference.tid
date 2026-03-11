@@ -65,20 +65,39 @@ Tag: `$:/tags/rimir/llm-connect/tool`
 |`tool-name` |Name sent to LLM (e.g. `search_tiddlers`) |
 |`tool-description` |Description sent to LLM |
 |`tool-schema` |JSON Schema for input parameters |
-|`tool-handler` |`filter` / `get-tiddler` / `set-field` / `create-tiddler` / `delete-tiddler` / `navigate` / `wikitext-render` / `wikitext` |
+|`tool-mode` |`read` — render wikitext, return text output. `action` — render + invoke action widgets, return confirmation text (audit logged) |
+|`text` (body) |Wikitext implementation. LLM input parameters available as variables (e.g. `<<title>>`, `<<filter>>`). For `read` tools, rendered output = tool result. For `action` tools, action widgets execute side effects and surrounding text = confirmation message |
 
 !! Built-in tools
 
-|!Tool name |!Handler |!Description |
-|`search_tiddlers` |`filter` |Run a filter and return matching titles |
-|`get_tiddler` |`get-tiddler` |Read a tiddler's fields and text |
-|`set_field` |`set-field` |Set a field value on an existing tiddler (audit logged) |
-|`create_tiddler` |`create-tiddler` |Create a new tiddler (audit logged) |
-|`delete_tiddler` |`delete-tiddler` |Delete a tiddler (audit logged) |
-|`navigate_to_tiddler` |`navigate` |Open a tiddler in the story river so the user can see it |
-|`wikitext_render` |`wikitext-render` |Render wikitext and return the text output |
+|!Tool name |!Mode |!Description |
+|`search_tiddlers` |`read` |Run a filter and return matching titles with tags |
+|`get_tiddler` |`read` |Read a tiddler's fields and text |
+|`set_field` |`action` |Set a field value on an existing tiddler |
+|`create_tiddler` |`action` |Create a new tiddler with title, text, and optional tags |
+|`delete_tiddler` |`action` |Delete a tiddler |
+|`navigate_to_tiddler` |`action` |Open a tiddler in the story river so the user can see it |
+|`wikitext_render` |`read` |Render wikitext and return the text output |
 
-Write tools (`set_field`, `create_tiddler`, `delete_tiddler`) execute immediately and append an entry to the audit log at `$:/temp/rimir/llm-connect/write-log`.
+Action-mode tools (`set_field`, `create_tiddler`, `delete_tiddler`, `navigate_to_tiddler`) execute immediately and append an entry to the audit log at `$:/temp/rimir/llm-connect/write-log`.
+
+!! Custom tools
+
+Create your own tool tiddler tagged `$:/tags/rimir/llm-connect/tool` with the fields above. The tiddler body contains wikitext that receives LLM inputs as variables:
+
+```
+title: $:/my-tools/get-tagged
+tags: $:/tags/rimir/llm-connect/tool
+tool-name: get_tagged_tiddlers
+tool-description: Get all tiddlers with a specific tag
+tool-schema: {"type":"object","properties":{"tag":{"type":"string"}},"required":["tag"]}
+tool-mode: read
+type: text/vnd.tiddlywiki
+
+<$list filter="[tag<tag>]" variable="item">
+<$text text=<<item>>/>
+</$list>
+```
 
 !! Bundled context templates
 

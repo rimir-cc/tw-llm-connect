@@ -3,4 +3,7 @@ tags: $:/tags/rimir/llm-connect/tool
 tool-name: navigate_to_tiddler
 tool-description: Open a tiddler in the wiki's story river (the main content area) so the user can see it. Use this after searching or when the user asks to show/open a tiddler.
 tool-schema: {"type":"object","properties":{"title":{"type":"string","description":"The exact title of the tiddler to open"}},"required":["title"]}
-tool-handler: navigate
+tool-mode: action
+type: text/vnd.tiddlywiki
+
+<$list filter="[<title>is[tiddler]] [<title>is[shadow]] +[limit[1]]" variable="_" emptyMessage="Error: Tiddler not found"><$action-listops $tiddler="$:/StoryList" $field="list" $subfilter="+[prepend<title>unique[]]"/><$action-setfield $tiddler="$:/HistoryList" current-tiddler=<<title>>/>Opened tiddler: <<title>></$list>
