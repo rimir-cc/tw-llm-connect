@@ -193,6 +193,51 @@ exports.resolvePrompt = function(options) {
 	return "";
 };
 
+/*
+Resolve context attachments from a filter.
+Merges llm-context field on sourceTiddler + chatFilter (per-chat).
+Returns { textTitles: string[], fileParts: fileInfo[], renderText: function(title) }
+where fileInfo = { title, uri, mediaType, category, filename }
+*/
+exports.resolveContextAttachments = function(options) {
+	var sourceTiddler = options.sourceTiddler;
+	var chatFilter = options.chatFilter;
+	var templateTitle = options.templateTitle;
+
+	// Merge filters from tiddler field + per-chat input
+	var filters = [];
+	if (sourceTiddler) {
+		var tiddler = $tw.wiki.getTiddler(sourceTiddler);
+		if (tiddler && tiddler.fields["llm-context"]) {
+			filters.push(tiddler.fields["llm-context"]);
+		}
+	}
+	if (chatFilter && chatFilter.trim()) {
+		filters.push(chatFilter.trim());
+	}
+
+	if (filters.length === 0) {
+		return { textTitles: [], fileParts: [], renderText: renderTextForTitle };
+	}
+
+	var combined = filters.join(" ");
+	var titles = $tw.wiki.filterTiddlers(combined);
+
+	var fileResolver = require("$:/plugins/rimir/llm-connect/file-resolver");
+	var classified = fileResolver.classifyTitles(titles);
+
+	return {
+		textTitles: classified.textTitles,
+		fileParts: classified.fileParts,
+		renderText: renderTextForTitle
+	};
+};
+
+function renderTextForTitle(title) {
+	var text = $tw.wiki.getTiddlerText(title) || "";
+	return "=== " + title + " ===\n" + wikifyText(text, title);
+}
+
 function wikifyText(wikitext, currentTiddler) {
 	var parser = $tw.wiki.parseText("text/vnd.tiddlywiki", wikitext);
 	var variables = {};

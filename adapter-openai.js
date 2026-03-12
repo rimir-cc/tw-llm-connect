@@ -118,6 +118,22 @@ exports.parseModelListResponse = function(responseText) {
 		.sort(function(a, b) { return a.label.localeCompare(b.label); });
 };
 
+exports.buildFileBlock = function(fileData) {
+	if (fileData.category === "image") {
+		return {
+			type: "image_url",
+			image_url: { url: "data:" + fileData.mediaType + ";base64," + fileData.base64 }
+		};
+	}
+	if (fileData.category === "document") {
+		return {
+			type: "file",
+			file: { filename: fileData.filename, file_data: "data:" + fileData.mediaType + ";base64," + fileData.base64 }
+		};
+	}
+	return { type: "text", text: "[Unsupported file: " + fileData.filename + " (" + fileData.mediaType + ")]" };
+};
+
 function convertMessages(messages, systemPrompt) {
 	var result = [];
 	if (systemPrompt) {
@@ -150,18 +166,48 @@ function convertMessages(messages, systemPrompt) {
 			}
 			result.push(converted);
 		} else if (msg.role === "user" && Array.isArray(msg.content)) {
-			// Convert Claude-format tool_result messages to OpenAI format
-			for (var k = 0; k < msg.content.length; k++) {
-				var item = msg.content[k];
-				if (item.type === "tool_result") {
-					result.push({
-						role: "tool",
-						tool_call_id: item.tool_use_id,
-						content: typeof item.content === "string" ? item.content : JSON.stringify(item.content)
-					});
-				} else if (typeof item === "string") {
-					result.push({ role: "user", content: item });
+			// Check if this is a tool_result array or a multimodal content array
+			var hasToolResult = false;
+			var hasMultimodal = false;
+			for (var p = 0; p < msg.content.length; p++) {
+				if (msg.content[p].type === "tool_result") hasToolResult = true;
+				if (msg.content[p].type === "text" || msg.content[p].type === "image_url" || msg.content[p].type === "file" || msg.content[p].type === "image" || msg.content[p].type === "document") hasMultimodal = true;
+			}
+			if (hasToolResult) {
+				for (var k = 0; k < msg.content.length; k++) {
+					var item = msg.content[k];
+					if (item.type === "tool_result") {
+						result.push({
+							role: "tool",
+							tool_call_id: item.tool_use_id,
+							content: typeof item.content === "string" ? item.content : JSON.stringify(item.content)
+						});
+					} else if (typeof item === "string") {
+						result.push({ role: "user", content: item });
+					}
 				}
+			} else if (hasMultimodal) {
+				// Convert Claude-format image/document blocks to OpenAI format
+				var contentParts = [];
+				for (var m = 0; m < msg.content.length; m++) {
+					var block = msg.content[m];
+					if (block.type === "text") {
+						contentParts.push(block);
+					} else if (block.type === "image_url" || block.type === "file") {
+						contentParts.push(block);
+					} else if (block.type === "image" && block.source) {
+						contentParts.push({
+							type: "image_url",
+							image_url: { url: "data:" + block.source.media_type + ";base64," + block.source.data }
+						});
+					} else if (block.type === "document" && block.source) {
+						contentParts.push({
+							type: "file",
+							file: { filename: "document.pdf", file_data: "data:" + block.source.media_type + ";base64," + block.source.data }
+						});
+					}
+				}
+				result.push({ role: "user", content: contentParts });
 			}
 		} else {
 			result.push(msg);

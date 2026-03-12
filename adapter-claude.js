@@ -134,6 +134,22 @@ exports.parseModelListResponse = function(responseText) {
 		.sort(function(a, b) { return a.label.localeCompare(b.label); });
 };
 
+exports.buildFileBlock = function(fileData) {
+	if (fileData.category === "image") {
+		return {
+			type: "image",
+			source: { type: "base64", media_type: fileData.mediaType, data: fileData.base64 }
+		};
+	}
+	if (fileData.category === "document") {
+		return {
+			type: "document",
+			source: { type: "base64", media_type: fileData.mediaType, data: fileData.base64 }
+		};
+	}
+	return { type: "text", text: "[Unsupported file: " + fileData.filename + " (" + fileData.mediaType + ")]" };
+};
+
 function convertMessages(messages) {
 	var result = [];
 	for (var i = 0; i < messages.length; i++) {

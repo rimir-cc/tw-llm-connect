@@ -80,9 +80,15 @@ exports.runConversation = function(options) {
 			}
 			iteration++;
 
-			var request = adapter.buildRequest(messages, tools, config);
-
-			httpRequest(request, options.signal).then(function(responseText) {
+			// Resolve file_ref blocks before building the API request
+			exports.resolveFileRefs(messages, adapter).then(function(resolvedMessages) {
+				messages = resolvedMessages;
+				var request = adapter.buildRequest(messages, tools, config);
+				if (options.onRequest) {
+					try { options.onRequest(request); } catch(e) { /* ignore */ }
+				}
+				return httpRequest(request, options.signal);
+			}).then(function(responseText) {
 				var parsed;
 				try {
 					parsed = adapter.parseResponse(responseText);
@@ -145,10 +151,26 @@ exports.runAction = function(options) {
 	var messages = [];
 	var config = $tw.utils.extend({}, options.config);
 
-	// Inject context
+	// Inject context (may be string or multimodal content array)
 	if (options.contextText) {
 		if (options.injectAs === "system-prompt") {
-			config.systemPrompt = (config.systemPrompt ? config.systemPrompt + "\n\n" : "") + options.contextText;
+			// System prompt is always text — extract text from array if needed
+			var sysText = options.contextText;
+			if (Array.isArray(sysText)) {
+				var textParts = [];
+				for (var s = 0; s < sysText.length; s++) {
+					if (sysText[s].type === "text") textParts.push(sysText[s].text);
+				}
+				sysText = textParts.join("\n\n");
+			}
+			config.systemPrompt = (config.systemPrompt ? config.systemPrompt + "\n\n" : "") + sysText;
+			// File attachments still go as user message
+			if (Array.isArray(options.contextText)) {
+				var fileParts = options.contextText.filter(function(p) { return p.type !== "text"; });
+				if (fileParts.length > 0) {
+					messages.push({ role: "user", content: fileParts });
+				}
+			}
 		} else {
 			messages.push({ role: "user", content: options.contextText });
 		}
@@ -185,9 +207,14 @@ exports.runAction = function(options) {
 
 	// Simple single-turn — one API call
 	var adapter = options.adapter;
-	var request = adapter.buildRequest(messages, [], config);
 
-	return httpRequest(request).then(function(responseText) {
+	return exports.resolveFileRefs(messages, adapter).then(function(resolvedMessages) {
+		var request = adapter.buildRequest(resolvedMessages, [], config);
+		if (options.onRequest) {
+			try { options.onRequest(request); } catch(e) { /* ignore */ }
+		}
+		return httpRequest(request);
+	}).then(function(responseText) {
 		var parsed = adapter.parseResponse(responseText);
 		return parsed.content || "";
 	});
@@ -241,6 +268,56 @@ exports.getConfiguredProviders = function() {
 		}
 	}
 	return result;
+};
+
+/*
+Resolve file_ref blocks in messages to actual base64 content blocks.
+Scans all messages, fetches referenced files in parallel, and replaces
+file_ref markers with adapter-specific content blocks.
+Returns a Promise that resolves with the modified messages array.
+*/
+exports.resolveFileRefs = function(messages, adapter) {
+	var fileResolver = require("$:/plugins/rimir/llm-connect/file-resolver");
+	var refs = [];
+
+	// Collect all file_ref blocks with their location
+	for (var i = 0; i < messages.length; i++) {
+		var msg = messages[i];
+		if (msg.role === "user" && Array.isArray(msg.content)) {
+			for (var j = 0; j < msg.content.length; j++) {
+				if (msg.content[j].type === "file_ref") {
+					refs.push({
+						msgIdx: i,
+						blockIdx: j,
+						ref: msg.content[j]
+					});
+				}
+			}
+		}
+	}
+
+	if (refs.length === 0) return Promise.resolve(messages);
+
+	// Fetch all files in parallel
+	var fetchPromises = refs.map(function(r) {
+		return fileResolver.fetchAsBase64({
+			uri: r.ref.uri,
+			mediaType: r.ref.mediaType,
+			category: r.ref.category || (r.ref.mediaType.indexOf("image/") === 0 ? "image" : "document"),
+			filename: r.ref.filename,
+			title: r.ref.title || ""
+		});
+	});
+
+	return Promise.all(fetchPromises).then(function(results) {
+		// Replace file_ref blocks with adapter-specific content blocks
+		for (var k = 0; k < refs.length; k++) {
+			var loc = refs[k];
+			var fileData = results[k];
+			messages[loc.msgIdx].content[loc.blockIdx] = adapter.buildFileBlock(fileData);
+		}
+		return messages;
+	});
 };
 
 function httpGetRequest(requestConfig) {

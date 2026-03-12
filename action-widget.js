@@ -28,6 +28,7 @@ LlmActionWidget.prototype.execute = function() {
 	this.promptAttr = this.getAttribute("prompt", "");
 	this.promptTemplateAttr = this.getAttribute("promptTemplate", "");
 	this.contextTemplateAttr = this.getAttribute("contextTemplate", "");
+	this.contextFilterAttr = this.getAttribute("context", "");
 	this.outputTargetAttr = this.getAttribute("outputTarget", "");
 	this.outputModeAttr = this.getAttribute("outputMode", "");
 	this.toolsFilter = this.getAttribute("tools", "");
@@ -53,6 +54,13 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 		sourceTiddler: this.sourceTiddler,
 		outputMode: this.outputModeAttr || undefined,
 		outputTarget: this.outputTargetAttr || undefined
+	});
+
+	// Resolve context attachments
+	var attachments = contextResolver.resolveContextAttachments({
+		sourceTiddler: this.sourceTiddler,
+		chatFilter: this.contextFilterAttr,
+		templateTitle: templateTitle
 	});
 
 	// Resolve prompt
@@ -81,12 +89,30 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 		text: "Running..."
 	}));
 
+	// Build context content (may include file_ref blocks)
+	var contextContent = rendered.text;
+	var hasAttachments = attachments.fileParts.length > 0 || attachments.textTitles.length > 0;
+	if (hasAttachments) {
+		var contentParts = [];
+		if (rendered.text) {
+			contentParts.push({ type: "text", text: rendered.text });
+		}
+		for (var ti = 0; ti < attachments.textTitles.length; ti++) {
+			contentParts.push({ type: "text", text: attachments.renderText(attachments.textTitles[ti]) });
+		}
+		for (var fi = 0; fi < attachments.fileParts.length; fi++) {
+			var fp = attachments.fileParts[fi];
+			contentParts.push({ type: "file_ref", uri: fp.uri, mediaType: fp.mediaType, category: fp.category, filename: fp.filename, title: fp.title });
+		}
+		contextContent = contentParts;
+	}
+
 	// Run the action
 	var baseProtection = this.wiki.getTiddlerText("$:/config/rimir/llm-connect/protection-filter") || "";
 
 	orchestrator.runAction({
 		prompt: prompt,
-		contextText: rendered.text,
+		contextText: contextContent,
 		injectAs: rendered.injectAs,
 		tools: tools,
 		config: config,

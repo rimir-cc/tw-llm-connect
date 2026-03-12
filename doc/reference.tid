@@ -154,8 +154,16 @@ type: text/vnd.tiddlywiki
 |`$:/config/rimir/llm-connect/confirm-writes` |`yes` |Currently unused — writes execute immediately with audit log |
 |`$:/config/rimir/llm-connect/max-tool-result-length` |`4000` |Truncation limit |
 |`$:/config/rimir/llm-connect/default-context-template` | |Global default template |
+|`$:/config/rimir/llm-connect/max-file-size` |`20971520` |Maximum file size in bytes for multimodal attachments (default 20 MB) |
 
-The `llm-active-tools` field on each chat tiddler controls per-chat tool selection. This is a TiddlyWiki title list managed by the tool selector UI — not a config tiddler.
+!! Per-chat fields
+
+The following fields on each chat tiddler control per-chat behaviour. They are managed by the chat UI — not config tiddlers.
+
+|!Field |!Description |
+|`llm-active-tools` |TiddlyWiki title list of active tool tiddlers (managed by wrench icon) |
+|`llm-context-filter` |TiddlyWiki filter expression for context attachments (managed by 📎 icon). Results are classified as text or file tiddlers and included in the first message |
+|`llm-protection-filter` |Additional protection filter for this chat (managed by shield icon). Combined with the base filter from settings |
 
 </$fill>
 </$transclude>

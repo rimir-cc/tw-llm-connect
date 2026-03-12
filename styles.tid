@@ -7,8 +7,6 @@ type: text/vnd.tiddlywiki
 	flex-direction: column;
 	border: 1px solid <<colour tiddler-border>>;
 	border-radius: 4px;
-	overflow: hidden;
-	max-height: 600px;
 }
 
 .llm-chat-messages {
@@ -147,7 +145,9 @@ type: text/vnd.tiddlywiki
 	bottom: 20px;
 	right: 20px;
 	width: 480px;
-	max-height: 70vh;
+	height: 70vh;
+	min-height: 250px;
+	min-width: 320px;
 	background: <<colour tiddler-background>>;
 	border: 1px solid <<colour tiddler-border>>;
 	border-radius: 8px;
@@ -156,20 +156,39 @@ type: text/vnd.tiddlywiki
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+	resize: both;
 }
 
 .llm-chat-panel .llm-chat-container {
 	max-height: none;
 	border: none;
-	flex: 1;
-	overflow: hidden;
+	flex: 1 1 0%;
+	min-height: 0;
 	display: flex;
 	flex-direction: column;
+	overflow: hidden;
 }
 
 .llm-chat-panel .llm-chat-messages {
+	flex: 1 1 0%;
+	min-height: 100px;
+	max-height: none;
+	overflow-y: auto;
+	resize: vertical;
+}
+
+.llm-chat-panel .llm-chat-debug-panel {
+	flex: 1 1 0%;
+	min-height: 80px;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.llm-chat-panel .llm-chat-debug-content {
 	max-height: none;
 	flex: 1;
+	min-height: 0;
 	overflow-y: auto;
 }
 
@@ -200,6 +219,8 @@ type: text/vnd.tiddlywiki
 .llm-pair-edit-panel .llm-chat-container {
 	max-height: none;
 	border: none;
+	display: flex;
+	flex-direction: column;
 }
 
 .llm-pair-edit-panel .llm-chat-messages {
@@ -584,4 +605,104 @@ type: text/vnd.tiddlywiki
 
 .llm-chat-btn-shield:hover {
 	opacity: 1;
+}
+
+/* Context filter */
+.llm-chat-context-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 4px;
+}
+
+.llm-chat-context-label {
+	font-size: 0.8em;
+	color: <<colour muted-foreground>>;
+	white-space: nowrap;
+}
+
+.llm-chat-context-input {
+	flex: 1;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 3px;
+	padding: 3px 6px;
+	font-size: 0.8em;
+	font-family: {{$:/themes/tiddlywiki/vanilla/settings/codefontfamily}};
+	background: <<colour tiddler-background>>;
+	color: <<colour foreground>>;
+}
+
+.llm-chat-context-input:focus {
+	outline: none;
+	border-color: <<colour primary>>;
+}
+
+.llm-chat-btn-context {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 0.85em;
+	padding: 1px 4px;
+	opacity: 0.5;
+}
+
+.llm-chat-btn-context:hover {
+	opacity: 1;
+}
+
+/* Debug panel */
+.llm-chat-btn-debug {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 0.85em;
+	padding: 1px 4px;
+	opacity: 0.35;
+}
+
+.llm-chat-btn-debug:hover {
+	opacity: 0.8;
+}
+
+.llm-chat-debug-panel {
+	margin-top: 6px;
+	background: <<colour code-background>>;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 4px;
+	font-size: 0.75em;
+	color: <<colour foreground>>;
+}
+
+.llm-chat-debug-tabs {
+	display: flex;
+	border-bottom: 1px solid <<colour tiddler-border>>;
+}
+
+.llm-chat-debug-tab {
+	padding: 4px 12px;
+	border: none;
+	background: none;
+	cursor: pointer;
+	font-size: 1em;
+	color: <<colour muted-foreground>>;
+	border-bottom: 2px solid transparent;
+}
+
+.llm-chat-debug-tab:hover {
+	color: <<colour foreground>>;
+}
+
+.llm-chat-debug-tab-active {
+	color: <<colour primary>>;
+	border-bottom-color: <<colour primary>>;
+}
+
+.llm-chat-debug-content {
+	padding: 8px;
+	margin: 0;
+	font-family: {{$:/themes/tiddlywiki/vanilla/settings/codefontfamily}};
+	max-height: 300px;
+	overflow-y: scroll;
+	white-space: pre-wrap;
+	word-break: break-all;
 }

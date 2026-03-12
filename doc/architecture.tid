@@ -26,6 +26,10 @@ Chat widget reads context template (first message only)
     ↓
 Context rendered (text or markup mode)
     ↓
+Context attachments resolved (text tiddlers + file_ref markers for binaries)
+    ↓
+Just before API call: file_ref markers resolved → base64 content blocks
+    ↓
 Messages + tools sent to LLM via adapter
     ↓
 Response parsed → tool calls? → execute → send results → loop
@@ -50,12 +54,14 @@ Write response to output target (field / new tiddler / display / filter)
 !! Components
 
 |!Module |!Type |!Description |
-|`orchestrator.js` |library |Tool-use loop, conversation management, HTTP requests |
-|`adapter-claude.js` |library |Claude API: request building, response parsing, tool results |
-|`adapter-openai.js` |library |OpenAI API: same interface, different format |
-|`tool-executor.js` |library |Tool dispatch — renders wikitext from tool tiddler text fields (`read` mode captures output, `action` mode invokes action widgets) |
-|`context-resolver.js` |library |Template precedence, rendering (text/markup), output target resolution |
-|`chat-widget.js` |widget |`<$llm-chat>` — chat UI, message management |
+|`orchestrator.js` |library |Tool-use loop, conversation management, HTTP requests, `file_ref` resolution |
+|`adapter-claude.js` |library |Claude API: request building, response parsing, tool results, multimodal blocks |
+|`adapter-openai.js` |library |OpenAI API: same interface, different format, multimodal blocks |
+|`adapter-azure.js` |library |Azure OpenAI API: same as OpenAI with deployment/version config |
+|`tool-executor.js` |library |Tool dispatch, restricted wiki proxy creation, wikitext execution |
+|`context-resolver.js` |library |Template precedence, rendering (text/markup), context attachment resolution |
+|`file-resolver.js` |library |File detection (`_canonical_uri`), classification (image/document), base64 fetching |
+|`chat-widget.js` |widget |`<$llm-chat>` — chat UI, message management, debug panel |
 |`action-widget.js` |widget |`<$llm-action>` — one-shot invocation, output writing |
 |`startup.js` |startup |Module verification on browser load |
 |`ui/chat-panel.tid` |PageTemplate |Global chat panel, toggled from page toolbar |
@@ -115,6 +121,38 @@ All tool wikitext executes against a ''restricted wiki proxy'' rather than the r
 The protection filter is evaluated once per tool call. Tools that take an explicit `title` parameter also get an early "Access denied" error before wikitext execution (defense-in-depth).
 
 The default filter protects `[tag[sensitive]]` and all rimir plugin internals (`[all[shadows+tiddlers]prefix[$:/plugins/rimir/]]`). This prevents the LLM from reading plugin source code, configuration, or tool implementations. The filter is configurable in settings with a reset-to-default button; per-chat additions are possible via the shield icon.
+
+!! Multimodal context — file attachments
+
+Binary files (PDFs, images) stored via `_canonical_uri` can be attached to conversations. The flow uses a two-phase approach to avoid storing large base64 data in the message history:
+
+```
+Context filter evaluated (📎 input + llm-context field on source tiddler)
+    ↓
+file-resolver classifies each title → text tiddler or file tiddler
+    ↓
+Text tiddlers: rendered content included inline
+File tiddlers: file_ref marker stored in message (URI + mediaType only)
+    ↓
+Just before API call: orchestrator.resolveFileRefs()
+    ↓
+XHR fetches each file → arraybuffer → base64
+    ↓
+adapter.buildFileBlock() converts to provider format:
+  Claude: { type: "image"|"document", source: { type: "base64", ... } }
+  OpenAI/Azure: { type: "image_url"|"file", ... }
+```
+
+Supported formats: JPEG, PNG, GIF, WEBP (image), PDF (document). Max file size configurable via `$:/config/rimir/llm-connect/max-file-size` (default 20 MB).
+
+!! Debug panel
+
+The chat widget includes a debug panel (🐛 icon) that is added/removed from the DOM on toggle — no hidden elements consuming layout space. Two tabs:
+
+* ''Preview'' — live preview of the request that would be sent (provider, model, system prompt, messages, pending input, context attachments, tools, protection filter). Updates in real-time as the user types or changes inputs.
+* ''Sent'' — the last actual HTTP request body sent to the provider API. Base64 data and data URIs are abbreviated for readability.
+
+The debug panel is a sibling of the chat container in the DOM (not a child), so it participates directly in the panel's flex layout and resizes correctly with the chat window.
 
 </$fill>
 </$transclude>

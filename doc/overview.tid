@@ -24,9 +24,13 @@ llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI) directly from the 
 * ''Pair editing'' — toolbar button opens an embedded chat panel on any tiddler for collaborative editing with the LLM
 * ''Provider adapters'' — Claude and OpenAI out of the box, extensible adapter interface
 * ''Tool system'' — search, read, navigate, create, modify, delete tiddlers; user-defined tools via wikitext
+* ''Multimodal context'' — attach PDFs, images, and text tiddlers via a context filter (📎 icon); binaries are base64-encoded and sent inline
 * ''Context templates'' — wikitext templates that render input from source tiddlers before sending to the LLM
 * ''Output targets'' — display only, write to field, create new tiddler, or filter-resolved target
 * ''Template precedence'' — tiddler field → prompt template → widget attribute → global default
+* ''Debug panel'' — 🐛 icon toggles a live preview of the request payload or the last sent request; base64 data abbreviated
+* ''Resizable chat'' — drag panel edges to resize the chat window; drag the history resize handle to adjust the split between history and debug
+* ''Tiddler protection'' — restricted wiki proxy hides sensitive tiddlers from all LLM tool execution
 * ''Audit logging'' — write operations execute immediately with an audit log to `$:/temp/rimir/llm-connect/write-log`
 
 !! Prerequisites

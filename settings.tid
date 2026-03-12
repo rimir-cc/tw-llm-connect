@@ -200,6 +200,10 @@ toggle list</$button>
 Max tool result length: <$edit-text tiddler="$:/config/rimir/llm-connect/max-tool-result-length" tag="input" default="4000" class="rr-input" size="10"/> <span class="rr-muted">characters — truncates long tool results to fit context</span>
 </div>
 
+<div class="rr-input-row">
+Max file size: <$edit-text tiddler="$:/config/rimir/llm-connect/max-file-size" tag="input" default="20971520" class="rr-input" size="12"/> <span class="rr-muted">bytes — files larger than this are rejected (default 20MB)</span>
+</div>
+
 !! Context
 
 <div class="rr-input-row">

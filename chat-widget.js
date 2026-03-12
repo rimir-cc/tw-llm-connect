@@ -59,6 +59,9 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 			self.sendMessage();
 		}
 	});
+	textarea.addEventListener("input", function() {
+		self.refreshDebugPanel();
+	});
 	inputArea.appendChild(textarea);
 
 	// Protection filter row (hidden by default)
@@ -84,6 +87,10 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 			if (existing) fields = $tw.utils.extend({}, existing.fields, fields);
 			self.wiki.addTiddler(new $tw.Tiddler(fields));
 		}
+		self.refreshDebugPanel();
+	});
+	protectionInput.addEventListener("input", function() {
+		self.refreshDebugPanel();
 	});
 	var protectionLabel = this.document.createElement("span");
 	protectionLabel.className = "llm-chat-protection-label";
@@ -91,6 +98,40 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	protectionRow.appendChild(protectionLabel);
 	protectionRow.appendChild(protectionInput);
 	inputArea.appendChild(protectionRow);
+
+	// Context filter row (hidden by default)
+	var contextRow = this.document.createElement("div");
+	contextRow.className = "llm-chat-context-row";
+	contextRow.style.display = "none";
+	this.contextRow = contextRow;
+
+	var contextInput = this.document.createElement("input");
+	contextInput.className = "llm-chat-context-input";
+	contextInput.type = "text";
+	contextInput.placeholder = "e.g. [[report.pdf]] [tag[project]has[_canonical_uri]]";
+	if (this.chatTiddler) {
+		var ctxTid = this.wiki.getTiddler(this.chatTiddler);
+		if (ctxTid) contextInput.value = ctxTid.fields["llm-context-filter"] || "";
+	}
+	this.contextInput = contextInput;
+	contextInput.addEventListener("change", function() {
+		if (self.chatTiddler) {
+			var fields = { title: self.chatTiddler, "llm-context-filter": contextInput.value };
+			var existing = self.wiki.getTiddler(self.chatTiddler);
+			if (existing) fields = $tw.utils.extend({}, existing.fields, fields);
+			self.wiki.addTiddler(new $tw.Tiddler(fields));
+		}
+		self.refreshDebugPanel();
+	});
+	contextInput.addEventListener("input", function() {
+		self.refreshDebugPanel();
+	});
+	var contextLabel = this.document.createElement("span");
+	contextLabel.className = "llm-chat-context-label";
+	contextLabel.textContent = "Context:";
+	contextRow.appendChild(contextLabel);
+	contextRow.appendChild(contextInput);
+	inputArea.appendChild(contextRow);
 
 	var buttonRow = this.document.createElement("div");
 	buttonRow.className = "llm-chat-button-row";
@@ -137,6 +178,17 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 
 	buttonRow.appendChild(modelSelector);
 
+	// Paperclip icon to toggle context filter
+	var contextBtn = this.document.createElement("button");
+	contextBtn.className = "llm-chat-btn-context";
+	contextBtn.textContent = "\uD83D\uDCCE";
+	contextBtn.title = "Toggle per-chat context filter (attach tiddlers/files)";
+	contextBtn.addEventListener("click", function() {
+		var visible = contextRow.style.display !== "none";
+		contextRow.style.display = visible ? "none" : "flex";
+	});
+	buttonRow.appendChild(contextBtn);
+
 	// Shield icon to toggle protection filter
 	var shieldBtn = this.document.createElement("button");
 	shieldBtn.className = "llm-chat-btn-shield";
@@ -147,6 +199,61 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 		protectionRow.style.display = visible ? "none" : "flex";
 	});
 	buttonRow.appendChild(shieldBtn);
+
+	// Debug button + panel
+	var debugBtn = this.document.createElement("button");
+	debugBtn.className = "llm-chat-btn-debug";
+	debugBtn.textContent = "\uD83D\uDC1B";
+	debugBtn.title = "Toggle debug panel (preview / last sent request)";
+
+	var debugPanel = this.document.createElement("div");
+	debugPanel.className = "llm-chat-debug-panel";
+	debugPanel.style.display = "flex";
+	this.debugPanel = debugPanel;
+	this.lastRequestBody = null;
+	this.debugMode = "preview";
+
+	var debugTabs = this.document.createElement("div");
+	debugTabs.className = "llm-chat-debug-tabs";
+	var previewTab = this.document.createElement("button");
+	previewTab.className = "llm-chat-debug-tab llm-chat-debug-tab-active";
+	previewTab.textContent = "Preview";
+	var sentTab = this.document.createElement("button");
+	sentTab.className = "llm-chat-debug-tab";
+	sentTab.textContent = "Sent";
+	debugTabs.appendChild(previewTab);
+	debugTabs.appendChild(sentTab);
+
+	var debugContent = this.document.createElement("pre");
+	debugContent.className = "llm-chat-debug-content";
+	this.debugContent = debugContent;
+
+	debugPanel.appendChild(debugTabs);
+	debugPanel.appendChild(debugContent);
+
+	previewTab.addEventListener("click", function() {
+		self.debugMode = "preview";
+		previewTab.className = "llm-chat-debug-tab llm-chat-debug-tab-active";
+		sentTab.className = "llm-chat-debug-tab";
+		self.refreshDebugPanel();
+	});
+	sentTab.addEventListener("click", function() {
+		self.debugMode = "sent";
+		sentTab.className = "llm-chat-debug-tab llm-chat-debug-tab-active";
+		previewTab.className = "llm-chat-debug-tab";
+		self.refreshDebugPanel();
+	});
+
+	debugBtn.addEventListener("click", function() {
+		if (debugPanel.parentNode) {
+			debugPanel.parentNode.removeChild(debugPanel);
+			return;
+		}
+		self.refreshDebugPanel();
+		debugPanel.style.display = "flex";
+		container.parentNode.appendChild(debugPanel);
+	});
+	buttonRow.appendChild(debugBtn);
 
 	var stopBtn = this.document.createElement("button");
 	stopBtn.className = "llm-chat-btn llm-chat-btn-stop";
@@ -277,15 +384,46 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 		var userDiv = doc.createElement("div");
 		if (msg._context) {
 			userDiv.className = "llm-chat-message llm-chat-message-context";
-			userDiv.textContent = "\u{1F4CB} Context injected (click to expand)";
-			userDiv.title = typeof msg.content === "string" ? msg.content.substring(0, 500) : "";
+			// Build summary for context messages (may contain file_ref blocks)
+			var contextSummary = "\u{1F4CB} Context injected";
+			var contextDetail = "";
+			if (Array.isArray(msg.content)) {
+				var fileCount = 0;
+				var textCount = 0;
+				for (var ci = 0; ci < msg.content.length; ci++) {
+					var cb = msg.content[ci];
+					if (cb.type === "file_ref" || cb.type === "image" || cb.type === "document" || cb.type === "image_url" || cb.type === "file") {
+						fileCount++;
+					} else if (cb.type === "text") {
+						textCount++;
+						contextDetail += cb.text + "\n";
+					}
+				}
+				var parts = [];
+				if (textCount > 0) parts.push(textCount + " text");
+				if (fileCount > 0) parts.push(fileCount + " file" + (fileCount > 1 ? "s" : ""));
+				contextSummary += " (" + parts.join(", ") + ")";
+				// Add file badges
+				for (var fi = 0; fi < msg.content.length; fi++) {
+					var fb = msg.content[fi];
+					if (fb.type === "file_ref") {
+						var cat = fb.mediaType && fb.mediaType.indexOf("image/") === 0 ? "IMG" : "PDF";
+						contextSummary += " [" + cat + " " + fb.filename + "]";
+					}
+				}
+			} else {
+				contextDetail = typeof msg.content === "string" ? msg.content : "";
+			}
+			contextSummary += " (click to expand)";
+			userDiv.textContent = contextSummary;
+			userDiv.title = contextDetail.substring(0, 500);
 			userDiv.addEventListener("click", function() {
 				if (userDiv.classList.contains("llm-chat-context-expanded")) {
 					userDiv.classList.remove("llm-chat-context-expanded");
-					userDiv.textContent = "\u{1F4CB} Context injected (click to expand)";
+					userDiv.textContent = contextSummary;
 				} else {
 					userDiv.classList.add("llm-chat-context-expanded");
-					userDiv.textContent = typeof msg.content === "string" ? msg.content : "";
+					userDiv.textContent = contextDetail || contextSummary;
 				}
 			});
 		} else {
@@ -359,6 +497,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 	var self = this;
 
 	// Inject context on first message if configured
+	var contextReady = Promise.resolve();
 	if (!this.contextInjected && messages.length === 0) {
 		var contextResolver = this.getContextResolverModule();
 		var templateTitle = contextResolver.resolveTemplate({
@@ -370,11 +509,57 @@ LlmChatWidget.prototype.sendMessage = function() {
 			sourceTiddler: this.sourceTiddler
 		});
 
-		if (rendered.text) {
+		// Resolve context attachments (llm-context field + per-chat filter)
+		var chatCtxFilter = "";
+		if (this.chatTiddler) {
+			var ctxTid = this.wiki.getTiddler(this.chatTiddler);
+			if (ctxTid) chatCtxFilter = ctxTid.fields["llm-context-filter"] || "";
+		}
+		var attachments = contextResolver.resolveContextAttachments({
+			sourceTiddler: this.sourceTiddler,
+			chatFilter: chatCtxFilter,
+			templateTitle: templateTitle
+		});
+
+		var hasFiles = attachments.fileParts.length > 0;
+		var hasTextAttachments = attachments.textTitles.length > 0;
+
+		if (rendered.text || hasFiles || hasTextAttachments) {
 			if (rendered.injectAs === "system-prompt") {
 				this.systemPromptOverride = (this.systemPromptAttr ? this.systemPromptAttr + "\n\n" : "") + rendered.text;
+				// Attachments still go as user message even if template injects as system-prompt
+				if (hasFiles || hasTextAttachments) {
+					var sysContentParts = [];
+					for (var ti = 0; ti < attachments.textTitles.length; ti++) {
+						sysContentParts.push({ type: "text", text: attachments.renderText(attachments.textTitles[ti]) });
+					}
+					for (var fi = 0; fi < attachments.fileParts.length; fi++) {
+						var fp = attachments.fileParts[fi];
+						sysContentParts.push({ type: "file_ref", uri: fp.uri, mediaType: fp.mediaType, category: fp.category, filename: fp.filename, title: fp.title });
+					}
+					if (sysContentParts.length > 0) {
+						messages.push({ role: "user", content: sysContentParts, _context: true });
+					}
+				}
 			} else {
-				messages.push({ role: "user", content: rendered.text, _context: true });
+				// Build multimodal content array
+				var contentParts = [];
+				if (rendered.text) {
+					contentParts.push({ type: "text", text: rendered.text });
+				}
+				for (var ti2 = 0; ti2 < attachments.textTitles.length; ti2++) {
+					contentParts.push({ type: "text", text: attachments.renderText(attachments.textTitles[ti2]) });
+				}
+				for (var fi2 = 0; fi2 < attachments.fileParts.length; fi2++) {
+					var fp2 = attachments.fileParts[fi2];
+					contentParts.push({ type: "file_ref", uri: fp2.uri, mediaType: fp2.mediaType, category: fp2.category, filename: fp2.filename, title: fp2.title });
+				}
+				if (contentParts.length === 1 && contentParts[0].type === "text") {
+					// Simple text-only context — keep as plain string for backward compatibility
+					messages.push({ role: "user", content: contentParts[0].text, _context: true });
+				} else if (contentParts.length > 0) {
+					messages.push({ role: "user", content: contentParts, _context: true });
+				}
 			}
 		}
 		this.contextInjected = true;
@@ -431,6 +616,9 @@ LlmChatWidget.prototype.sendMessage = function() {
 		toolExecutor: toolExecutor,
 		protectionFilter: protectionFilter,
 		signal: this.abortController.signal,
+		onRequest: function(request) {
+			self.lastRequestBody = request.body;
+		},
 		onUpdate: function(msgs) {
 			self.saveMessages(msgs);
 			self.renderMessages(self.messagesDiv);
@@ -467,6 +655,117 @@ LlmChatWidget.prototype.clearChat = function() {
 	this.renderMessages(this.messagesDiv);
 	this.updateModelDisplay();
 	this.setStatus("");
+};
+
+LlmChatWidget.prototype.isDebugVisible = function() {
+	return this.debugPanel && this.debugPanel.parentNode;
+};
+
+LlmChatWidget.prototype.refreshDebugPanel = function() {
+	if (!this.debugContent) return;
+	if (!this.isDebugVisible()) return;
+	if (this.debugMode === "sent") {
+		if (!this.lastRequestBody) {
+			this.debugContent.textContent = "(no request sent yet)";
+		} else {
+			this.debugContent.textContent = abbreviateBase64(this.lastRequestBody);
+		}
+	} else {
+		this.debugContent.textContent = this.buildPreview();
+	}
+};
+
+LlmChatWidget.prototype.buildPreview = function() {
+	var orchestrator = this.getOrchestratorModule();
+	var toolExecutor = this.getToolExecutorModule();
+	var contextResolver = this.getContextResolverModule();
+
+	var preview = {};
+
+	// Provider + model
+	preview.provider = this.provider;
+	preview.model = this.model;
+
+	// System prompt
+	var config = orchestrator.getProviderConfig(this.provider);
+	if (this.systemPromptOverride) {
+		preview.systemPrompt = this.systemPromptOverride;
+	} else if (this.systemPromptAttr) {
+		preview.systemPrompt = this.systemPromptAttr;
+	} else {
+		preview.systemPrompt = config.systemPrompt;
+	}
+
+	// Current messages
+	var messages = this.getMessages();
+	preview.messages = messages;
+
+	// Pending text in textarea
+	if (this.textarea && this.textarea.value.trim()) {
+		preview.pendingInput = this.textarea.value.trim();
+	}
+
+	// Context (what would be injected on first message)
+	if (!this.contextInjected && messages.length === 0) {
+		var templateTitle = contextResolver.resolveTemplate({
+			sourceTiddler: this.sourceTiddler,
+			contextTemplate: this.contextTemplateAttr
+		});
+		var rendered = contextResolver.renderContext({
+			templateTitle: templateTitle,
+			sourceTiddler: this.sourceTiddler
+		});
+
+		var chatCtxFilter = "";
+		if (this.chatTiddler) {
+			var ctxTid = this.wiki.getTiddler(this.chatTiddler);
+			if (ctxTid) chatCtxFilter = ctxTid.fields["llm-context-filter"] || "";
+		}
+		var attachments = contextResolver.resolveContextAttachments({
+			sourceTiddler: this.sourceTiddler,
+			chatFilter: chatCtxFilter,
+			templateTitle: templateTitle
+		});
+
+		preview.contextWillInject = {
+			templateTitle: templateTitle || "(built-in default)",
+			injectAs: rendered.injectAs,
+			renderedText: rendered.text ? (rendered.text.length > 500 ? rendered.text.substring(0, 500) + "..." : rendered.text) : null,
+			textAttachments: attachments.textTitles,
+			fileAttachments: attachments.fileParts.map(function(f) {
+				return { title: f.title, filename: f.filename, mediaType: f.mediaType, category: f.category, uri: f.uri };
+			})
+		};
+	} else if (this.contextInjected) {
+		preview.contextWillInject = "(already injected)";
+	}
+
+	// Tools
+	if (this.toolsFilter) {
+		var chatTid = this.wiki.getTiddler(this.chatTiddler);
+		var activeTitles;
+		if (chatTid && chatTid.fields["llm-tools-init"] === "yes") {
+			activeTitles = $tw.utils.parseStringArray(chatTid.fields["llm-active-tools"] || "");
+		} else {
+			activeTitles = $tw.wiki.filterTiddlers("[all[shadows]tag[$:/tags/rimir/llm-connect/tool]]");
+		}
+		var tools = toolExecutor.getToolDefinitions(this.toolsFilter, activeTitles);
+		preview.tools = tools.map(function(t) { return t.name; });
+	}
+
+	// Protection filter
+	var baseProtection = this.wiki.getTiddlerText("$:/config/rimir/llm-connect/protection-filter") || "";
+	var chatProtection = "";
+	if (this.chatTiddler) {
+		var protTid = this.wiki.getTiddler(this.chatTiddler);
+		if (protTid) chatProtection = protTid.fields["llm-protection-filter"] || "";
+	}
+	var protectionFilter = (baseProtection + " " + chatProtection).trim();
+	if (protectionFilter) {
+		preview.protectionFilter = protectionFilter;
+	}
+
+	return JSON.stringify(preview, null, 2);
 };
 
 LlmChatWidget.prototype.getOrchestratorModule = function() {
@@ -583,6 +882,28 @@ LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 	}
 	return false;
 };
+
+function abbreviateBase64(jsonBody) {
+	try {
+		var obj = JSON.parse(jsonBody);
+		return JSON.stringify(obj, function(key, value) {
+			if (typeof value === "string" && value.length > 200) {
+				// Check if it looks like base64 data
+				if (/^[A-Za-z0-9+/=\s]{200,}$/.test(value.substring(0, 200))) {
+					return value.substring(0, 80) + "... [" + Math.round(value.length / 1024) + "KB base64 truncated]";
+				}
+				// Check for data URIs
+				if (value.indexOf("data:") === 0 && value.indexOf(";base64,") !== -1) {
+					var prefix = value.substring(0, value.indexOf(";base64,") + 8);
+					return prefix + "... [" + Math.round(value.length / 1024) + "KB data URI truncated]";
+				}
+			}
+			return value;
+		}, 2);
+	} catch(e) {
+		return jsonBody;
+	}
+}
 
 exports["llm-chat"] = LlmChatWidget;
 
