@@ -344,6 +344,7 @@ LlmChatWidget.prototype.execute = function() {
 		this.model = config.model;
 	}
 	this.contextInjected = false;
+	this.attachmentsInjected = false;
 };
 
 LlmChatWidget.prototype.getMessages = function() {
@@ -530,8 +531,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 	var messages = this.getMessages();
 	var self = this;
 
-	// Inject context on first message if configured
-	var contextReady = Promise.resolve();
+	// Context template injection — first message only
 	if (!this.contextInjected && messages.length === 0) {
 		var contextResolver = this.getContextResolverModule();
 		var templateTitle = contextResolver.resolveTemplate({
@@ -602,8 +602,47 @@ LlmChatWidget.prototype.sendMessage = function() {
 					messages.push({ role: "user", content: contentParts, _context: true });
 				}
 			}
+			if (hasFiles || hasTextAttachments) {
+				this.attachmentsInjected = true;
+			}
 		}
 		this.contextInjected = true;
+	}
+
+	// Late attachment injection — if context filter was set/changed after first message
+	if (this.contextInjected && !this.attachmentsInjected) {
+		var lateCtxFilter = "";
+		if (this.chatTiddler) {
+			var lateCtxTid = this.wiki.getTiddler(this.chatTiddler);
+			if (lateCtxTid) lateCtxFilter = lateCtxTid.fields["llm-context-filter"] || "";
+		}
+		if (lateCtxFilter) {
+			var lateContextResolver = this.getContextResolverModule();
+			var lateAttachments = lateContextResolver.resolveContextAttachments({
+				sourceTiddler: this.sourceTiddler,
+				chatFilter: lateCtxFilter,
+				templateTitle: null
+			});
+			if (lateAttachments.error) {
+				this.textarea.value = text;
+				this.setStatus("Context filter error: " + lateAttachments.error);
+				return;
+			}
+			if (lateAttachments.fileParts.length > 0 || lateAttachments.textTitles.length > 0) {
+				var lateParts = [];
+				for (var lti = 0; lti < lateAttachments.textTitles.length; lti++) {
+					lateParts.push({ type: "text", text: lateAttachments.renderText(lateAttachments.textTitles[lti]) });
+				}
+				for (var lfi = 0; lfi < lateAttachments.fileParts.length; lfi++) {
+					var lfp = lateAttachments.fileParts[lfi];
+					lateParts.push({ type: "file_ref", uri: lfp.uri, mediaType: lfp.mediaType, category: lfp.category, filename: lfp.filename, title: lfp.title });
+				}
+				if (lateParts.length > 0) {
+					messages.push({ role: "user", content: lateParts, _context: true });
+				}
+				this.attachmentsInjected = true;
+			}
+		}
 	}
 
 	messages.push({ role: "user", content: text });
@@ -680,6 +719,7 @@ LlmChatWidget.prototype.clearChat = function() {
 	// Clear messages and unlock provider/model
 	this.saveMessages([]);
 	this.contextInjected = false;
+	this.attachmentsInjected = false;
 	this.systemPromptOverride = null;
 	this.lastRequestBody = null;
 	this.lastResponseBody = null;
@@ -723,7 +763,7 @@ LlmChatWidget.prototype.refreshDebugPanel = function() {
 			this.debugContent.textContent = abbreviateBase64(this.lastResponseBody);
 		}
 	} else {
-		this.debugContent.textContent = this.buildPreview();
+		this.debugContent.textContent = abbreviateBase64(this.buildPreview());
 	}
 };
 
@@ -944,6 +984,7 @@ LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 	if (changedTiddlers[this.chatTiddler]) {
 		this.renderMessages(this.messagesDiv);
 		this.updateTokenDisplay();
+		this.refreshDebugPanel();
 	}
 	// Update provider/model display if config changed — but only if chat is empty (not locked)
 	var msgs = this.getMessages();
@@ -983,14 +1024,14 @@ function abbreviateBase64(jsonBody) {
 		var obj = JSON.parse(jsonBody);
 		return JSON.stringify(obj, function(key, value) {
 			if (typeof value === "string" && value.length > 200) {
-				// Check if it looks like base64 data
-				if (/^[A-Za-z0-9+/=\s]{200,}$/.test(value.substring(0, 200))) {
-					return value.substring(0, 80) + "... [" + Math.round(value.length / 1024) + "KB base64 truncated]";
-				}
-				// Check for data URIs
+				// Check for data URIs (OpenAI format)
 				if (value.indexOf("data:") === 0 && value.indexOf(";base64,") !== -1) {
 					var prefix = value.substring(0, value.indexOf(";base64,") + 8);
 					return prefix + "... [" + Math.round(value.length / 1024) + "KB data URI truncated]";
+				}
+				// Check if it looks like base64 data (Claude format — raw base64 in "data" field)
+				if (/^[A-Za-z0-9+/=\s]+$/.test(value.substring(0, 100))) {
+					return value.substring(0, 80) + "... [" + Math.round(value.length / 1024) + "KB base64 truncated]";
 				}
 			}
 			return value;
