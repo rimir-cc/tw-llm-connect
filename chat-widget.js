@@ -95,8 +95,30 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	var protectionLabel = this.document.createElement("span");
 	protectionLabel.className = "llm-chat-protection-label";
 	protectionLabel.textContent = "Protect:";
-	protectionRow.appendChild(protectionLabel);
-	protectionRow.appendChild(protectionInput);
+	var baseFilter = this.wiki.getTiddlerText("$:/config/rimir/llm-connect/protection-filter") || "";
+	if (baseFilter) {
+		var baseRow = this.document.createElement("div");
+		baseRow.className = "llm-chat-protection-base-row";
+		baseRow.appendChild(protectionLabel);
+		var baseFilterSpan = this.document.createElement("code");
+		baseFilterSpan.className = "llm-chat-protection-base";
+		baseFilterSpan.textContent = baseFilter;
+		baseFilterSpan.title = "Base protection filter (from settings — always active)";
+		baseRow.appendChild(baseFilterSpan);
+		protectionRow.appendChild(baseRow);
+		var addRow = this.document.createElement("div");
+		addRow.className = "llm-chat-protection-add-row";
+		var plusLabel = this.document.createElement("span");
+		plusLabel.className = "llm-chat-protection-label";
+		plusLabel.textContent = "+";
+		addRow.appendChild(plusLabel);
+		protectionInput.placeholder = "additional filter (optional)";
+		addRow.appendChild(protectionInput);
+		protectionRow.appendChild(addRow);
+	} else {
+		protectionRow.appendChild(protectionLabel);
+		protectionRow.appendChild(protectionInput);
+	}
 	inputArea.appendChild(protectionRow);
 
 	// Context filter row (hidden by default)
@@ -218,7 +240,9 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	debugPanel.style.display = "flex";
 	this.debugPanel = debugPanel;
 	this.lastRequestBody = null;
+	this.lastResponseBody = null;
 	this.debugMode = "preview";
+	this.debugTabs = [];
 
 	var debugTabs = this.document.createElement("div");
 	debugTabs.className = "llm-chat-debug-tabs";
@@ -228,8 +252,13 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	var sentTab = this.document.createElement("button");
 	sentTab.className = "llm-chat-debug-tab";
 	sentTab.textContent = "Sent";
+	var responseTab = this.document.createElement("button");
+	responseTab.className = "llm-chat-debug-tab";
+	responseTab.textContent = "Response";
 	debugTabs.appendChild(previewTab);
 	debugTabs.appendChild(sentTab);
+	debugTabs.appendChild(responseTab);
+	this.debugTabs = [previewTab, sentTab, responseTab];
 
 	var debugContent = this.document.createElement("pre");
 	debugContent.className = "llm-chat-debug-content";
@@ -239,16 +268,13 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	debugPanel.appendChild(debugContent);
 
 	previewTab.addEventListener("click", function() {
-		self.debugMode = "preview";
-		previewTab.className = "llm-chat-debug-tab llm-chat-debug-tab-active";
-		sentTab.className = "llm-chat-debug-tab";
-		self.refreshDebugPanel();
+		self.setDebugTab("preview");
 	});
 	sentTab.addEventListener("click", function() {
-		self.debugMode = "sent";
-		sentTab.className = "llm-chat-debug-tab llm-chat-debug-tab-active";
-		previewTab.className = "llm-chat-debug-tab";
-		self.refreshDebugPanel();
+		self.setDebugTab("sent");
+	});
+	responseTab.addEventListener("click", function() {
+		self.setDebugTab("response");
 	});
 
 	debugBtn.addEventListener("click", function() {
@@ -302,6 +328,7 @@ LlmChatWidget.prototype.execute = function() {
 	this.chatTiddler = this.getAttribute("chatTiddler", "");
 	this.systemPromptAttr = this.getAttribute("systemPrompt", "");
 	this.toolsFilter = this.getAttribute("tools", "");
+	this.toolGroupAttr = this.getAttribute("toolGroup", "");
 	this.contextTemplateAttr = this.getAttribute("contextTemplate", "");
 	this.sourceTiddler = this.getAttribute("tiddler", "");
 
@@ -608,6 +635,9 @@ LlmChatWidget.prototype.sendMessage = function() {
 		var activeTitles;
 		if (chatTid && chatTid.fields["llm-tools-init"] === "yes") {
 			activeTitles = $tw.utils.parseStringArray(chatTid.fields["llm-active-tools"] || "");
+		} else if (this.toolGroupAttr) {
+			activeTitles = toolExecutor.resolveToolGroup(this.toolGroupAttr);
+			if (!activeTitles) activeTitles = $tw.wiki.filterTiddlers("[all[shadows]tag[$:/tags/rimir/llm-connect/tool]]");
 		} else {
 			activeTitles = $tw.wiki.filterTiddlers("[all[shadows]tag[$:/tags/rimir/llm-connect/tool]]");
 		}
@@ -633,6 +663,9 @@ LlmChatWidget.prototype.sendMessage = function() {
 		signal: this.abortController.signal,
 		onRequest: function(request) {
 			self.lastRequestBody = request.body;
+		},
+		onResponse: function(responseText) {
+			self.lastResponseBody = responseText;
 		},
 		onUpdate: function(msgs) {
 			self.saveMessages(msgs);
@@ -664,6 +697,8 @@ LlmChatWidget.prototype.clearChat = function() {
 	this.saveMessages([]);
 	this.contextInjected = false;
 	this.systemPromptOverride = null;
+	this.lastRequestBody = null;
+	this.lastResponseBody = null;
 	// Reset to global config
 	var config = this.getOrchestratorModule().getProviderConfig();
 	this.provider = config.provider;
@@ -678,6 +713,16 @@ LlmChatWidget.prototype.isDebugVisible = function() {
 	return this.debugPanel && this.debugPanel.parentNode;
 };
 
+LlmChatWidget.prototype.setDebugTab = function(mode) {
+	this.debugMode = mode;
+	for (var i = 0; i < this.debugTabs.length; i++) {
+		this.debugTabs[i].className = "llm-chat-debug-tab";
+	}
+	var idx = mode === "preview" ? 0 : mode === "sent" ? 1 : 2;
+	this.debugTabs[idx].className = "llm-chat-debug-tab llm-chat-debug-tab-active";
+	this.refreshDebugPanel();
+};
+
 LlmChatWidget.prototype.refreshDebugPanel = function() {
 	if (!this.debugContent) return;
 	if (!this.isDebugVisible()) return;
@@ -686,6 +731,12 @@ LlmChatWidget.prototype.refreshDebugPanel = function() {
 			this.debugContent.textContent = "(no request sent yet)";
 		} else {
 			this.debugContent.textContent = abbreviateBase64(this.lastRequestBody);
+		}
+	} else if (this.debugMode === "response") {
+		if (!this.lastResponseBody) {
+			this.debugContent.textContent = "(no response received yet)";
+		} else {
+			this.debugContent.textContent = abbreviateBase64(this.lastResponseBody);
 		}
 	} else {
 		this.debugContent.textContent = this.buildPreview();
@@ -763,6 +814,9 @@ LlmChatWidget.prototype.buildPreview = function() {
 		var activeTitles;
 		if (chatTid && chatTid.fields["llm-tools-init"] === "yes") {
 			activeTitles = $tw.utils.parseStringArray(chatTid.fields["llm-active-tools"] || "");
+		} else if (this.toolGroupAttr) {
+			activeTitles = toolExecutor.resolveToolGroup(this.toolGroupAttr);
+			if (!activeTitles) activeTitles = $tw.wiki.filterTiddlers("[all[shadows]tag[$:/tags/rimir/llm-connect/tool]]");
 		} else {
 			activeTitles = $tw.wiki.filterTiddlers("[all[shadows]tag[$:/tags/rimir/llm-connect/tool]]");
 		}

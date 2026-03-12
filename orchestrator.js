@@ -89,6 +89,9 @@ exports.runConversation = function(options) {
 				}
 				return httpRequest(request, options.signal);
 			}).then(function(responseText) {
+				if (options.onResponse) {
+					try { options.onResponse(responseText); } catch(e) { /* ignore */ }
+				}
 				var parsed;
 				try {
 					parsed = adapter.parseResponse(responseText);

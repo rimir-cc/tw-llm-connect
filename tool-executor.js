@@ -23,6 +23,22 @@ exports.findToolByName = function(name) {
 	return null;
 };
 
+/*
+Resolve a tool group name to tool tiddler titles.
+Returns array of titles, or null if group not found.
+*/
+exports.resolveToolGroup = function(groupName) {
+	if (!groupName) return null;
+	var groups = $tw.wiki.filterTiddlers("[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool-group]]");
+	for (var i = 0; i < groups.length; i++) {
+		var tiddler = $tw.wiki.getTiddler(groups[i]);
+		if (tiddler && tiddler.fields["group-name"] === groupName) {
+			return $tw.utils.parseStringArray(tiddler.fields["group-tools"] || "");
+		}
+	}
+	return null;
+};
+
 exports.getToolDefinitions = function(filter, activeTitles) {
 	var titles;
 	if (filter) {

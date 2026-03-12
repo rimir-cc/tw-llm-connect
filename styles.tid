@@ -575,9 +575,21 @@ type: text/vnd.tiddlywiki
 /* Protection filter */
 .llm-chat-protection-row {
 	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	margin-top: 4px;
+}
+
+.llm-chat-protection-base-row {
+	display: flex;
 	align-items: center;
 	gap: 6px;
-	margin-top: 4px;
+}
+
+.llm-chat-protection-add-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
 }
 
 .llm-chat-protection-label {
@@ -595,6 +607,21 @@ type: text/vnd.tiddlywiki
 	font-family: {{$:/themes/tiddlywiki/vanilla/settings/codefontfamily}};
 	background: <<colour tiddler-background>>;
 	color: <<colour foreground>>;
+}
+
+.llm-chat-protection-base {
+	font-size: 0.75em;
+	color: <<colour muted-foreground>>;
+	background: <<colour code-background>>;
+	padding: 2px 5px;
+	border-radius: 3px;
+	word-break: break-all;
+}
+
+.llm-chat-protection-plus {
+	font-size: 0.8em;
+	color: <<colour muted-foreground>>;
+	flex-shrink: 0;
 }
 
 .llm-chat-protection-input:focus {

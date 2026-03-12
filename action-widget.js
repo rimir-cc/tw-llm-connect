@@ -32,7 +32,11 @@ LlmActionWidget.prototype.execute = function() {
 	this.outputTargetAttr = this.getAttribute("outputTarget", "");
 	this.outputModeAttr = this.getAttribute("outputMode", "");
 	this.toolsFilter = this.getAttribute("tools", "");
+	this.toolGroupAttr = this.getAttribute("toolGroup", "");
 	this.systemPromptAttr = this.getAttribute("systemPrompt", "");
+	this.providerAttr = this.getAttribute("provider", "");
+	this.modelAttr = this.getAttribute("model", "");
+	this.protectionFilterAttr = this.getAttribute("protectionFilter", "");
 };
 
 LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
@@ -78,18 +82,22 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 		promptTemplate: this.promptTemplateAttr
 	});
 
-	// Get provider config
-	var config = orchestrator.getProviderConfig();
+	// Get provider config (allow override via attributes)
+	var config = orchestrator.getProviderConfig(this.providerAttr || undefined);
+	if (this.modelAttr) {
+		config.model = this.modelAttr;
+	}
 	if (this.systemPromptAttr) {
 		config.systemPrompt = this.systemPromptAttr;
 	}
 
 	var adapter = orchestrator.getAdapter(config.provider);
 
-	// Get tools if specified
+	// Get tools if specified (toolGroup narrows to group members)
 	var tools = [];
-	if (this.toolsFilter) {
-		tools = toolExecutor.getToolDefinitions(this.toolsFilter);
+	if (this.toolsFilter || this.toolGroupAttr) {
+		var activeTitles = this.toolGroupAttr ? toolExecutor.resolveToolGroup(this.toolGroupAttr) : undefined;
+		tools = toolExecutor.getToolDefinitions(this.toolsFilter || "[tag[$:/tags/rimir/llm-connect/tool]]", activeTitles || undefined);
 	}
 
 	// Set status
@@ -118,6 +126,7 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 
 	// Run the action
 	var baseProtection = this.wiki.getTiddlerText("$:/config/rimir/llm-connect/protection-filter") || "";
+	var protectionFilter = (baseProtection + " " + (this.protectionFilterAttr || "")).trim();
 
 	orchestrator.runAction({
 		prompt: prompt,
@@ -127,7 +136,7 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 		config: config,
 		adapter: adapter,
 		toolExecutor: toolExecutor,
-		protectionFilter: baseProtection
+		protectionFilter: protectionFilter
 	}).then(function(responseText) {
 		// Write output
 		self.writeOutput(responseText, rendered, templateTitle);
