@@ -193,10 +193,6 @@ toggle list</$button>
 </$let>
 
 <div class="rr-input-row">
-<$checkbox tiddler="$:/config/rimir/llm-connect/confirm-writes" field="text" checked="yes" unchecked="no" default="yes"> Confirm before write operations <span class="rr-muted">(currently unused — writes execute immediately with audit log to `$:/temp/rimir/llm-connect/write-log`)</span></$checkbox>
-</div>
-
-<div class="rr-input-row">
 Max tool result length: <$edit-text tiddler="$:/config/rimir/llm-connect/max-tool-result-length" tag="input" default="4000" class="rr-input" size="10"/> <span class="rr-muted">characters — truncates long tool results to fit context</span>
 </div>
 

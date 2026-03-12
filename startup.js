@@ -21,8 +21,10 @@ exports.startup = function() {
 		require("$:/plugins/rimir/llm-connect/tool-executor");
 		require("$:/plugins/rimir/llm-connect/context-resolver");
 		require("$:/plugins/rimir/llm-connect/adapter-claude");
+		require("$:/plugins/rimir/llm-connect/adapter-openai-base");
 		require("$:/plugins/rimir/llm-connect/adapter-openai");
 		require("$:/plugins/rimir/llm-connect/adapter-azure");
+		require("$:/plugins/rimir/llm-connect/widget-helpers");
 	} catch(e) {
 		console.error("llm-connect: Failed to load modules:", e);
 	}

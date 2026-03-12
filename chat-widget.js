@@ -617,48 +617,32 @@ LlmChatWidget.prototype.sendMessage = function() {
 	this.abortController = new AbortController();
 
 	var orchestrator = this.getOrchestratorModule();
-	var toolExecutor = this.getToolExecutorModule();
-	var config = orchestrator.getProviderConfig(this.provider);
+	var helpers = this.getWidgetHelpersModule();
+	var config = helpers.resolveProviderConfig(this.provider, this.model, null);
 
 	if (this.systemPromptOverride) {
 		config.systemPrompt = this.systemPromptOverride;
 	} else if (this.systemPromptAttr) {
 		config.systemPrompt = this.systemPromptAttr;
 	}
-	// Ensure we use the locked model
-	config.model = this.model;
 
 	var adapter = orchestrator.getAdapter(this.provider);
-	var tools = [];
-	if (this.toolsFilter) {
-		var chatTid = this.wiki.getTiddler(this.chatTiddler);
-		var activeTitles;
-		if (chatTid && chatTid.fields["llm-tools-init"] === "yes") {
-			activeTitles = $tw.utils.parseStringArray(chatTid.fields["llm-active-tools"] || "");
-		} else if (this.toolGroupAttr) {
-			activeTitles = toolExecutor.resolveToolGroup(this.toolGroupAttr);
-			if (!activeTitles) activeTitles = $tw.wiki.filterTiddlers("[all[shadows]tag[$:/tags/rimir/llm-connect/tool]]");
-		} else {
-			activeTitles = $tw.wiki.filterTiddlers("[all[shadows]tag[$:/tags/rimir/llm-connect/tool]]");
-		}
-		tools = toolExecutor.getToolDefinitions(this.toolsFilter, activeTitles);
-	}
+	var tools = this.toolsFilter ? helpers.resolveTools(this.toolsFilter, this.toolGroupAttr, this.chatTiddler) : [];
 
 	// Compute protection filter (base + per-chat)
-	var baseProtection = this.wiki.getTiddlerText("$:/config/rimir/llm-connect/protection-filter") || "";
 	var chatProtection = "";
 	if (this.chatTiddler) {
 		var protChatTid = this.wiki.getTiddler(this.chatTiddler);
 		if (protChatTid) chatProtection = protChatTid.fields["llm-protection-filter"] || "";
 	}
-	var protectionFilter = (baseProtection + " " + chatProtection).trim();
+	var protectionFilter = helpers.resolveProtectionFilter(chatProtection);
 
 	orchestrator.runConversation({
 		messages: messages,
 		tools: tools,
 		config: config,
 		adapter: adapter,
-		toolExecutor: toolExecutor,
+		toolExecutor: this.getToolExecutorModule(),
 		protectionFilter: protectionFilter,
 		signal: this.abortController.signal,
 		onRequest: function(request) {
@@ -745,7 +729,6 @@ LlmChatWidget.prototype.refreshDebugPanel = function() {
 
 LlmChatWidget.prototype.buildPreview = function() {
 	var orchestrator = this.getOrchestratorModule();
-	var toolExecutor = this.getToolExecutorModule();
 	var contextResolver = this.getContextResolverModule();
 
 	var preview = {};
@@ -809,29 +792,19 @@ LlmChatWidget.prototype.buildPreview = function() {
 	}
 
 	// Tools
+	var helpers = this.getWidgetHelpersModule();
 	if (this.toolsFilter) {
-		var chatTid = this.wiki.getTiddler(this.chatTiddler);
-		var activeTitles;
-		if (chatTid && chatTid.fields["llm-tools-init"] === "yes") {
-			activeTitles = $tw.utils.parseStringArray(chatTid.fields["llm-active-tools"] || "");
-		} else if (this.toolGroupAttr) {
-			activeTitles = toolExecutor.resolveToolGroup(this.toolGroupAttr);
-			if (!activeTitles) activeTitles = $tw.wiki.filterTiddlers("[all[shadows]tag[$:/tags/rimir/llm-connect/tool]]");
-		} else {
-			activeTitles = $tw.wiki.filterTiddlers("[all[shadows]tag[$:/tags/rimir/llm-connect/tool]]");
-		}
-		var tools = toolExecutor.getToolDefinitions(this.toolsFilter, activeTitles);
+		var tools = helpers.resolveTools(this.toolsFilter, this.toolGroupAttr, this.chatTiddler);
 		preview.tools = tools.map(function(t) { return t.name; });
 	}
 
 	// Protection filter
-	var baseProtection = this.wiki.getTiddlerText("$:/config/rimir/llm-connect/protection-filter") || "";
 	var chatProtection = "";
 	if (this.chatTiddler) {
 		var protTid = this.wiki.getTiddler(this.chatTiddler);
 		if (protTid) chatProtection = protTid.fields["llm-protection-filter"] || "";
 	}
-	var protectionFilter = (baseProtection + " " + chatProtection).trim();
+	var protectionFilter = helpers.resolveProtectionFilter(chatProtection);
 	if (protectionFilter) {
 		preview.protectionFilter = protectionFilter;
 	}
@@ -849,6 +822,10 @@ LlmChatWidget.prototype.getToolExecutorModule = function() {
 
 LlmChatWidget.prototype.getContextResolverModule = function() {
 	return require("$:/plugins/rimir/llm-connect/context-resolver");
+};
+
+LlmChatWidget.prototype.getWidgetHelpersModule = function() {
+	return require("$:/plugins/rimir/llm-connect/widget-helpers");
 };
 
 LlmChatWidget.prototype.populateModelDropdown = function() {

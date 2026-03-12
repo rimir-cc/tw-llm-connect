@@ -43,7 +43,7 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 	var self = this;
 	var contextResolver = require("$:/plugins/rimir/llm-connect/context-resolver");
 	var orchestrator = require("$:/plugins/rimir/llm-connect/orchestrator");
-	var toolExecutor = require("$:/plugins/rimir/llm-connect/tool-executor");
+	var helpers = require("$:/plugins/rimir/llm-connect/widget-helpers");
 
 	// Resolve context template
 	var templateTitle = contextResolver.resolveTemplate({
@@ -83,22 +83,11 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 	});
 
 	// Get provider config (allow override via attributes)
-	var config = orchestrator.getProviderConfig(this.providerAttr || undefined);
-	if (this.modelAttr) {
-		config.model = this.modelAttr;
-	}
-	if (this.systemPromptAttr) {
-		config.systemPrompt = this.systemPromptAttr;
-	}
-
+	var config = helpers.resolveProviderConfig(this.providerAttr, this.modelAttr, this.systemPromptAttr);
 	var adapter = orchestrator.getAdapter(config.provider);
 
 	// Get tools if specified (toolGroup narrows to group members)
-	var tools = [];
-	if (this.toolsFilter || this.toolGroupAttr) {
-		var activeTitles = this.toolGroupAttr ? toolExecutor.resolveToolGroup(this.toolGroupAttr) : undefined;
-		tools = toolExecutor.getToolDefinitions(this.toolsFilter || "[tag[$:/tags/rimir/llm-connect/tool]]", activeTitles || undefined);
-	}
+	var tools = helpers.resolveTools(this.toolsFilter, this.toolGroupAttr);
 
 	// Set status
 	this.wiki.addTiddler(new $tw.Tiddler({
@@ -125,8 +114,7 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 	}
 
 	// Run the action
-	var baseProtection = this.wiki.getTiddlerText("$:/config/rimir/llm-connect/protection-filter") || "";
-	var protectionFilter = (baseProtection + " " + (this.protectionFilterAttr || "")).trim();
+	var protectionFilter = helpers.resolveProtectionFilter(this.protectionFilterAttr);
 
 	orchestrator.runAction({
 		prompt: prompt,
@@ -135,7 +123,7 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 		tools: tools,
 		config: config,
 		adapter: adapter,
-		toolExecutor: toolExecutor,
+		toolExecutor: require("$:/plugins/rimir/llm-connect/tool-executor"),
 		protectionFilter: protectionFilter
 	}).then(function(responseText) {
 		// Write output

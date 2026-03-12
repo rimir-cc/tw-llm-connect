@@ -18,6 +18,7 @@ type: text/vnd.tiddlywiki
 |`tiddler` |Source tiddler (sets `currentTiddler` for context) | |
 |`systemPrompt` |System prompt text |global config |
 |`tools` |Filter for tool tiddlers |none |
+|`toolGroup` |Tool group name — restricts active tools to group members |none |
 |`contextTemplate` |Context template tiddler title |precedence chain |
 
 !! Widget: `<$llm-action>`
@@ -27,10 +28,15 @@ type: text/vnd.tiddlywiki
 |`prompt` |Inline prompt text |none |
 |`promptTemplate` |Prompt template tiddler title |none |
 |`contextTemplate` |Context template override |precedence chain |
+|`context` |Filter for context attachments (text and file tiddlers) |none |
 |`outputTarget` |Override template's output target |template value |
 |`outputMode` |Override `text` / `markup` |template value |
 |`tools` |Filter for tool tiddlers |none (no tools) |
+|`toolGroup` |Tool group name — restricts active tools to group members |none |
 |`systemPrompt` |Override system prompt |global config |
+|`provider` |Provider name (`claude`, `openai`, `azure`) |global config |
+|`model` |Model ID override |provider default |
+|`protectionFilter` |Additional protection filter (combined with base) |none |
 
 !! Context template fields
 
@@ -137,6 +143,18 @@ type: text/vnd.tiddlywiki
 </$list>
 ```
 
+!! Debug panel
+
+The debug panel (toggled via the bug icon in the button row) has three tabs:
+
+* ''Preview'' — live preview of what will be sent on the next message: provider, model, system prompt, current messages, pending input, context that would be injected, active tools, and protection filter. Updates in real time as you type or change settings.
+* ''Sent'' — the raw JSON request body from the last API call. Base64 data (images, PDFs) is abbreviated to keep the display readable.
+* ''Response'' — the raw JSON response from the last API call, also with base64 abbreviation.
+
+!! Token estimate
+
+The button row shows an approximate token count: `~3.2k tok (1.8k in / 1.4k out)`. This is a rough estimate using ~4 characters per token. "In" counts assistant message text, "out" counts user messages, context, and tool results. Base64 image/document data is excluded from the count. The display updates after each message exchange.
+
 !! Bundled context templates
 
 |!Template |!Tiddler |!Description |
@@ -151,7 +169,6 @@ type: text/vnd.tiddlywiki
 |`$:/config/rimir/llm-connect/providers/<name>/max-tokens` |`4096` |Max response tokens |
 |`$:/config/rimir/llm-connect/system-prompt` |default text |Global system prompt |
 |`$:/config/rimir/llm-connect/protection-filter` |`[tag[sensitive]] [all[shadows+tiddlers]prefix[$:/plugins/rimir/]]` |Protection filter — matched tiddlers are invisible to LLM tools. Resettable to default in settings |
-|`$:/config/rimir/llm-connect/confirm-writes` |`yes` |Currently unused — writes execute immediately with audit log |
 |`$:/config/rimir/llm-connect/max-tool-result-length` |`4000` |Truncation limit |
 |`$:/config/rimir/llm-connect/default-context-template` | |Global default template |
 |`$:/config/rimir/llm-connect/max-file-size` |`20971520` |Maximum file size in bytes for multimodal attachments (default 20 MB) |
