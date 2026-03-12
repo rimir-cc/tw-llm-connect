@@ -521,6 +521,13 @@ LlmChatWidget.prototype.sendMessage = function() {
 			templateTitle: templateTitle
 		});
 
+		// Abort if context filter is broken
+		if (attachments.error) {
+			this.textarea.value = text;
+			this.setStatus("Context filter error: " + attachments.error);
+			return;
+		}
+
 		var hasFiles = attachments.fileParts.length > 0;
 		var hasTextAttachments = attachments.textTitles.length > 0;
 

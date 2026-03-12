@@ -223,8 +223,28 @@ exports.resolveContextAttachments = function(options) {
 	var combined = filters.join(" ");
 	var titles = $tw.wiki.filterTiddlers(combined);
 
+	// Detect filter errors (TW returns error strings as result items)
+	var filterErrors = [];
+	var validTitles = [];
+	for (var i = 0; i < titles.length; i++) {
+		if (/^Filter error:/.test(titles[i])) {
+			filterErrors.push(titles[i]);
+		} else {
+			validTitles.push(titles[i]);
+		}
+	}
+
+	if (filterErrors.length > 0) {
+		return {
+			textTitles: [],
+			fileParts: [],
+			renderText: renderTextForTitle,
+			error: filterErrors.join("; ")
+		};
+	}
+
 	var fileResolver = require("$:/plugins/rimir/llm-connect/file-resolver");
-	var classified = fileResolver.classifyTitles(titles);
+	var classified = fileResolver.classifyTitles(validTitles);
 
 	return {
 		textTitles: classified.textTitles,

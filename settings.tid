@@ -154,7 +154,7 @@ Deployment: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/azure/dep
 </div>
 
 <div class="rr-input-row">
-API version: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/azure/api-version" tag="input" default="2024-10-21" class="rr-input" size="15"/>
+API version: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/azure/api-version" tag="input" default="2025-04-01-preview" class="rr-input" size="15"/>
 </div>
 
 <div class="rr-input-row">

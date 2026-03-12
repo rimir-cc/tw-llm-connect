@@ -15,7 +15,7 @@ exports.name = "azure";
 exports.buildRequest = function(messages, tools, config) {
 	var endpoint = (config.endpoint || "").replace(/\/+$/, "");
 	var deployment = config.deployment || "";
-	var apiVersion = config.apiVersion || "2024-10-21";
+	var apiVersion = config.apiVersion || "2025-04-01-preview";
 	var maxTokens = parseInt(config.maxTokens) || 4096;
 
 	var openaiMessages = convertMessages(messages, config.systemPrompt);
@@ -103,7 +103,7 @@ exports.buildAssistantMessage = function(parsed) {
 
 exports.buildModelListRequest = function(config) {
 	var endpoint = (config.endpoint || "").replace(/\/+$/, "");
-	var apiVersion = config.apiVersion || "2024-10-21";
+	var apiVersion = config.apiVersion || "2025-04-01-preview";
 	return {
 		url: endpoint + "/openai/models?api-version=" + apiVersion,
 		headers: { "api-key": config.apiKey }

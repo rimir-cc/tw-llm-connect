@@ -63,6 +63,15 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 		templateTitle: templateTitle
 	});
 
+	// Abort if context filter is broken
+	if (attachments.error) {
+		this.wiki.addTiddler(new $tw.Tiddler({
+			title: "$:/temp/rimir/llm-connect/action-status",
+			text: "Context filter error: " + attachments.error
+		}));
+		return true;
+	}
+
 	// Resolve prompt
 	var prompt = contextResolver.resolvePrompt({
 		prompt: this.promptAttr,
