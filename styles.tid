@@ -541,6 +541,14 @@ type: text/vnd.tiddlywiki
 	color: <<colour primary>>;
 }
 
+/* Token estimate label */
+.llm-chat-token-label {
+	font-size: 0.75em;
+	color: <<colour muted-foreground>>;
+	white-space: nowrap;
+	opacity: 0.7;
+}
+
 /* Fetch models button in settings */
 .llm-fetch-models-btn {
 	margin-left: 8px;

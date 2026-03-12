@@ -178,6 +178,13 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 
 	buttonRow.appendChild(modelSelector);
 
+	// Token estimate display
+	var tokenLabel = this.document.createElement("span");
+	tokenLabel.className = "llm-chat-token-label";
+	this.tokenLabel = tokenLabel;
+	this.updateTokenDisplay();
+	buttonRow.appendChild(tokenLabel);
+
 	// Paperclip icon to toggle context filter
 	var contextBtn = this.document.createElement("button");
 	contextBtn.className = "llm-chat-btn-context";
@@ -576,6 +583,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 	this.saveMessages(messages);
 	this.renderMessages(this.messagesDiv);
 	this.updateModelDisplay();
+	this.updateTokenDisplay();
 
 	this.setStatus("Thinking...");
 	this.stopBtn.style.display = "inline-block";
@@ -629,6 +637,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 		onUpdate: function(msgs) {
 			self.saveMessages(msgs);
 			self.renderMessages(self.messagesDiv);
+			self.updateTokenDisplay();
 		},
 		onError: function(err) {
 			self.setStatus("Error: " + err.message);
@@ -661,6 +670,7 @@ LlmChatWidget.prototype.clearChat = function() {
 	this.model = config.model;
 	this.renderMessages(this.messagesDiv);
 	this.updateModelDisplay();
+	this.updateTokenDisplay();
 	this.setStatus("");
 };
 
@@ -873,9 +883,36 @@ LlmChatWidget.prototype.updateModelDisplay = function() {
 	}
 };
 
+LlmChatWidget.prototype.updateTokenDisplay = function() {
+	if (!this.tokenLabel) return;
+	var messages = this.getMessages();
+	if (messages.length === 0) {
+		this.tokenLabel.textContent = "";
+		this.tokenLabel.title = "";
+		return;
+	}
+	var inChars = 0, outChars = 0;
+	for (var i = 0; i < messages.length; i++) {
+		var msg = messages[i];
+		var len = extractTextLength(msg.content);
+		if (msg.role === "assistant") {
+			inChars += len;
+		} else {
+			outChars += len;
+		}
+	}
+	var inTokens = Math.round(inChars / 4);
+	var outTokens = Math.round(outChars / 4);
+	var totalTokens = inTokens + outTokens;
+	var fmt = function(t) { return t >= 1000 ? (t / 1000).toFixed(1) + "k" : String(t); };
+	this.tokenLabel.textContent = "~" + fmt(totalTokens) + " tok (" + fmt(inTokens) + " in / " + fmt(outTokens) + " out)";
+	this.tokenLabel.title = "Estimate (~4 chars/token)\nIn (assistant): " + inChars + " chars / ~" + inTokens + " tokens\nOut (user+context+tools): " + outChars + " chars / ~" + outTokens + " tokens";
+};
+
 LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 	if (changedTiddlers[this.chatTiddler]) {
 		this.renderMessages(this.messagesDiv);
+		this.updateTokenDisplay();
 	}
 	// Update provider/model display if config changed — but only if chat is empty (not locked)
 	var msgs = this.getMessages();
@@ -889,6 +926,26 @@ LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 	}
 	return false;
 };
+
+function extractTextLength(content) {
+	if (typeof content === "string") return content.length;
+	if (!Array.isArray(content)) return 0;
+	var len = 0;
+	for (var i = 0; i < content.length; i++) {
+		var block = content[i];
+		if (block.type === "text" && block.text) {
+			len += block.text.length;
+		} else if (block.type === "tool_use" && block.input) {
+			len += JSON.stringify(block.input).length;
+		} else if (block.type === "tool_result" && block.content) {
+			len += typeof block.content === "string" ? block.content.length : JSON.stringify(block.content).length;
+		} else if (typeof block.content === "string") {
+			len += block.content.length;
+		}
+		// Skip base64 data (image/document/file_ref blocks) — not text
+	}
+	return len;
+}
 
 function abbreviateBase64(jsonBody) {
 	try {
