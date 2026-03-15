@@ -1,0 +1,27 @@
+created: 20260315120000000
+modified: 20260315120000000
+rdt.order: 7
+rdt.plugin-key: llm-connect
+rdt.plugin-name: llm connect
+rdt.plugin-subtitle: In-browser LLM integration with tool use
+rdt.section: FAQ
+title: $:/plugins/rimir/llm-connect/doc/faq
+type: text/vnd.tiddlywiki
+
+<$transclude $tiddler="$:/plugins/rimir/doc-template/templates/page">
+<$fill $name="body">
+
+!! Q: The LLM cannot read or modify a specific tiddler. Why?
+
+The tiddler is likely matched by the protection filter. By default, all tiddlers tagged `sensitive` and all rimir plugin internals (`$:/plugins/rimir/*`) are hidden from the LLM. Check Settings > Protection Filter to see the active filter and adjust it if needed. You can also add per-chat protection via the shield icon.
+
+!! Q: Can I use llm-connect with a single-file wiki (no server)?
+
+Yes. llm-connect is entirely browser-side — it makes direct XHR calls to the LLM provider API from the browser. No TiddlyWiki server is required. You only need a valid API key and a modern browser with CORS support (all major LLM APIs support browser-origin requests).
+
+!! Q: How do I attach a PDF to a conversation?
+
+Use the context filter (paperclip icon in the chat panel). Enter a filter that matches tiddlers with `_canonical_uri` pointing to PDFs, e.g., `[title[My Document.pdf]]`. The file resolver detects the `_canonical_uri`, fetches the file via XHR, base64-encodes it, and sends it to the LLM as a document attachment. Maximum file size is configurable (default 20 MB).
+
+</$fill>
+</$transclude>

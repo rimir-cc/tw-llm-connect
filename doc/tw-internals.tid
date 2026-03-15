@@ -1,0 +1,43 @@
+created: 20260315120000000
+modified: 20260315120000000
+rdt.order: 8
+rdt.plugin-key: llm-connect
+rdt.plugin-name: llm connect
+rdt.plugin-subtitle: In-browser LLM integration with tool use
+rdt.section: TW Internals
+title: $:/plugins/rimir/llm-connect/doc/tw-internals
+type: text/vnd.tiddlywiki
+
+<$transclude $tiddler="$:/plugins/rimir/doc-template/templates/page">
+<$fill $name="body">
+
+!! Object.create($tw.wiki)
+
+The restricted wiki proxy is created via `Object.create($tw.wiki)`, which produces an object that inherits all methods from the real wiki but allows overriding individual methods (like `getTiddler`, `filterTiddlers`, `addTiddler`) to enforce tiddler protection. This is a lightweight, zero-copy approach that avoids duplicating the entire wiki store.
+
+!! $tw.wiki.filterTiddlers
+
+Used extensively by the tool executor to run user-defined filters (e.g., `search_tiddlers` tool). The restricted wiki proxy overrides this to strip protected titles from filter results, ensuring the LLM never sees protected tiddler titles even through indirect filter queries.
+
+!! $tw.wiki.renderText
+
+The context resolver uses `renderText(type, "text/vnd.tiddlywiki", text, {variables})` to wikify context templates. This runs the full TiddlyWiki rendering pipeline including transclusion, macro expansion, and widget execution — producing plain text or wikitext output depending on the output mode.
+
+!! module-type: widget
+
+`chat-widget.js` and `action-widget.js` are registered as custom widgets. `<$llm-chat>` extends TW's `Widget` class and manages its own DOM lifecycle (message list, input area, debug panel). `<$llm-action>` is an action widget that executes during `invokeActions()` — it runs the LLM call and writes the result.
+
+!! $:/tags/PageTemplate
+
+The global chat panel (`ui/chat-panel.tid`) is tagged `$:/tags/PageTemplate`, making it render as a page-level element (alongside the story river, sidebar, etc.). Visibility is controlled via a `$reveal` widget watching a state tiddler toggled by the page toolbar button.
+
+!! $:/tags/ViewTemplate
+
+The pair-edit panel (`ui/pair-edit-panel.tid`) is tagged `$:/tags/ViewTemplate`, injecting it into every tiddler's view. A `$reveal` widget gates rendering based on a per-tiddler state tiddler, so the panel only appears when the user clicks the pair-edit toolbar button.
+
+!! XMLHttpRequest
+
+The orchestrator uses raw `XMLHttpRequest` (not `fetch`) for LLM API calls to maintain compatibility with older TiddlyWiki environments. The request is built by the provider adapter and sent as JSON with appropriate headers (Authorization, Content-Type).
+
+</$fill>
+</$transclude>

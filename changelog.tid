@@ -6,6 +6,7 @@ type: text/vnd.tiddlywiki
 ! Changelog
 
 |!Version |!Date |!Changes |
+|v0.1.16 |2026-03-15 |Add recipe/tools-panel system, PDF summarization, missing doc tiddlers |
 |v0.1.15 |2026-03-15 |Extract inline SVGs to icon tiddlers |
 |v0.1.14 |2026-03-15 |Add regression tests and CI test gate |
 |v0.1.13 |2026-03-12 |Fix: context attachments (📎) now work when added after the first message — separate `attachmentsInjected` flag allows late injection. Fix: base64 abbreviation in debug panel — relaxed regex, data URI check first, now also applies to Preview tab. Fix: tool toggle via wrench icon now instantly updates the Preview debug tab |

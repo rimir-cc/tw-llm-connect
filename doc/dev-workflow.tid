@@ -1,0 +1,57 @@
+created: 20260315120000000
+modified: 20260315120000000
+rdt.order: 6
+rdt.plugin-key: llm-connect
+rdt.plugin-name: llm connect
+rdt.plugin-subtitle: In-browser LLM integration with tool use
+rdt.section: Dev Workflow
+title: $:/plugins/rimir/llm-connect/doc/dev-workflow
+type: text/vnd.tiddlywiki
+
+<$transclude $tiddler="$:/plugins/rimir/doc-template/templates/page">
+<$fill $name="body">
+
+!! Restart rules
+
+|!Change |!Restart needed? |
+|`orchestrator.js`, `adapter-*.js`, `tool-executor.js`, `context-resolver.js`, `file-resolver.js` |Yes — `module-type: library`, loaded at boot |
+|`chat-widget.js`, `action-widget.js` |Yes — `module-type: widget`, loaded at boot |
+|`startup.js`, `ui/drag-panel.js` |Yes — `module-type: startup`, loaded at boot |
+|Tool tiddlers (tagged `$:/tags/rimir/llm-connect/tool`) |No — read from wiki store per invocation |
+|Context templates, prompt templates |No — read from wiki store per request |
+|Config tiddlers (`$:/config/rimir/llm-connect/*`) |No — read from wiki store per request |
+|UI tiddlers (`ui/chat-panel.tid`, `ui/pair-edit*.tid`) |Browser reload — system tiddlers |
+
+<$transclude $tiddler="$:/plugins/rimir/doc-template/templates/callout" type="tip">
+<$fill $name="body">
+On Windows, use `taskkill //F //PID <pid> //T` to kill the server before restarting.
+</$fill>
+</$transclude>
+
+!! Key modules
+
+|!Module |!Type |!Role |
+|`orchestrator.js` |library |Tool-use loop, conversation management, HTTP requests, `file_ref` resolution |
+|`adapter-claude.js` |library |Claude API: request building, response parsing, multimodal blocks |
+|`adapter-openai.js` |library |OpenAI API: same interface, different format |
+|`adapter-azure.js` |library |Azure OpenAI API: deployment/version config |
+|`tool-executor.js` |library |Tool dispatch, restricted wiki proxy, wikitext execution |
+|`context-resolver.js` |library |Template precedence, rendering, context attachment resolution |
+|`file-resolver.js` |library |File detection, classification (image/document), base64 fetching |
+|`chat-widget.js` |widget |`<$llm-chat>` — chat UI, message management, debug panel |
+|`action-widget.js` |widget |`<$llm-action>` — one-shot invocation, output writing |
+
+!! Debugging
+
+* Use the debug panel (bug icon) in the chat to inspect the request payload before sending
+* Check `$:/temp/rimir/llm-connect/write-log` for the audit log of all write operations
+* Tool tiddlers can be cloned and edited from Settings > Tools — clones start disabled
+* Set `tool-enabled: no` on work-in-progress tools to prevent them from being used
+
+!! Dependencies
+
+* ''theme'' — CSS utility classes (`rr-*` prefix)
+* ''json-dsl'' — used internally for building tool schemas
+
+</$fill>
+</$transclude>
