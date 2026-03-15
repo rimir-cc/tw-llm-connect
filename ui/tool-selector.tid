@@ -11,7 +11,7 @@ type: text/vnd.tiddlywiki
 <$action-listops $tiddler=<<chatTiddler>> $field="llm-active-tools" $filter="[all[shadows]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]]"/>
 </$list>
 <$action-setfield $tiddler=<<selectorState>> text={{{ [<selectorState>get[text]match[open]then[closed]else[open]] }}}/>
-<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+<$transclude $tiddler="$:/plugins/rimir/llm-connect/icon/tools"/>
 </$button>
 <$reveal type="match" state=<<selectorState>> text="open" animate="yes">
 <$click-outside state=<<selectorState>> closedValue="closed">

@@ -6,6 +6,7 @@ type: text/vnd.tiddlywiki
 ! Changelog
 
 |!Version |!Date |!Changes |
+|v0.1.15 |2026-03-15 |Extract inline SVGs to icon tiddlers |
 |v0.1.14 |2026-03-15 |Add regression tests and CI test gate |
 |v0.1.13 |2026-03-12 |Fix: context attachments (📎) now work when added after the first message — separate `attachmentsInjected` flag allows late injection. Fix: base64 abbreviation in debug panel — relaxed regex, data URI check first, now also applies to Preview tab. Fix: tool toggle via wrench icon now instantly updates the Preview debug tab |
 |v0.1.12 |2026-03-12 |Refactor: extracted shared OpenAI-compatible adapter base (`adapter-openai-base.js`) — eliminates ~160 lines of duplication between OpenAI and Azure adapters. New `widget-helpers.js` library centralizes protection filter resolution, tool resolution, and provider config patterns shared by `<$llm-chat>` and `<$llm-action>`. Removed unused `confirm-writes` config tiddler and settings checkbox. Updated `doc-reference.tid` with missing attributes (`toolGroup`, `provider`, `model`, `protectionFilter`, `context` on `<$llm-action>`; `toolGroup` on `<$llm-chat>`), debug panel docs, and token estimate docs |

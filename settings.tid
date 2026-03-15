@@ -23,14 +23,14 @@ type: text/vnd.tiddlywiki
 <%if [<isComplete>match[yes]] %>
 <$button class="tc-btn-invisible llm-tool-icon-btn" tooltip="Clone tool">
 <$action-setfield $tiddler="$:/temp/rimir/llm-connect/new-tool-form" show="yes" new-title={{{ [<tool>addsuffix[/clone]] }}} tool-name={{{ [<tool>get[tool-name]addsuffix[_clone]] }}} tool-description={{{ [<tool>get[tool-description]addprefix[Clone of: ]] }}} tool-mode={{{ [<tool>get[tool-mode]] }}} tool-schema={{{ [<tool>get[tool-schema]] }}} tool-text={{{ [<tool>get[text]] }}} tool-enabled="no"/>
-<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+<$transclude $tiddler="$:/plugins/rimir/llm-connect/icon/copy"/>
 </$button>
 <%endif%>
 <%if [<tool>!is[shadow]] %>
 <$button class="tc-btn-invisible llm-tool-icon-btn" tooltip="Edit tool inline">
 <$action-setfield $tiddler=<<detailState>> text={{{ [<editState>get[text]match[yes]then[open]else[open]] }}}/>
 <$action-setfield $tiddler=<<editState>> text={{{ [<editState>get[text]match[yes]then[no]else[yes]] }}}/>
-<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+<$transclude $tiddler="$:/plugins/rimir/llm-connect/icon/edit"/>
 </$button>
 <%endif%>
 </td>
@@ -315,7 +315,7 @@ Cancel
 <$action-confirm $message="Delete this tool group?">
 <$action-deletetiddler $tiddler=<<group>>/>
 </$action-confirm>
-<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+<$transclude $tiddler="$:/plugins/rimir/llm-connect/icon/delete"/>
 </$button>
 </div>
 <$reveal type="match" state=<<groupDetailState>> text="open" animate="yes">
