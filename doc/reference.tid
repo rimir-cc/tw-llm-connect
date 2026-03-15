@@ -20,6 +20,9 @@ type: text/vnd.tiddlywiki
 |`tools` |Filter for tool tiddlers |none |
 |`toolGroup` |Tool group name — restricts active tools to group members |none |
 |`contextTemplate` |Context template tiddler title |precedence chain |
+|`actionMode` |`yes` — hides message history until first action starts; allows empty send (sends "Go.") |`no` |
+|`sendLabel` |Custom label for the send button |`Send` |
+|`placeholder` |Custom placeholder text for the textarea |default text |
 
 !! Widget: `<$llm-action>`
 
@@ -37,6 +40,8 @@ type: text/vnd.tiddlywiki
 |`provider` |Provider name (`claude`, `openai`, `azure`) |global config |
 |`model` |Model ID override |provider default |
 |`protectionFilter` |Additional protection filter (combined with base) |none |
+|`statusTiddler` |Custom tiddler for status text (enables per-instance status) |`$:/temp/rimir/llm-connect/action-status` |
+|`resultTiddler` |Custom tiddler for result output (enables per-instance results) |`$:/temp/rimir/llm-connect/action-result` |
 
 !! Context template fields
 
@@ -123,6 +128,13 @@ The property names from `tool-schema` become widget variables inside the tool's 
 
 Variables for parameters the LLM did not provide resolve to empty string.
 
+Additionally, the tool executor injects these built-in context variables (available to all tools):
+
+|!Variable |!Description |
+|`<<__timestamp>>` |Current time in TW format (`YYYYMMDDHHMMSSMMM`) |
+|`<<__provider>>` |Active provider name (e.g. `claude`) |
+|`<<__model>>` |Active model ID (e.g. `claude-opus-4-20250514`) |
+
 !! Custom tools
 
 Create custom tools from the Settings > Tools panel using ''Create new tool'' or ''Clone'' (copy icon on any existing tool). Clones start disabled (`tool-enabled: no`) so you can edit them before activation.
@@ -154,6 +166,54 @@ The debug panel (toggled via the bug icon in the button row) has three tabs:
 !! Token estimate
 
 The button row shows an approximate token count: `~3.2k tok (1.8k in / 1.4k out)`. This is a rough estimate using ~4 characters per token. "In" counts assistant message text, "out" counts user messages, context, and tool results. Base64 image/document data is excluded from the count. The display updates after each message exchange.
+
+!! Tools panel (ViewTemplate)
+
+The tools panel (`$:/plugins/rimir/llm-connect/ui/tools-panel`) is a ViewTemplate element that renders below the tiddler body. It dispatches to matching ''recipes'' — each recipe defines which tiddlers it applies to and what UI to show.
+
+!!! Recipe tiddler fields
+
+Tag: `$:/tags/rimir/llm-connect/tw-recipe`
+
+|!Field |!Description |
+|`match-filter` |TiddlyWiki filter evaluated against `currentTiddler`. If the filter returns any result, the recipe's UI renders |
+|`recipe-name` |Display name |
+|`recipe-order` |Numeric sort order (lower = higher priority) |
+
+The tiddler body contains the recipe's wikitext UI, which typically includes `<$llm-action>` invocations with tool-use.
+
+!!! Adding a new recipe
+
+Create a tiddler tagged `$:/tags/rimir/llm-connect/tw-recipe` with a `match-filter` and wikitext body. Example — a recipe that shows for all tiddlers tagged "report":
+
+```
+tags: $:/tags/rimir/llm-connect/tw-recipe
+match-filter: [all[current]tag[report]]
+recipe-name: Summarize Report
+recipe-order: 200
+```
+
+!!! Built-in recipes
+
+|!Recipe |!Match filter |!Description |
+|PDF Summary |`[all[current]has[_canonical_uri]type[application/pdf]]` |Opens a floating chat panel pre-configured for PDF summarization. Uses `<$llm-chat>` with `pdf-tools` tool group, PDF context, and summary system prompt. Creates summary tiddler via `pdf_store_summary` tool |
+
+Recipe panels reuse the full `<$llm-chat>` widget, giving access to model selection, tool management, debug panel, protection filters, and context filters — the same capabilities as the global chat panel.
+
+!!! `pdf_store_summary` tool
+
+Creates a summary tiddler linked to a parent PDF. Called by the LLM during PDF summarization.
+
+|!Parameter |!Type |!Required |!Description |
+|`parent_title` |string |yes |Title of the PDF tiddler being summarized |
+|`summary` |string |yes |Summary content in wikitext format |
+|`additional_requirements` |string |no |Extra user instructions |
+
+Summary tiddler conventions:
+
+* Title: `<parent>/summaries/<model>-<timestamp>` (model and timestamp read from config at creation time)
+* Tag: `llm-summary`
+* Fields: `parent`, `summary-model`, `summary-timestamp`, `additional-requirements`
 
 !! Bundled context templates
 

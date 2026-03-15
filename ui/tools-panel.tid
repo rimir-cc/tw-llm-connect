@@ -1,0 +1,13 @@
+title: $:/plugins/rimir/llm-connect/ui/tools-panel
+tags: $:/tags/ViewTemplate
+list-after: $:/core/ui/ViewTemplate/body
+
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tw-recipe]nsort[recipe-order]]" variable="recipe">
+<$set name="matchFilter" filter="[<recipe>get[match-filter]]">
+<$list filter="[subfilter<matchFilter>limit[1]]" variable="_">
+<div class="llm-tools-panel">
+<$transclude $tiddler=<<recipe>> $mode="block"/>
+</div>
+</$list>
+</$set>
+</$list>

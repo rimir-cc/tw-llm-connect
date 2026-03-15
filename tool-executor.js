@@ -191,6 +191,12 @@ function executeWikitext(wikitext, input, mode, protectionFilter) {
 	}
 	variables.protectionFilter = protectionFilter || "";
 
+	// Inject built-in context variables available to all tools
+	var provider = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/provider") || "unknown";
+	variables.__timestamp = $tw.utils.stringifyDate(new Date());
+	variables.__provider = provider;
+	variables.__model = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/providers/" + provider + "/model") || provider;
+
 	var wiki = createRestrictedWiki(protectionFilter);
 	var parser = wiki.parseText("text/vnd.tiddlywiki", wikitext);
 	var widgetNode = wiki.makeWidget(parser, {

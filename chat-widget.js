@@ -30,6 +30,10 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	// Messages area
 	var messagesDiv = this.document.createElement("div");
 	messagesDiv.className = "llm-chat-messages";
+	if (this.actionMode) {
+		messagesDiv.style.display = "none";
+		messagesDiv.style.minHeight = "0";
+	}
 	this.messagesDiv = messagesDiv;
 	container.appendChild(messagesDiv);
 
@@ -48,7 +52,7 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 
 	var textarea = this.document.createElement("textarea");
 	textarea.className = "llm-chat-textarea";
-	textarea.placeholder = "Type your message... (Enter to send, Ctrl+Enter for newline)";
+	textarea.placeholder = this.placeholderAttr || "Type your message... (Enter to send, Ctrl+Enter for newline)";
 	textarea.rows = 3;
 	this.textarea = textarea;
 
@@ -311,7 +315,7 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 
 	var sendBtn = this.document.createElement("button");
 	sendBtn.className = "llm-chat-btn llm-chat-btn-send";
-	sendBtn.textContent = "Send";
+	sendBtn.textContent = this.sendLabelAttr || "Send";
 	sendBtn.addEventListener("click", function() {
 		self.sendMessage();
 	});
@@ -331,6 +335,9 @@ LlmChatWidget.prototype.execute = function() {
 	this.toolGroupAttr = this.getAttribute("toolGroup", "");
 	this.contextTemplateAttr = this.getAttribute("contextTemplate", "");
 	this.sourceTiddler = this.getAttribute("tiddler", "");
+	this.placeholderAttr = this.getAttribute("placeholder", "");
+	this.sendLabelAttr = this.getAttribute("sendLabel", "");
+	this.actionMode = this.getAttribute("actionMode", "") === "yes";
 
 	// Use chat tiddler's locked provider/model if conversation has started, otherwise global config
 	var chatTid = this.chatTiddler ? this.wiki.getTiddler(this.chatTiddler) : null;
@@ -525,7 +532,8 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 
 LlmChatWidget.prototype.sendMessage = function() {
 	var text = this.textarea.value.trim();
-	if (!text) return;
+	if (!text && !this.actionMode) return;
+	if (!text) text = "Go.";
 	this.textarea.value = "";
 
 	var messages = this.getMessages();
@@ -653,6 +661,9 @@ LlmChatWidget.prototype.sendMessage = function() {
 
 	this.setStatus("Thinking...");
 	this.stopBtn.style.display = "inline-block";
+	if (this.actionMode && this.messagesDiv.style.display === "none") {
+		this.messagesDiv.style.display = "";
+	}
 	this.abortController = new AbortController();
 
 	var orchestrator = this.getOrchestratorModule();

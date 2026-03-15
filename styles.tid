@@ -741,3 +741,63 @@ type: text/vnd.tiddlywiki
 	white-space: pre-wrap;
 	word-break: break-all;
 }
+
+/* Tools panel (ViewTemplate recipes) */
+.llm-tools-panel {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	padding: 4px 0;
+	gap: 6px;
+	align-items: center;
+	position: relative;
+}
+
+.llm-tools-btn {
+	padding: 2px 8px;
+	font-size: 0.85em;
+	white-space: nowrap;
+}
+
+.llm-tools-btn:hover {
+	opacity: 0.8;
+}
+
+.llm-tools-btn-done {
+	color: <<colour primary>>;
+}
+
+/* Tools panel dropdown */
+.llm-tools-dropdown {
+	position: absolute;
+	right: 0;
+	top: 100%;
+	z-index: 1000;
+	width: 480px;
+	max-width: 90vw;
+	background: <<colour tiddler-background>>;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 6px;
+	box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+	overflow: hidden;
+}
+
+.llm-tools-dropdown .llm-chat-container {
+	border: none;
+	max-height: none;
+}
+
+.llm-tools-dropdown .llm-chat-messages {
+	max-height: 300px;
+}
+
+.llm-tools-dropdown-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 6px 12px;
+	border-bottom: 1px solid <<colour tiddler-border>>;
+	background: <<colour page-background>>;
+	font-weight: bold;
+	font-size: 0.85em;
+}

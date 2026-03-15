@@ -1,0 +1,6 @@
+title: $:/plugins/rimir/llm-connect/tools/groups/pdf-tools
+tags: $:/tags/rimir/llm-connect/tool-group
+group-name: pdf-tools
+group-description: Tools for PDF document processing
+group-tools: $:/plugins/rimir/llm-connect/tools/pdf-store-summary
+type: text/vnd.tiddlywiki

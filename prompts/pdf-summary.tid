@@ -1,0 +1,4 @@
+title: $:/plugins/rimir/llm-connect/prompts/pdf-summary
+tags: $:/tags/rimir/llm-connect/prompt
+prompt-name: PDF Summary
+prompt-template: Summarize the attached PDF briefly using sections and bullet-points.

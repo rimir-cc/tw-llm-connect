@@ -37,6 +37,8 @@ LlmActionWidget.prototype.execute = function() {
 	this.providerAttr = this.getAttribute("provider", "");
 	this.modelAttr = this.getAttribute("model", "");
 	this.protectionFilterAttr = this.getAttribute("protectionFilter", "");
+	this.statusTiddlerAttr = this.getAttribute("statusTiddler", "");
+	this.resultTiddlerAttr = this.getAttribute("resultTiddler", "");
 };
 
 LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
@@ -67,10 +69,14 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 		templateTitle: templateTitle
 	});
 
+	// Resolve per-instance tiddler titles
+	var statusTitle = this.statusTiddlerAttr || "$:/temp/rimir/llm-connect/action-status";
+	var resultTitle = this.resultTiddlerAttr || "$:/temp/rimir/llm-connect/action-result";
+
 	// Abort if context filter is broken
 	if (attachments.error) {
 		this.wiki.addTiddler(new $tw.Tiddler({
-			title: "$:/temp/rimir/llm-connect/action-status",
+			title: statusTitle,
 			text: "Context filter error: " + attachments.error
 		}));
 		return true;
@@ -91,7 +97,7 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 
 	// Set status
 	this.wiki.addTiddler(new $tw.Tiddler({
-		title: "$:/temp/rimir/llm-connect/action-status",
+		title: statusTitle,
 		text: "Running..."
 	}));
 
@@ -127,14 +133,14 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 		protectionFilter: protectionFilter
 	}).then(function(responseText) {
 		// Write output
-		self.writeOutput(responseText, rendered, templateTitle);
+		self.writeOutput(responseText, rendered, templateTitle, resultTitle);
 		self.wiki.addTiddler(new $tw.Tiddler({
-			title: "$:/temp/rimir/llm-connect/action-status",
+			title: statusTitle,
 			text: ""
 		}));
 	})["catch"](function(err) {
 		self.wiki.addTiddler(new $tw.Tiddler({
-			title: "$:/temp/rimir/llm-connect/action-status",
+			title: statusTitle,
 			text: "Error: " + err.message
 		}));
 	});
@@ -142,14 +148,14 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 	return true;
 };
 
-LlmActionWidget.prototype.writeOutput = function(responseText, rendered, templateTitle) {
+LlmActionWidget.prototype.writeOutput = function(responseText, rendered, templateTitle, resultTitle) {
 	var outputTarget = this.outputTargetAttr || rendered.outputTarget || "display";
 	var contextResolver = require("$:/plugins/rimir/llm-connect/context-resolver");
 
 	if (outputTarget === "display") {
 		// Write to temp tiddler for display
 		this.wiki.addTiddler(new $tw.Tiddler({
-			title: "$:/temp/rimir/llm-connect/action-result",
+			title: resultTitle || "$:/temp/rimir/llm-connect/action-result",
 			text: responseText,
 			source: this.sourceTiddler,
 			timestamp: new Date().toISOString()

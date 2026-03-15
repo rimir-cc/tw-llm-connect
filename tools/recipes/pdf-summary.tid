@@ -1,0 +1,65 @@
+title: $:/plugins/rimir/llm-connect/tools/recipes/pdf-summary
+tags: $:/tags/rimir/llm-connect/tw-recipe
+match-filter: [all[current]has[_canonical_uri]type[application/pdf]]
+recipe-name: PDF Summary
+recipe-order: 100
+type: text/vnd.tiddlywiki
+
+\import [[$:/plugins/rimir/llm-connect/ui/tool-selector]]
+\whitespace trim
+
+\define panelState() $:/state/rimir/llm-connect/tools-panel/$(currentTiddler)$/open
+\define chatTiddler() $:/temp/rimir/llm-connect/tools-panel/$(currentTiddler)$/chat
+\define pdfContextFilter() [title[$(currentTiddler)$]]
+
+\define pdf-summary-system-prompt()
+You are a document summarizer. Read the attached PDF and create a structured summary. Store it using the pdf_store_summary tool with parent_title set to the PDF tiddler title. If the user provides additional requirements, follow them.
+\end
+
+\define open-panel-actions()
+<$action-setfield $tiddler=<<chatTiddler>> llm-context-filter=<<pdfContextFilter>>/>
+<$action-setfield $tiddler=<<panelState>> text="yes"/>
+\end
+
+<%if [tag[llm-summary]field:parent<currentTiddler>limit[1]] %>
+<$let latestSummary={{{ [tag[llm-summary]field:parent<currentTiddler>nsort[created]last[]] }}}>
+<$button class="tc-btn-invisible llm-tools-btn llm-tools-btn-done" tooltip="Open latest summary">
+<$action-navigate $to=<<latestSummary>>/>
+&#x2705; Summary
+</$button>
+</$let>
+<$button class="tc-btn-invisible llm-tools-btn" tooltip="Re-summarize this PDF">
+<<open-panel-actions>>
+&#x1F504;
+</$button>
+<%else%>
+<$button class="tc-btn-invisible llm-tools-btn" tooltip="Summarize this PDF">
+<<open-panel-actions>>
+&#x1F4C4; Summarize
+</$button>
+<%endif%>
+
+<$reveal stateTitle=<<panelState>> type="match" text="yes" animate="yes">
+<div class="llm-tools-dropdown">
+<div class="llm-tools-dropdown-header">
+<span>PDF Summary</span>
+<span class="llm-chat-panel-header-actions">
+<<llm-tool-selector chatTiddler:<<chatTiddler>>>>
+<$button class="tc-btn-invisible" tooltip="Close">
+<$action-setfield $tiddler=<<panelState>> text="no"/>
+&times;
+</$button>
+</span>
+</div>
+<$llm-chat
+  chatTiddler=<<chatTiddler>>
+  tiddler=<<currentTiddler>>
+  tools="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]]"
+  toolGroup="pdf-tools"
+  systemPrompt=<<pdf-summary-system-prompt>>
+  actionMode="yes"
+  sendLabel="Summarize"
+  placeholder="Additional instructions... (Enter to send)"
+/>
+</div>
+</$reveal>
