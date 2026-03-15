@@ -1,7 +1,8 @@
 {
     "description": "Test edition for llm-connect",
     "plugins": [
-        "tiddlywiki/jasmine"
+        "tiddlywiki/jasmine",
+        "rimir/llm-connect"
     ],
     "themes": [
         "tiddlywiki/vanilla",
