@@ -17,7 +17,7 @@ jobs:
         run: |
           mkdir -p /tmp/plugins/rimir/llm-connect
           cp -r . /tmp/plugins/rimir/llm-connect/
-          TIDDLYWIKI_PLUGIN_PATH=/tmp/plugins npx tiddlywiki test-edition --test spec="llm-connect"
+          TIDDLYWIKI_CLI_MODE=1 TIDDLYWIKI_PLUGIN_PATH=/tmp/plugins npx tiddlywiki test-edition --test spec="llm-connect"
 
   notify:
     needs: test
