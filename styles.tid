@@ -580,6 +580,25 @@ type: text/vnd.tiddlywiki
 	margin-top: 4px;
 }
 
+.llm-chat-protection-mode-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.llm-chat-protection-mode-select {
+	font-size: 0.8em;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 3px;
+	padding: 2px 4px;
+	background: <<colour tiddler-background>>;
+	color: <<colour foreground>>;
+}
+
+.llm-chat-protection-mode-hint {
+	font-size: 0.75em;
+}
+
 .llm-chat-protection-base-row {
 	display: flex;
 	align-items: center;

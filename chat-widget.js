@@ -74,55 +74,96 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	protectionRow.style.display = "none";
 	this.protectionRow = protectionRow;
 
-	var protectionInput = this.document.createElement("input");
-	protectionInput.className = "llm-chat-protection-input";
-	protectionInput.type = "text";
-	protectionInput.placeholder = "e.g. [tag[sensitive]] [prefix[Private/]]";
-	// Load existing per-chat filter
+	// Mode toggle (deny/allow)
+	var baseMode = (this.wiki.getTiddlerText("$:/config/rimir/llm-connect/protection-mode") || "allow").trim();
+	var chatMode = "";
 	if (this.chatTiddler) {
-		var protTid = this.wiki.getTiddler(this.chatTiddler);
-		if (protTid) protectionInput.value = protTid.fields["llm-protection-filter"] || "";
+		var protModeTid = this.wiki.getTiddler(this.chatTiddler);
+		if (protModeTid) chatMode = protModeTid.fields["llm-protection-mode"] || "";
 	}
-	this.protectionInput = protectionInput;
-	protectionInput.addEventListener("change", function() {
+	var activeMode = this.protectionModeAttr || chatMode || baseMode;
+
+	var modeRow = this.document.createElement("div");
+	modeRow.className = "llm-chat-protection-mode-row";
+	var modeLabel = this.document.createElement("span");
+	modeLabel.className = "llm-chat-protection-label";
+	modeLabel.textContent = "Mode:";
+	modeRow.appendChild(modeLabel);
+
+	var modeSelect = this.document.createElement("select");
+	modeSelect.className = "llm-chat-protection-mode-select";
+	var denyOption = this.document.createElement("option");
+	denyOption.value = "deny";
+	denyOption.textContent = "Deny (blacklist)";
+	var allowOption = this.document.createElement("option");
+	allowOption.value = "allow";
+	allowOption.textContent = "Allow (whitelist)";
+	modeSelect.appendChild(denyOption);
+	modeSelect.appendChild(allowOption);
+	modeSelect.value = activeMode;
+	this.protectionModeSelect = modeSelect;
+
+	modeSelect.addEventListener("change", function() {
+		// Save current input value to the field for the OLD mode before switching
+		self.saveProtectionInput();
 		if (self.chatTiddler) {
-			var fields = { title: self.chatTiddler, "llm-protection-filter": protectionInput.value };
+			var fields = { title: self.chatTiddler, "llm-protection-mode": modeSelect.value };
 			var existing = self.wiki.getTiddler(self.chatTiddler);
 			if (existing) fields = $tw.utils.extend({}, existing.fields, fields);
 			self.wiki.addTiddler(new $tw.Tiddler(fields));
 		}
+		// Load the input value for the NEW mode
+		self.loadProtectionInput();
+		self.updateProtectionLabels();
+		self.refreshDebugPanel();
+	});
+	modeRow.appendChild(modeSelect);
+
+	var modeHint = this.document.createElement("span");
+	modeHint.className = "llm-chat-protection-mode-hint rr-muted";
+	this.protectionModeHint = modeHint;
+	modeRow.appendChild(modeHint);
+	protectionRow.appendChild(modeRow);
+
+	// Base filter row (shows the settings-level filter for the active mode)
+	var baseRow = this.document.createElement("div");
+	baseRow.className = "llm-chat-protection-base-row";
+	var protectionLabel = this.document.createElement("span");
+	protectionLabel.className = "llm-chat-protection-label";
+	this.protectionFilterLabel = protectionLabel;
+	baseRow.appendChild(protectionLabel);
+	var baseFilterSpan = this.document.createElement("code");
+	baseFilterSpan.className = "llm-chat-protection-base";
+	baseFilterSpan.title = "Base filter (from settings — always active)";
+	this.protectionBaseFilterSpan = baseFilterSpan;
+	baseRow.appendChild(baseFilterSpan);
+	this.protectionBaseRow = baseRow;
+	protectionRow.appendChild(baseRow);
+
+	// Per-chat additional filter input (switches between deny/allow field based on mode)
+	var addRow = this.document.createElement("div");
+	addRow.className = "llm-chat-protection-add-row";
+	var plusLabel = this.document.createElement("span");
+	plusLabel.className = "llm-chat-protection-label";
+	plusLabel.textContent = "+";
+	addRow.appendChild(plusLabel);
+	var protectionInput = this.document.createElement("input");
+	protectionInput.className = "llm-chat-protection-input";
+	protectionInput.type = "text";
+	protectionInput.placeholder = "additional filter (optional)";
+	this.protectionInput = protectionInput;
+	this.loadProtectionInput();
+	protectionInput.addEventListener("change", function() {
+		self.saveProtectionInput();
 		self.refreshDebugPanel();
 	});
 	protectionInput.addEventListener("input", function() {
 		self.refreshDebugPanel();
 	});
-	var protectionLabel = this.document.createElement("span");
-	protectionLabel.className = "llm-chat-protection-label";
-	protectionLabel.textContent = "Protect:";
-	var baseFilter = this.wiki.getTiddlerText("$:/config/rimir/llm-connect/protection-filter") || "";
-	if (baseFilter) {
-		var baseRow = this.document.createElement("div");
-		baseRow.className = "llm-chat-protection-base-row";
-		baseRow.appendChild(protectionLabel);
-		var baseFilterSpan = this.document.createElement("code");
-		baseFilterSpan.className = "llm-chat-protection-base";
-		baseFilterSpan.textContent = baseFilter;
-		baseFilterSpan.title = "Base protection filter (from settings — always active)";
-		baseRow.appendChild(baseFilterSpan);
-		protectionRow.appendChild(baseRow);
-		var addRow = this.document.createElement("div");
-		addRow.className = "llm-chat-protection-add-row";
-		var plusLabel = this.document.createElement("span");
-		plusLabel.className = "llm-chat-protection-label";
-		plusLabel.textContent = "+";
-		addRow.appendChild(plusLabel);
-		protectionInput.placeholder = "additional filter (optional)";
-		addRow.appendChild(protectionInput);
-		protectionRow.appendChild(addRow);
-	} else {
-		protectionRow.appendChild(protectionLabel);
-		protectionRow.appendChild(protectionInput);
-	}
+	addRow.appendChild(protectionInput);
+	protectionRow.appendChild(addRow);
+
+	this.updateProtectionLabels();
 	inputArea.appendChild(protectionRow);
 
 	// Context filter row (hidden by default)
@@ -337,6 +378,9 @@ LlmChatWidget.prototype.execute = function() {
 	this.sourceTiddler = this.getAttribute("tiddler", "");
 	this.placeholderAttr = this.getAttribute("placeholder", "");
 	this.sendLabelAttr = this.getAttribute("sendLabel", "");
+	this.denyFilterAttr = this.getAttribute("denyFilter", "");
+	this.allowFilterAttr = this.getAttribute("allowFilter", "");
+	this.protectionModeAttr = this.getAttribute("protectionMode", "");
 	this.actionMode = this.getAttribute("actionMode", "") === "yes";
 
 	// Use chat tiddler's locked provider/model if conversation has started, otherwise global config
@@ -679,13 +723,21 @@ LlmChatWidget.prototype.sendMessage = function() {
 	var adapter = orchestrator.getAdapter(this.provider);
 	var tools = this.toolsFilter ? helpers.resolveTools(this.toolsFilter, this.toolGroupAttr, this.chatTiddler) : [];
 
-	// Compute protection filter (base + per-chat)
-	var chatProtection = "";
+	// Compute protection: widget attrs + per-chat tiddler fields, combined
+	var denyFilter = this.denyFilterAttr || "";
+	var allowFilter = this.allowFilterAttr || "";
+	var protMode = this.protectionModeAttr || "";
 	if (this.chatTiddler) {
 		var protChatTid = this.wiki.getTiddler(this.chatTiddler);
-		if (protChatTid) chatProtection = protChatTid.fields["llm-protection-filter"] || "";
+		if (protChatTid) {
+			var chatDeny = protChatTid.fields["llm-deny-filter"] || "";
+			var chatAllow = protChatTid.fields["llm-allow-filter"] || "";
+			if (chatDeny) denyFilter = (denyFilter + " " + chatDeny).trim();
+			if (chatAllow) allowFilter = (allowFilter + " " + chatAllow).trim();
+			if (!protMode) protMode = protChatTid.fields["llm-protection-mode"] || "";
+		}
 	}
-	var protectionFilter = helpers.resolveProtectionFilter(chatProtection);
+	var protection = helpers.resolveProtectionFilter({ denyFilter: denyFilter, allowFilter: allowFilter, mode: protMode });
 
 	orchestrator.runConversation({
 		messages: messages,
@@ -693,7 +745,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 		config: config,
 		adapter: adapter,
 		toolExecutor: this.getToolExecutorModule(),
-		protectionFilter: protectionFilter,
+		protectionFilter: protection,
 		signal: this.abortController.signal,
 		onRequest: function(request) {
 			self.lastRequestBody = request.body;
@@ -850,14 +902,23 @@ LlmChatWidget.prototype.buildPreview = function() {
 	}
 
 	// Protection filter
-	var chatProtection = "";
+	var denyFilter = this.denyFilterAttr || "";
+	var allowFilter = this.allowFilterAttr || "";
+	var protMode = this.protectionModeAttr || "";
 	if (this.chatTiddler) {
 		var protTid = this.wiki.getTiddler(this.chatTiddler);
-		if (protTid) chatProtection = protTid.fields["llm-protection-filter"] || "";
+		if (protTid) {
+			var chatDeny = protTid.fields["llm-deny-filter"] || "";
+			var chatAllow = protTid.fields["llm-allow-filter"] || "";
+			if (chatDeny) denyFilter = (denyFilter + " " + chatDeny).trim();
+			if (chatAllow) allowFilter = (allowFilter + " " + chatAllow).trim();
+			if (!protMode) protMode = protTid.fields["llm-protection-mode"] || "";
+		}
 	}
-	var protectionFilter = helpers.resolveProtectionFilter(chatProtection);
-	if (protectionFilter) {
-		preview.protectionFilter = protectionFilter;
+	var protection = helpers.resolveProtectionFilter({ denyFilter: denyFilter, allowFilter: allowFilter, mode: protMode });
+	if (protection.filter) {
+		preview.protectionFilter = protection.filter;
+		preview.protectionMode = protection.mode;
 	}
 
 	return JSON.stringify(preview, null, 2);
@@ -948,6 +1009,55 @@ LlmChatWidget.prototype.populateModelDropdown = function() {
 			});
 		});
 		dropdown.appendChild(fetchBtn);
+	}
+};
+
+LlmChatWidget.prototype.getActiveProtectionMode = function() {
+	return this.protectionModeSelect ? this.protectionModeSelect.value : "allow";
+};
+
+LlmChatWidget.prototype.loadProtectionInput = function() {
+	if (!this.protectionInput) return;
+	var mode = this.getActiveProtectionMode();
+	var field = mode === "allow" ? "llm-allow-filter" : "llm-deny-filter";
+	var widgetDefault = mode === "allow" ? (this.allowFilterAttr || "") : (this.denyFilterAttr || "");
+	var value = widgetDefault;
+	if (this.chatTiddler) {
+		var tid = this.wiki.getTiddler(this.chatTiddler);
+		if (tid && tid.fields[field]) value = tid.fields[field];
+	}
+	this.protectionInput.value = value;
+};
+
+LlmChatWidget.prototype.saveProtectionInput = function() {
+	if (!this.protectionInput || !this.chatTiddler) return;
+	var mode = this.getActiveProtectionMode();
+	var field = mode === "allow" ? "llm-allow-filter" : "llm-deny-filter";
+	var fields = { title: this.chatTiddler };
+	fields[field] = this.protectionInput.value;
+	var existing = this.wiki.getTiddler(this.chatTiddler);
+	if (existing) fields = $tw.utils.extend({}, existing.fields, fields);
+	this.wiki.addTiddler(new $tw.Tiddler(fields));
+};
+
+LlmChatWidget.prototype.updateProtectionLabels = function() {
+	var mode = this.getActiveProtectionMode();
+	if (this.protectionFilterLabel) {
+		this.protectionFilterLabel.textContent = mode === "allow" ? "Allow:" : "Deny:";
+	}
+	if (this.protectionModeHint) {
+		this.protectionModeHint.textContent = mode === "allow"
+			? " — only matching tiddlers are accessible"
+			: " — matching tiddlers are hidden from LLM";
+	}
+	// Update base filter display for the active mode
+	if (this.protectionBaseFilterSpan && this.protectionBaseRow) {
+		var baseConfigTiddler = mode === "allow"
+			? "$:/config/rimir/llm-connect/allow-filter"
+			: "$:/config/rimir/llm-connect/protection-filter";
+		var baseFilter = this.wiki.getTiddlerText(baseConfigTiddler) || "";
+		this.protectionBaseFilterSpan.textContent = baseFilter;
+		this.protectionBaseRow.style.display = baseFilter ? "" : "none";
 	}
 };
 

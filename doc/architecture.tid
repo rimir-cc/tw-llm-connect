@@ -103,24 +103,30 @@ The global chat panel is rendered via `$:/tags/PageTemplate` (not a popup). It i
 * ''text'' — wikify template output to plain text (for content-level help)
 * ''markup'' — preserve raw wikitext/HTML (for wiki-programming help)
 
-!! Tiddler protection — restricted wiki proxy
+!! Tiddler protection — allow/deny modes + restricted wiki proxy
 
-All tool wikitext executes against a ''restricted wiki proxy'' rather than the real `$tw.wiki`. The proxy is created via `Object.create($tw.wiki)` and overrides core access methods so protected tiddlers are completely invisible:
+Protection supports two modes, configurable in Settings and per-chat:
 
-|!Method |!Behaviour for protected titles |
+* ''Allow mode (whitelist)'' — default. Only filter-matched tiddlers are accessible; everything else is blocked. Empty filter = no access.
+* ''Deny mode (blacklist)'' — filter-matched tiddlers are hidden; everything else is accessible. Empty filter = full access.
+
+Each mode has its own base filter (`$:/config/rimir/llm-connect/allow-filter` and `$:/config/rimir/llm-connect/protection-filter`). Filters are combined in three layers: base config + widget attributes (`allowFilter`/`denyFilter`) + per-chat tiddler fields (`llm-allow-filter`/`llm-deny-filter`).
+
+All tool wikitext executes against a ''restricted wiki proxy'' rather than the real `$tw.wiki`. The proxy is created via `Object.create($tw.wiki)` and overrides core access methods so blocked tiddlers are completely invisible:
+
+|!Method |!Behaviour for blocked titles |
 |`getTiddler(title)` |returns `undefined` |
 |`getTiddlerText(title, default)` |returns `default` |
 |`tiddlerExists(title)` |returns `false` |
 |`isShadowTiddler(title)` |returns `false` |
-|`filterTiddlers(filter)` |runs on real wiki, strips protected titles from results |
-|`each(callback)` |skips protected titles |
-|`forEachTiddler(options, callback)` |skips protected titles |
-|`addTiddler(tiddler)` |silently blocked if protected |
-|`deleteTiddler(title)` |silently blocked if protected |
+|`each(callback)` |skips blocked titles |
+|`forEachTiddler(options, callback)` |skips blocked titles |
+|`addTiddler(tiddler)` |silently blocked |
+|`deleteTiddler(title)` |silently blocked |
+
+Filter operators (`is[tiddler]`, `get`, `has`, etc.) use the overridden accessors via the prototype chain — no separate `filterTiddlers` override is needed.
 
 The protection filter is evaluated once per tool call. Tools that take an explicit `title` parameter also get an early "Access denied" error before wikitext execution (defense-in-depth).
-
-The default filter protects `[tag[sensitive]]` and all rimir plugin internals (`[all[shadows+tiddlers]prefix[$:/plugins/rimir/]]`). This prevents the LLM from reading plugin source code, configuration, or tool implementations. The filter is configurable in settings with a reset-to-default button; per-chat additions are possible via the shield icon.
 
 !! Multimodal context — file attachments
 

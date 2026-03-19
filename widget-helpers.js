@@ -12,12 +12,23 @@ tool resolution, and provider config patterns.
 "use strict";
 
 /*
-Combine base protection filter (from settings) with a per-widget filter.
-Returns the trimmed combined filter string, or empty string.
+Resolve protection from separate deny/allow filters and a mode.
+Returns { filter, mode } where filter is the effective combined filter for the active mode.
+options: { denyFilter, allowFilter, mode } — all optional, fall back to base config.
 */
-exports.resolveProtectionFilter = function(perWidgetFilter) {
-	var base = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/protection-filter") || "";
-	return (base + " " + (perWidgetFilter || "")).trim();
+exports.resolveProtectionFilter = function(options) {
+	options = options || {};
+	var mode = options.mode || ($tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/protection-mode") || "allow").trim();
+	mode = mode === "deny" ? "deny" : "allow";
+	var baseConfigTiddler = mode === "allow"
+		? "$:/config/rimir/llm-connect/allow-filter"
+		: "$:/config/rimir/llm-connect/protection-filter";
+	var base = $tw.wiki.getTiddlerText(baseConfigTiddler) || "";
+	var extra = (mode === "allow" ? options.allowFilter : options.denyFilter) || "";
+	return {
+		filter: (base + " " + extra).trim(),
+		mode: mode
+	};
 };
 
 /*

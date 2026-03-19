@@ -36,7 +36,9 @@ LlmActionWidget.prototype.execute = function() {
 	this.systemPromptAttr = this.getAttribute("systemPrompt", "");
 	this.providerAttr = this.getAttribute("provider", "");
 	this.modelAttr = this.getAttribute("model", "");
-	this.protectionFilterAttr = this.getAttribute("protectionFilter", "");
+	this.denyFilterAttr = this.getAttribute("denyFilter", "");
+	this.allowFilterAttr = this.getAttribute("allowFilter", "");
+	this.protectionModeAttr = this.getAttribute("protectionMode", "");
 	this.statusTiddlerAttr = this.getAttribute("statusTiddler", "");
 	this.resultTiddlerAttr = this.getAttribute("resultTiddler", "");
 };
@@ -120,7 +122,7 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 	}
 
 	// Run the action
-	var protectionFilter = helpers.resolveProtectionFilter(this.protectionFilterAttr);
+	var protection = helpers.resolveProtectionFilter({ denyFilter: this.denyFilterAttr, allowFilter: this.allowFilterAttr, mode: this.protectionModeAttr });
 
 	orchestrator.runAction({
 		prompt: prompt,
@@ -130,7 +132,7 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 		config: config,
 		adapter: adapter,
 		toolExecutor: require("$:/plugins/rimir/llm-connect/tool-executor"),
-		protectionFilter: protectionFilter
+		protectionFilter: protection
 	}).then(function(responseText) {
 		// Write output
 		self.writeOutput(responseText, rendered, templateTitle, resultTitle);

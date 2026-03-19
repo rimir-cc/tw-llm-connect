@@ -23,6 +23,9 @@ type: text/vnd.tiddlywiki
 |`actionMode` |`yes` — hides message history until first action starts; allows empty send (sends "Go.") |`no` |
 |`sendLabel` |Custom label for the send button |`Send` |
 |`placeholder` |Custom placeholder text for the textarea |default text |
+|`protectionMode` |`allow` (whitelist) or `deny` (blacklist) |global config |
+|`allowFilter` |Allow filter (combined with base allow filter) |none |
+|`denyFilter` |Deny filter (combined with base deny filter) |none |
 
 !! Widget: `<$llm-action>`
 
@@ -39,7 +42,9 @@ type: text/vnd.tiddlywiki
 |`systemPrompt` |Override system prompt |global config |
 |`provider` |Provider name (`claude`, `openai`, `azure`) |global config |
 |`model` |Model ID override |provider default |
-|`protectionFilter` |Additional protection filter (combined with base) |none |
+|`protectionMode` |`allow` (whitelist) or `deny` (blacklist) |global config |
+|`allowFilter` |Allow filter (combined with base allow filter) |none |
+|`denyFilter` |Deny filter (combined with base deny filter) |none |
 |`statusTiddler` |Custom tiddler for status text (enables per-instance status) |`$:/temp/rimir/llm-connect/action-status` |
 |`resultTiddler` |Custom tiddler for result output (enables per-instance results) |`$:/temp/rimir/llm-connect/action-result` |
 
@@ -228,7 +233,9 @@ Summary tiddler conventions:
 |`$:/config/rimir/llm-connect/providers/<name>/model` |varies |Model ID |
 |`$:/config/rimir/llm-connect/providers/<name>/max-tokens` |`4096` |Max response tokens |
 |`$:/config/rimir/llm-connect/system-prompt` |default text |Global system prompt |
-|`$:/config/rimir/llm-connect/protection-filter` |`[tag[sensitive]] [all[shadows+tiddlers]prefix[$:/plugins/rimir/]]` |Protection filter — matched tiddlers are invisible to LLM tools. Resettable to default in settings |
+|`$:/config/rimir/llm-connect/protection-mode` |`allow` |Protection mode — `allow` (whitelist, default) or `deny` (blacklist) |
+|`$:/config/rimir/llm-connect/allow-filter` |(empty) |Allow filter — only matched tiddlers are accessible to LLM tools (allow mode) |
+|`$:/config/rimir/llm-connect/protection-filter` |`[tag[sensitive]] [all[shadows+tiddlers]prefix[$:/plugins/rimir/]!tag[$:/tags/rimir/llm-accessible]]` |Deny filter — matched tiddlers are invisible to LLM tools (deny mode) |
 |`$:/config/rimir/llm-connect/max-tool-result-length` |`4000` |Truncation limit |
 |`$:/config/rimir/llm-connect/default-context-template` | |Global default template |
 |`$:/config/rimir/llm-connect/max-file-size` |`20971520` |Maximum file size in bytes for multimodal attachments (default 20 MB) |
@@ -240,7 +247,9 @@ The following fields on each chat tiddler control per-chat behaviour. They are m
 |!Field |!Description |
 |`llm-active-tools` |TiddlyWiki title list of active tool tiddlers (managed by wrench icon) |
 |`llm-context-filter` |TiddlyWiki filter expression for context attachments (managed by 📎 icon). Results are classified as text or file tiddlers and included in the first message |
-|`llm-protection-filter` |Additional protection filter for this chat (managed by shield icon). Combined with the base filter from settings |
+|`llm-protection-mode` |Protection mode override for this chat — `allow` or `deny` (managed by shield icon dropdown) |
+|`llm-allow-filter` |Additional allow filter for this chat (managed by shield icon). Combined with widget attribute and base allow filter |
+|`llm-deny-filter` |Additional deny filter for this chat (managed by shield icon). Combined with widget attribute and base deny filter |
 
 </$fill>
 </$transclude>

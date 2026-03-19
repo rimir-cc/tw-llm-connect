@@ -19,32 +19,46 @@ llm connect executes LLM-requested operations against the wiki store. This secti
 
 API keys are stored in wiki config tiddlers (`$:/config/rimir/llm-connect/providers/<name>/api-key`). They are visible to anyone with file access to the wiki. This is suitable for personal wikis or server wikis with authentication. API keys are never sent to the LLM — only to the respective provider API endpoint.
 
-!! Tiddler protection — restricted wiki proxy
+!! Protection modes — allow & deny
 
-All tool wikitext executes against a restricted wiki proxy rather than the real `$tw.wiki`. The proxy is created via `Object.create($tw.wiki)` and overrides core access methods so protected tiddlers are invisible:
+The protection system supports two modes, selectable in Settings and per-chat via the shield icon:
 
-* `getTiddler`, `getTiddlerText`, `tiddlerExists`, `isShadowTiddler` — return undefined/false/default
-* `filterTiddlers` — runs on real wiki, strips protected titles from results
-* `each`, `forEachTiddler` — skip protected titles
-* `addTiddler`, `deleteTiddler` — silently blocked for protected titles
+* ''Allow mode (whitelist)'' — default. Only tiddlers matched by the allow filter are accessible. Everything else is invisible. With an empty filter the LLM has no tiddler access at all.
+* ''Deny mode (blacklist)'' — tiddlers matched by the deny filter are hidden. Everything else is accessible.
 
-This means wikitext transclusion, `<$list>` filters, and any custom tool code cannot access protected tiddlers — the proxy intercepts at every access point.
+Each mode has its own base filter configured in Settings:
 
-!! Protection filter layers
+* Allow base filter: `$:/config/rimir/llm-connect/allow-filter` (empty by default)
+* Deny base filter: `$:/config/rimir/llm-connect/protection-filter` (default: `[tag[sensitive]] [all[shadows+tiddlers]prefix[$:/plugins/rimir/]!tag[$:/tags/rimir/llm-accessible]]`)
 
-Protection is applied in two layers:
-
-# ''Base filter'' — configured in Settings (default: `[tag[sensitive]] [all[shadows+tiddlers]prefix[$:/plugins/rimir/]]`). Always active for all chats and actions. Resettable to default via the settings UI.
-# ''Per-chat filter'' — additional filter set via the shield icon in the chat header. Combined with the base filter. Stored in the `llm-protection-filter` field on the chat tiddler.
-
-The default base filter protects:
+The deny base filter protects:
 
 * Tiddlers tagged `sensitive` — user-designated sensitive content
 * All rimir plugin internals (`$:/plugins/rimir/`) — prevents the LLM from reading plugin source code, configuration, tool implementations, or API keys
 
+!! Restricted wiki proxy
+
+All tool wikitext executes against a restricted wiki proxy rather than the real `$tw.wiki`. The proxy is created via `Object.create($tw.wiki)` and overrides core access methods so blocked tiddlers are invisible:
+
+* `getTiddler`, `getTiddlerText`, `tiddlerExists`, `isShadowTiddler` — return undefined/false/default
+* `each`, `forEachTiddler` — skip blocked titles
+* `addTiddler`, `deleteTiddler` — silently blocked
+
+Filter operators (`is[tiddler]`, `get`, `has`, etc.) go through the overridden accessors automatically since the proxy sits on the prototype chain. No post-filtering of results is needed.
+
+!! Protection filter layers
+
+Protection filters are combined in three layers:
+
+# ''Base filter'' — configured in Settings for the active mode. Always active for all chats and actions. Resettable to default via the settings UI.
+# ''Widget attributes'' — `denyFilter` and `allowFilter` on `<$llm-chat>` / `<$llm-action>`. Useful for recipe-based panels that need specific access rules.
+# ''Per-chat filter'' — additional filter set via the shield icon in the chat header. Stored in `llm-deny-filter` / `llm-allow-filter` fields on the chat tiddler.
+
+All layers for the active mode are concatenated into a single filter. Per-chat mode can be overridden via the mode dropdown in the shield panel.
+
 !! Defense-in-depth
 
-Tools that take an explicit `title` parameter (e.g. `get_tiddler`, `set_field`, `delete_tiddler`) check the title against the protection filter ''before'' wikitext execution. This provides a clear "Access denied" error message rather than a silent "not found". The proxy provides the second layer — even if a tool bypasses the title check (e.g. via wikitext transclusion), the proxy blocks access.
+Tools that take an explicit `title` parameter (e.g. `get_tiddler`, `set_field`, `delete_tiddler`) check the title against the active filter ''before'' wikitext execution. In allow mode, the title must be in the filter results; in deny mode, it must not be. This provides a clear "Access denied" error message rather than a silent "not found". The restricted wiki proxy provides the second layer — even if a tool bypasses the title check (e.g. via wikitext transclusion), the proxy blocks access.
 
 !! What is NOT protected
 
@@ -52,7 +66,7 @@ Tools that take an explicit `title` parameter (e.g. `get_tiddler`, `set_field`, 
 * ''API traffic'' — requests go directly from the browser to the provider API over HTTPS. No data passes through a third-party proxy, but the provider can see all content.
 * ''Tool execution'' — action-mode tools (`set_field`, `create_tiddler`, `delete_tiddler`) execute immediately. There is no confirmation step. An audit log is written to `$:/temp/rimir/llm-connect/write-log` but it is a temp tiddler (not persisted across reloads).
 * ''System prompt and context'' — the LLM sees the system prompt, context template output, and all context attachments. It can be instructed via prompt injection in tiddler content.
-* ''Unprotected tiddlers'' — any tiddler not matched by the protection filter is fully accessible to the LLM (read, modify, delete).
+* ''Unprotected tiddlers'' — in deny mode, any tiddler not matched by the deny filter is fully accessible. In allow mode, only explicitly allowed tiddlers are accessible.
 
 !! Multimodal file attachments
 
@@ -60,9 +74,10 @@ Files attached via the context filter are fetched from the server via XHR, base6
 
 !! Recommendations
 
-* Tag sensitive tiddlers with `sensitive` or extend the base protection filter to cover additional content
-* Use per-chat protection filters when working with a mix of sensitive and non-sensitive content
-* Avoid storing secrets (passwords, tokens) in unprotected tiddlers — the LLM can read them via tools
+* Start with allow mode (default) — grant access only to the tiddlers the LLM needs
+* When switching to deny mode, tag sensitive tiddlers with `sensitive` or extend the deny filter
+* Use widget-level `allowFilter` / `denyFilter` attributes for recipe panels with specific access needs
+* Avoid storing secrets (passwords, tokens) in accessible tiddlers — the LLM can read them via tools
 * Review the audit log after LLM interactions that modify tiddlers
 * Consider using read-only tool groups when the LLM only needs to search and read
 

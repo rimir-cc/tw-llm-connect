@@ -6,6 +6,7 @@ type: text/vnd.tiddlywiki
 ! Changelog
 
 |!Version |!Date |!Changes |
+|v0.1.17 |2026-03-19 |Allow/deny protection modes — default allow (whitelist, LLM has no access until filter defined) with deny (blacklist) option. Separate base filters per mode. `protectionMode`, `allowFilter`, `denyFilter` attributes on `<$llm-chat>` and `<$llm-action>`. Per-chat mode switching via shield icon dropdown. Per-chat `llm-allow-filter`/`llm-deny-filter` fields. Restricted wiki proxy no longer post-filters `filterTiddlers` results — filter operators use overridden accessors via prototype chain. Fix SVG icon tiddlers (removed `type: image/svg+xml` — now inline like TW core icons) |
 |v0.1.16 |2026-03-15 |Add recipe/tools-panel system, PDF summarization, missing doc tiddlers |
 |v0.1.15 |2026-03-15 |Extract inline SVGs to icon tiddlers |
 |v0.1.14 |2026-03-15 |Add regression tests and CI test gate |

@@ -58,7 +58,7 @@ exports.runConversation = function(options) {
 	var toolExecutor = options.toolExecutor;
 	var onUpdate = options.onUpdate || function() {};
 	var onError = options.onError || function() {};
-	var protectionFilter = options.protectionFilter || "";
+	var protection = options.protectionFilter || { filter: "", mode: "allow" };
 
 	// Build allowed tool names set for execution-time enforcement
 	var allowedToolNames = null;
@@ -119,7 +119,7 @@ exports.runConversation = function(options) {
 						if (allowedToolNames && !allowedToolNames[tc.name]) {
 							result = "Error: Tool not available in current chat: " + tc.name;
 						} else {
-							result = toolExecutor.executeTool(tc, protectionFilter);
+							result = toolExecutor.executeTool(tc, protection);
 						}
 						messages.push(adapter.buildToolResult(tc.id, result));
 					}
@@ -194,7 +194,7 @@ exports.runAction = function(options) {
 			config: config,
 			adapter: options.adapter,
 			toolExecutor: options.toolExecutor,
-			protectionFilter: options.protectionFilter || "",
+			protectionFilter: options.protectionFilter || { filter: "", mode: "allow" },
 			onUpdate: function() {},
 			onError: function() {}
 		}).then(function(msgs) {

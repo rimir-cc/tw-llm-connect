@@ -169,25 +169,33 @@ Max tokens: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/azure/max
 !! Safety
 
 <$let
-  configTiddler="$:/config/rimir/llm-connect/protection-filter"
-  protFilter={{{ [[$:/config/rimir/llm-connect/protection-filter]get[text]] }}}
-  shadowFilter={{{ [[$:/config/rimir/llm-connect/protection-filter]get[text]is[shadow]] }}}
-  isCustom={{{ [[$:/config/rimir/llm-connect/protection-filter]is[tiddler]then[yes]else[no]] }}}
+  modeTiddler="$:/config/rimir/llm-connect/protection-mode"
+  protMode={{{ [[$:/config/rimir/llm-connect/protection-mode]get[text]else[allow]] }}}
+  activeConfigTiddler={{{ [<protMode>match[allow]then[$:/config/rimir/llm-connect/allow-filter]else[$:/config/rimir/llm-connect/protection-filter]] }}}
+  activeFilter={{{ [<activeConfigTiddler>get[text]] }}}
+  isCustom={{{ [<activeConfigTiddler>is[tiddler]then[yes]else[no]] }}}
 >
 
 <div class="rr-input-row">
-Tiddler protection filter: <$edit-text tiddler=<<configTiddler>> tag="input" class="rr-input" size="50" placeholder="e.g. [tag[sensitive]] [prefix[Private/]]"/> <%if [<isCustom>match[yes]] %><$button class="tc-btn-invisible rr-link-btn" style="font-size:inherit;" tooltip="Reset to default filter">
-<$action-deletetiddler $tiddler=<<configTiddler>>/>
+Protection mode: <$select tiddler=<<modeTiddler>> default="allow" class="rr-input">
+<option value="allow">Allow (whitelist) — only matching tiddlers are accessible</option>
+<option value="deny">Deny (blacklist) — matching tiddlers are hidden from LLM</option>
+</$select>
+</div>
+
+<div class="rr-input-row">
+<%if [<protMode>match[allow]] %>Tiddler allow filter:<%else%>Tiddler deny filter:<%endif%> <$edit-text tiddler=<<activeConfigTiddler>> tag="input" class="rr-input" size="50" placeholder={{{ [<protMode>match[allow]then[e.g. [tag[public]] [prefix[Project/]]]else[e.g. [tag[sensitive]] [prefix[Private/]]]] }}}/> <%if [<isCustom>match[yes]] %><$button class="tc-btn-invisible rr-link-btn" style="font-size:inherit;" tooltip="Reset to default filter">
+<$action-deletetiddler $tiddler=<<activeConfigTiddler>>/>
 reset to default</$button><%endif%>
 </div>
 
-<div class="rr-input-row rr-small"><%if [<protFilter>minlength[1]] %><%if [<isCustom>match[no]] %><span class="rr-muted">Active filter (default):</span><%else%><span class="rr-muted">Active filter (custom):</span><%endif%> <code><$text text=<<protFilter>>/></code> — protecting <strong><$text text={{{ [subfilter<protFilter>count[]] }}}/></strong> tiddler(s). <$button class="tc-btn-invisible rr-link-btn" style="font-size:inherit;">
+<div class="rr-input-row rr-small"><%if [<activeFilter>minlength[1]] %><%if [<isCustom>match[no]] %><span class="rr-muted">Active filter (default):</span><%else%><span class="rr-muted">Active filter (custom):</span><%endif%> <code><$text text=<<activeFilter>>/></code> — <%if [<protMode>match[allow]] %><strong><$text text={{{ [subfilter<activeFilter>count[]] }}}/></strong> tiddler(s) accessible (all others hidden)<%else%>protecting <strong><$text text={{{ [subfilter<activeFilter>count[]] }}}/></strong> tiddler(s)<%endif%>. <$button class="tc-btn-invisible rr-link-btn" style="font-size:inherit;">
 <$action-setfield $tiddler="$:/state/rimir/llm-connect/show-protected" text={{{ [[$:/state/rimir/llm-connect/show-protected]get[text]match[yes]then[no]else[yes]] }}}/>
 toggle list</$button>
 <$reveal type="match" state="$:/state/rimir/llm-connect/show-protected" text="yes" animate="yes">
-<div style="margin-top:4px;"><$list filter="[subfilter<protFilter>sort[]]" variable="pt">
+<div style="margin-top:4px;"><$list filter="[subfilter<activeFilter>sort[]]" variable="pt">
 <$text text=<<pt>>/>, </$list></div>
-</$reveal><%else%><span class="rr-muted">No protection filter active — all tiddlers are accessible to the LLM.</span><%endif%>
+</$reveal><%else%><%if [<protMode>match[allow]] %><span class="rr-muted">No allow filter defined — LLM has no access to any tiddlers.</span><%else%><span class="rr-muted">No deny filter active — all tiddlers are accessible to the LLM.</span><%endif%><%endif%>
 </div>
 
 </$let>

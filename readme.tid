@@ -20,7 +20,7 @@ In-browser LLM integration with tool use. Connect TiddlyWiki to Claude, OpenAI, 
 * ''Output targets'' — write LLM responses to fields, new tiddlers, or just display in chat
 * ''Debug panel'' — toggle a live preview of the request payload or inspect the last sent request; base64 data abbreviated for readability
 * ''Resizable chat'' — drag the chat panel edges or the chat history resize handle to adjust layout
-* ''Tiddler protection'' — restricted wiki proxy makes protected tiddlers invisible to all tool wikitext; default filter protects `[tag[sensitive]]` and all rimir plugin internals (`$:/plugins/rimir/`); configurable in settings with reset-to-default + per-chat filter via shield icon
+* ''Tiddler protection'' — allow/deny modes with restricted wiki proxy. Default: allow mode (whitelist) — LLM has no access until you define an allow filter. Deny mode (blacklist) hides matched tiddlers. Per-chat mode and filter overrides via shield icon; widget-level `allowFilter`/`denyFilter` attributes for recipe panels
 * ''Audit logging'' — write operations (set-field, create, delete) execute immediately with an audit log
 
 !! Prerequisites
