@@ -298,8 +298,8 @@ type: text/vnd.tiddlywiki
 }
 
 .llm-tool-badge-action {
-	background: #e67e22;
-	color: #fff;
+	background: <<colour dirty-indicator>>;
+	color: <<colour background>>;
 }
 
 .llm-tool-badge-incomplete {

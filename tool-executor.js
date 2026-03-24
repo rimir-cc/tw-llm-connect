@@ -156,31 +156,22 @@ function createRestrictedWiki(protection) {
 
 	var wiki = Object.create($tw.wiki);
 
-	wiki.getTiddler = function(title) {
-		if (isBlocked(title)) return undefined;
-		return $tw.wiki.getTiddler(title);
-	};
+	// Guard single-title read methods: return blocked value if title is blocked, else delegate
+	function guardRead(method, blockedValue) {
+		wiki[method] = function(title) {
+			if (isBlocked(title)) return typeof blockedValue === "function" ? blockedValue.apply(null, arguments) : blockedValue;
+			return $tw.wiki[method].apply($tw.wiki, arguments);
+		};
+	}
+	guardRead("getTiddler", undefined);
+	guardRead("getTiddlerText", function(title, defaultText) { return defaultText !== undefined ? defaultText : undefined; });
+	guardRead("tiddlerExists", false);
+	guardRead("isShadowTiddler", false);
 
-	wiki.getTiddlerText = function(title, defaultText) {
-		if (isBlocked(title)) return defaultText !== undefined ? defaultText : undefined;
-		return $tw.wiki.getTiddlerText(title, defaultText);
-	};
-
-	wiki.tiddlerExists = function(title) {
-		if (isBlocked(title)) return false;
-		return $tw.wiki.tiddlerExists(title);
-	};
-
-	wiki.isShadowTiddler = function(title) {
-		if (isBlocked(title)) return false;
-		return $tw.wiki.isShadowTiddler(title);
-	};
-
+	// Guard iteration methods: skip blocked titles in callback
 	wiki.each = function(callback) {
 		$tw.wiki.each(function(tiddler, title) {
-			if (!isBlocked(title)) {
-				callback(tiddler, title);
-			}
+			if (!isBlocked(title)) callback(tiddler, title);
 		});
 	};
 
@@ -190,12 +181,11 @@ function createRestrictedWiki(protection) {
 			options = undefined;
 		}
 		$tw.wiki.forEachTiddler(options, function(tiddler, title) {
-			if (!isBlocked(title)) {
-				callback(tiddler, title);
-			}
+			if (!isBlocked(title)) callback(tiddler, title);
 		});
 	};
 
+	// Guard write methods: silently block writes to protected titles
 	wiki.addTiddler = function(tiddler) {
 		var title = typeof tiddler === "string" ? tiddler : (tiddler.fields ? tiddler.fields.title : tiddler.title);
 		if (isBlocked(title)) return;

@@ -585,115 +585,21 @@ LlmChatWidget.prototype.sendMessage = function() {
 
 	// Context template injection — first message only
 	if (!this.contextInjected && messages.length === 0) {
-		var contextResolver = this.getContextResolverModule();
-		var templateTitle = contextResolver.resolveTemplate({
-			sourceTiddler: this.sourceTiddler,
-			contextTemplate: this.contextTemplateAttr
-		});
-		var rendered = contextResolver.renderContext({
-			templateTitle: templateTitle,
-			sourceTiddler: this.sourceTiddler
-		});
-
-		// Resolve context attachments (llm-context field + per-chat filter)
-		var chatCtxFilter = "";
-		if (this.chatTiddler) {
-			var ctxTid = this.wiki.getTiddler(this.chatTiddler);
-			if (ctxTid) chatCtxFilter = ctxTid.fields["llm-context-filter"] || "";
-		}
-		var attachments = contextResolver.resolveContextAttachments({
-			sourceTiddler: this.sourceTiddler,
-			chatFilter: chatCtxFilter,
-			templateTitle: templateTitle
-		});
-
-		// Abort if context filter is broken
-		if (attachments.error) {
+		var ctxError = this.injectContextOnFirstMessage(messages);
+		if (ctxError) {
 			this.textarea.value = text;
-			this.setStatus("Context filter error: " + attachments.error);
+			this.setStatus(ctxError);
 			return;
 		}
-
-		var hasFiles = attachments.fileParts.length > 0;
-		var hasTextAttachments = attachments.textTitles.length > 0;
-
-		if (rendered.text || hasFiles || hasTextAttachments) {
-			if (rendered.injectAs === "system-prompt") {
-				this.systemPromptOverride = (this.systemPromptAttr ? this.systemPromptAttr + "\n\n" : "") + rendered.text;
-				// Attachments still go as user message even if template injects as system-prompt
-				if (hasFiles || hasTextAttachments) {
-					var sysContentParts = [];
-					for (var ti = 0; ti < attachments.textTitles.length; ti++) {
-						sysContentParts.push({ type: "text", text: attachments.renderText(attachments.textTitles[ti]) });
-					}
-					for (var fi = 0; fi < attachments.fileParts.length; fi++) {
-						var fp = attachments.fileParts[fi];
-						sysContentParts.push({ type: "file_ref", uri: fp.uri, mediaType: fp.mediaType, category: fp.category, filename: fp.filename, title: fp.title });
-					}
-					if (sysContentParts.length > 0) {
-						messages.push({ role: "user", content: sysContentParts, _context: true });
-					}
-				}
-			} else {
-				// Build multimodal content array
-				var contentParts = [];
-				if (rendered.text) {
-					contentParts.push({ type: "text", text: rendered.text });
-				}
-				for (var ti2 = 0; ti2 < attachments.textTitles.length; ti2++) {
-					contentParts.push({ type: "text", text: attachments.renderText(attachments.textTitles[ti2]) });
-				}
-				for (var fi2 = 0; fi2 < attachments.fileParts.length; fi2++) {
-					var fp2 = attachments.fileParts[fi2];
-					contentParts.push({ type: "file_ref", uri: fp2.uri, mediaType: fp2.mediaType, category: fp2.category, filename: fp2.filename, title: fp2.title });
-				}
-				if (contentParts.length === 1 && contentParts[0].type === "text") {
-					// Simple text-only context — keep as plain string for backward compatibility
-					messages.push({ role: "user", content: contentParts[0].text, _context: true });
-				} else if (contentParts.length > 0) {
-					messages.push({ role: "user", content: contentParts, _context: true });
-				}
-			}
-			if (hasFiles || hasTextAttachments) {
-				this.attachmentsInjected = true;
-			}
-		}
-		this.contextInjected = true;
 	}
 
 	// Late attachment injection — if context filter was set/changed after first message
 	if (this.contextInjected && !this.attachmentsInjected) {
-		var lateCtxFilter = "";
-		if (this.chatTiddler) {
-			var lateCtxTid = this.wiki.getTiddler(this.chatTiddler);
-			if (lateCtxTid) lateCtxFilter = lateCtxTid.fields["llm-context-filter"] || "";
-		}
-		if (lateCtxFilter) {
-			var lateContextResolver = this.getContextResolverModule();
-			var lateAttachments = lateContextResolver.resolveContextAttachments({
-				sourceTiddler: this.sourceTiddler,
-				chatFilter: lateCtxFilter,
-				templateTitle: null
-			});
-			if (lateAttachments.error) {
-				this.textarea.value = text;
-				this.setStatus("Context filter error: " + lateAttachments.error);
-				return;
-			}
-			if (lateAttachments.fileParts.length > 0 || lateAttachments.textTitles.length > 0) {
-				var lateParts = [];
-				for (var lti = 0; lti < lateAttachments.textTitles.length; lti++) {
-					lateParts.push({ type: "text", text: lateAttachments.renderText(lateAttachments.textTitles[lti]) });
-				}
-				for (var lfi = 0; lfi < lateAttachments.fileParts.length; lfi++) {
-					var lfp = lateAttachments.fileParts[lfi];
-					lateParts.push({ type: "file_ref", uri: lfp.uri, mediaType: lfp.mediaType, category: lfp.category, filename: lfp.filename, title: lfp.title });
-				}
-				if (lateParts.length > 0) {
-					messages.push({ role: "user", content: lateParts, _context: true });
-				}
-				this.attachmentsInjected = true;
-			}
+		var lateError = this.injectLateAttachments(messages);
+		if (lateError) {
+			this.textarea.value = text;
+			this.setStatus(lateError);
+			return;
 		}
 	}
 
@@ -723,21 +629,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 	var adapter = orchestrator.getAdapter(this.provider);
 	var tools = this.toolsFilter ? helpers.resolveTools(this.toolsFilter, this.toolGroupAttr, this.chatTiddler) : [];
 
-	// Compute protection: widget attrs + per-chat tiddler fields, combined
-	var denyFilter = this.denyFilterAttr || "";
-	var allowFilter = this.allowFilterAttr || "";
-	var protMode = this.protectionModeAttr || "";
-	if (this.chatTiddler) {
-		var protChatTid = this.wiki.getTiddler(this.chatTiddler);
-		if (protChatTid) {
-			var chatDeny = protChatTid.fields["llm-deny-filter"] || "";
-			var chatAllow = protChatTid.fields["llm-allow-filter"] || "";
-			if (chatDeny) denyFilter = (denyFilter + " " + chatDeny).trim();
-			if (chatAllow) allowFilter = (allowFilter + " " + chatAllow).trim();
-			if (!protMode) protMode = protChatTid.fields["llm-protection-mode"] || "";
-		}
-	}
-	var protection = helpers.resolveProtectionFilter({ denyFilter: denyFilter, allowFilter: allowFilter, mode: protMode });
+	var protection = this.resolveProtectionForChat(helpers);
 
 	orchestrator.runConversation({
 		messages: messages,
@@ -902,20 +794,7 @@ LlmChatWidget.prototype.buildPreview = function() {
 	}
 
 	// Protection filter
-	var denyFilter = this.denyFilterAttr || "";
-	var allowFilter = this.allowFilterAttr || "";
-	var protMode = this.protectionModeAttr || "";
-	if (this.chatTiddler) {
-		var protTid = this.wiki.getTiddler(this.chatTiddler);
-		if (protTid) {
-			var chatDeny = protTid.fields["llm-deny-filter"] || "";
-			var chatAllow = protTid.fields["llm-allow-filter"] || "";
-			if (chatDeny) denyFilter = (denyFilter + " " + chatDeny).trim();
-			if (chatAllow) allowFilter = (allowFilter + " " + chatAllow).trim();
-			if (!protMode) protMode = protTid.fields["llm-protection-mode"] || "";
-		}
-	}
-	var protection = helpers.resolveProtectionFilter({ denyFilter: denyFilter, allowFilter: allowFilter, mode: protMode });
+	var protection = this.resolveProtectionForChat(helpers);
 	if (protection.filter) {
 		preview.protectionFilter = protection.filter;
 		preview.protectionMode = protection.mode;
@@ -924,20 +803,137 @@ LlmChatWidget.prototype.buildPreview = function() {
 	return JSON.stringify(preview, null, 2);
 };
 
+LlmChatWidget.prototype.buildAttachmentParts = function(attachments) {
+	var parts = [];
+	for (var ti = 0; ti < attachments.textTitles.length; ti++) {
+		parts.push({ type: "text", text: attachments.renderText(attachments.textTitles[ti]) });
+	}
+	for (var fi = 0; fi < attachments.fileParts.length; fi++) {
+		var fp = attachments.fileParts[fi];
+		parts.push({ type: "file_ref", uri: fp.uri, mediaType: fp.mediaType, category: fp.category, filename: fp.filename, title: fp.title });
+	}
+	return parts;
+};
+
+LlmChatWidget.prototype.getChatContextFilter = function() {
+	if (!this.chatTiddler) return "";
+	var tid = this.wiki.getTiddler(this.chatTiddler);
+	return tid ? (tid.fields["llm-context-filter"] || "") : "";
+};
+
+LlmChatWidget.prototype.injectContextOnFirstMessage = function(messages) {
+	var contextResolver = this.getContextResolverModule();
+	var templateTitle = contextResolver.resolveTemplate({
+		sourceTiddler: this.sourceTiddler,
+		contextTemplate: this.contextTemplateAttr
+	});
+	var rendered = contextResolver.renderContext({
+		templateTitle: templateTitle,
+		sourceTiddler: this.sourceTiddler
+	});
+
+	var attachments = contextResolver.resolveContextAttachments({
+		sourceTiddler: this.sourceTiddler,
+		chatFilter: this.getChatContextFilter(),
+		templateTitle: templateTitle
+	});
+
+	if (attachments.error) {
+		return "Context filter error: " + attachments.error;
+	}
+
+	var hasFiles = attachments.fileParts.length > 0;
+	var hasTextAttachments = attachments.textTitles.length > 0;
+
+	if (rendered.text || hasFiles || hasTextAttachments) {
+		if (rendered.injectAs === "system-prompt") {
+			this.systemPromptOverride = (this.systemPromptAttr ? this.systemPromptAttr + "\n\n" : "") + rendered.text;
+			if (hasFiles || hasTextAttachments) {
+				var parts = this.buildAttachmentParts(attachments);
+				if (parts.length > 0) {
+					messages.push({ role: "user", content: parts, _context: true });
+				}
+			}
+		} else {
+			var contentParts = [];
+			if (rendered.text) {
+				contentParts.push({ type: "text", text: rendered.text });
+			}
+			contentParts = contentParts.concat(this.buildAttachmentParts(attachments));
+			if (contentParts.length === 1 && contentParts[0].type === "text") {
+				messages.push({ role: "user", content: contentParts[0].text, _context: true });
+			} else if (contentParts.length > 0) {
+				messages.push({ role: "user", content: contentParts, _context: true });
+			}
+		}
+		if (hasFiles || hasTextAttachments) {
+			this.attachmentsInjected = true;
+		}
+	}
+	this.contextInjected = true;
+	return null;
+};
+
+LlmChatWidget.prototype.injectLateAttachments = function(messages) {
+	var lateCtxFilter = this.getChatContextFilter();
+	if (!lateCtxFilter) return null;
+
+	var contextResolver = this.getContextResolverModule();
+	var attachments = contextResolver.resolveContextAttachments({
+		sourceTiddler: this.sourceTiddler,
+		chatFilter: lateCtxFilter,
+		templateTitle: null
+	});
+
+	if (attachments.error) {
+		return "Context filter error: " + attachments.error;
+	}
+
+	if (attachments.fileParts.length > 0 || attachments.textTitles.length > 0) {
+		var parts = this.buildAttachmentParts(attachments);
+		if (parts.length > 0) {
+			messages.push({ role: "user", content: parts, _context: true });
+		}
+		this.attachmentsInjected = true;
+	}
+	return null;
+};
+
+LlmChatWidget.prototype.resolveProtectionForChat = function(helpers) {
+	var denyFilter = this.denyFilterAttr || "";
+	var allowFilter = this.allowFilterAttr || "";
+	var protMode = this.protectionModeAttr || "";
+	if (this.chatTiddler) {
+		var tid = this.wiki.getTiddler(this.chatTiddler);
+		if (tid) {
+			var chatDeny = tid.fields["llm-deny-filter"] || "";
+			var chatAllow = tid.fields["llm-allow-filter"] || "";
+			if (chatDeny) denyFilter = (denyFilter + " " + chatDeny).trim();
+			if (chatAllow) allowFilter = (allowFilter + " " + chatAllow).trim();
+			if (!protMode) protMode = tid.fields["llm-protection-mode"] || "";
+		}
+	}
+	return helpers.resolveProtectionFilter({ denyFilter: denyFilter, allowFilter: allowFilter, mode: protMode });
+};
+
+LlmChatWidget.prototype.getModule = function(name) {
+	return require("$:/plugins/rimir/llm-connect/" + name);
+};
+
 LlmChatWidget.prototype.getOrchestratorModule = function() {
-	return require("$:/plugins/rimir/llm-connect/orchestrator");
+	return this.getModule("orchestrator");
 };
 
 LlmChatWidget.prototype.getToolExecutorModule = function() {
-	return require("$:/plugins/rimir/llm-connect/tool-executor");
+	return this.getModule("tool-executor");
 };
 
 LlmChatWidget.prototype.getContextResolverModule = function() {
-	return require("$:/plugins/rimir/llm-connect/context-resolver");
+	return this.getModule("context-resolver");
 };
 
 LlmChatWidget.prototype.getWidgetHelpersModule = function() {
-	return require("$:/plugins/rimir/llm-connect/widget-helpers");
+	return this.getModule("widget-helpers");
 };
 
 LlmChatWidget.prototype.populateModelDropdown = function() {

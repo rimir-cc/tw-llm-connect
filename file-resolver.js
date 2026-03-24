@@ -124,7 +124,7 @@ function inferMediaType(uri) {
 	var lower = uri.toLowerCase();
 	var keys = Object.keys(EXT_TO_MEDIA);
 	for (var i = 0; i < keys.length; i++) {
-		if (lower.indexOf(keys[i], lower.length - keys[i].length) !== -1) {
+		if (lower.endsWith(keys[i])) {
 			return EXT_TO_MEDIA[keys[i]];
 		}
 	}

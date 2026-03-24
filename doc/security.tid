@@ -29,7 +29,7 @@ The protection system supports two modes, selectable in Settings and per-chat vi
 Each mode has its own base filter configured in Settings:
 
 * Allow base filter: `$:/config/rimir/llm-connect/allow-filter` (empty by default)
-* Deny base filter: `$:/config/rimir/llm-connect/protection-filter` (default: `[tag[sensitive]] [all[shadows+tiddlers]prefix[$:/plugins/rimir/]!tag[$:/tags/rimir/llm-accessible]]`)
+* Deny base filter: `$:/config/rimir/llm-connect/protection-filter` (default: `[tag[sensitive]] [all[shadows+tiddlers]prefix[$:/plugins/rimir/]]`)
 
 The deny base filter protects:
 
