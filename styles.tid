@@ -718,6 +718,63 @@ type: text/vnd.tiddlywiki
 	opacity: 0.8;
 }
 
+/* Accessible tiddlers panel */
+
+.llm-chat-access-panel {
+	margin-top: 6px;
+	background: <<colour code-background>>;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 4px;
+	font-size: 0.8em;
+	color: <<colour foreground>>;
+}
+
+.llm-chat-access-panel.llm-chat-access-dragover {
+	border-color: <<colour primary>>;
+	background: <<colour notification-background>>;
+}
+
+.llm-chat-access-header {
+	padding: 4px 8px;
+	border-bottom: 1px solid <<colour tiddler-border>>;
+	font-weight: bold;
+	font-size: 0.9em;
+}
+
+.llm-chat-access-list {
+	overflow-y: auto;
+	padding: 4px 8px;
+	max-height: 220px;
+}
+
+.llm-chat-access-link {
+	cursor: pointer;
+	padding: 1px 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: block;
+}
+
+.llm-chat-access-link:hover {
+	text-decoration: underline;
+}
+
+.llm-chat-btn-access {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 1.1em;
+	padding: 2px 4px;
+	opacity: 0.7;
+}
+
+.llm-chat-btn-access:hover {
+	opacity: 1;
+}
+
+/* Debug panel */
+
 .llm-chat-debug-panel {
 	margin-top: 6px;
 	background: <<colour code-background>>;

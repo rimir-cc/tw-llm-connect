@@ -240,6 +240,17 @@ Summary tiddler conventions:
 |`$:/config/rimir/llm-connect/default-context-template` | |Global default template |
 |`$:/config/rimir/llm-connect/max-file-size` |`20971520` |Maximum file size in bytes for multimodal attachments (default 20 MB) |
 
+!! Accessible tiddlers panel
+
+The 👁️ button in the chat header toggles a scrollable list of all tiddler titles the LLM can currently access. The list is computed from the combined protection filter (base + widget attributes + per-chat).
+
+''Drag-and-drop'' — drop a tiddler onto the panel to grant the LLM access:
+
+* ''Allow mode'' — appends `[[title]]` to the per-chat allow filter
+* ''Deny mode'' — appends `-[[title]]` to the per-chat deny filter (exempts it from the blacklist)
+
+Titles are clickable links (navigates to tiddler). The list refreshes when protection mode or filters change.
+
 !! Per-chat fields
 
 The following fields on each chat tiddler control per-chat behaviour. They are managed by the chat UI — not config tiddlers.

@@ -151,6 +151,12 @@ adapter.buildFileBlock() converts to provider format:
 
 Supported formats: JPEG, PNG, GIF, WEBP (image), PDF (document). Max file size configurable via `$:/config/rimir/llm-connect/max-file-size` (default 20 MB).
 
+!! Accessible tiddlers panel
+
+The chat widget includes an accessible tiddlers panel (👁️ icon) that visualises the effective protection filter. It evaluates the combined filter (base + widget attributes + per-chat), runs it against all tiddlers, and renders the resulting accessible titles as clickable navigation links.
+
+Drag-and-drop modifies the per-chat filter to grant access: `[[title]]` is appended in allow mode, `-[[title]]` in deny mode. The panel, protection input, and debug preview all refresh on change.
+
 !! Debug panel
 
 The chat widget includes a debug panel (🐛 icon) that is added/removed from the DOM on toggle — no hidden elements consuming layout space. Two tabs:

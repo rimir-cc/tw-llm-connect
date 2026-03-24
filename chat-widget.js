@@ -116,6 +116,7 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 		self.loadProtectionInput();
 		self.updateProtectionLabels();
 		self.refreshDebugPanel();
+		self.refreshAccessPanel();
 	});
 	modeRow.appendChild(modeSelect);
 
@@ -156,6 +157,7 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	protectionInput.addEventListener("change", function() {
 		self.saveProtectionInput();
 		self.refreshDebugPanel();
+		self.refreshAccessPanel();
 	});
 	protectionInput.addEventListener("input", function() {
 		self.refreshDebugPanel();
@@ -273,6 +275,63 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 		protectionRow.style.display = visible ? "none" : "flex";
 	});
 	buttonRow.appendChild(shieldBtn);
+
+	// Eye icon to toggle accessible tiddlers panel
+	var accessPanel = this.document.createElement("div");
+	accessPanel.className = "llm-chat-access-panel";
+	accessPanel.style.display = "none";
+	this.accessPanel = accessPanel;
+
+	var accessHeader = this.document.createElement("div");
+	accessHeader.className = "llm-chat-access-header";
+	var accessTitle = this.document.createElement("span");
+	accessTitle.className = "llm-chat-access-title";
+	this.accessTitle = accessTitle;
+	accessHeader.appendChild(accessTitle);
+	accessPanel.appendChild(accessHeader);
+
+	var accessList = this.document.createElement("div");
+	accessList.className = "llm-chat-access-list";
+	this.accessList = accessList;
+	accessPanel.appendChild(accessList);
+
+	// Drop zone for adding/removing tiddlers
+	accessPanel.addEventListener("dragover", function(e) {
+		e.preventDefault();
+		accessPanel.classList.add("llm-chat-access-dragover");
+	});
+	accessPanel.addEventListener("dragleave", function(e) {
+		if (!accessPanel.contains(e.relatedTarget)) {
+			accessPanel.classList.remove("llm-chat-access-dragover");
+		}
+	});
+	accessPanel.addEventListener("drop", function(e) {
+		e.preventDefault();
+		accessPanel.classList.remove("llm-chat-access-dragover");
+		var jsonData = e.dataTransfer.getData("text/vnd.tiddler") || e.dataTransfer.getData("text/plain");
+		if (!jsonData) return;
+		var title;
+		try {
+			var parsed = JSON.parse(jsonData);
+			title = Array.isArray(parsed) ? parsed[0].title : parsed.title;
+		} catch(ex) {
+			title = jsonData.trim();
+		}
+		if (!title) return;
+		self.handleAccessDrop(title);
+	});
+
+	var accessBtn = this.document.createElement("button");
+	accessBtn.className = "llm-chat-btn-access";
+	accessBtn.textContent = "\uD83D\uDC41\uFE0F";
+	accessBtn.title = "Show accessible tiddlers (drop tiddlers to add/remove)";
+	accessBtn.addEventListener("click", function() {
+		var visible = accessPanel.style.display !== "none";
+		accessPanel.style.display = visible ? "none" : "block";
+		if (!visible) self.refreshAccessPanel();
+	});
+	buttonRow.appendChild(accessBtn);
+	inputArea.appendChild(accessPanel);
 
 	// Debug button + panel
 	var debugBtn = this.document.createElement("button");
@@ -897,6 +956,97 @@ LlmChatWidget.prototype.injectLateAttachments = function(messages) {
 		this.attachmentsInjected = true;
 	}
 	return null;
+};
+
+LlmChatWidget.prototype.refreshAccessPanel = function() {
+	if (!this.accessList || this.accessPanel.style.display === "none") return;
+	var helpers = this.getWidgetHelpersModule();
+	var protection = this.resolveProtectionForChat(helpers);
+	var self = this;
+
+	this.accessList.innerHTML = "";
+
+	var allTitles = this.wiki.filterTiddlers("[all[tiddlers]sort[title]]");
+	var accessible = [];
+
+	if (protection.mode === "allow") {
+		if (protection.filter) {
+			var allowed = Object.create(null);
+			var allowList = this.wiki.filterTiddlers(protection.filter);
+			for (var i = 0; i < allowList.length; i++) allowed[allowList[i]] = true;
+			for (var j = 0; j < allTitles.length; j++) {
+				if (allowed[allTitles[j]]) accessible.push(allTitles[j]);
+			}
+		}
+		// allow mode with empty filter = nothing accessible
+	} else {
+		if (protection.filter) {
+			var denied = Object.create(null);
+			var denyList = this.wiki.filterTiddlers(protection.filter);
+			for (var i2 = 0; i2 < denyList.length; i2++) denied[denyList[i2]] = true;
+			for (var j2 = 0; j2 < allTitles.length; j2++) {
+				if (!denied[allTitles[j2]]) accessible.push(allTitles[j2]);
+			}
+		} else {
+			accessible = allTitles;
+		}
+	}
+
+	this.accessTitle.textContent = "Accessible tiddlers (" + accessible.length + ")";
+
+	for (var k = 0; k < accessible.length; k++) {
+		var link = this.document.createElement("a");
+		link.className = "llm-chat-access-link tc-tiddlylink";
+		link.textContent = accessible[k];
+		link.setAttribute("data-title", accessible[k]);
+		link.addEventListener("click", function(e) {
+			e.preventDefault();
+			var t = this.getAttribute("data-title");
+			var bounds = { left: 0, top: 0, width: 0, height: 0 };
+			self.dispatchEvent({ type: "tm-navigate", navigateTo: t, navigateFromTitle: self.chatTiddler, navigateFromClientRect: bounds });
+		});
+		this.accessList.appendChild(link);
+	}
+};
+
+LlmChatWidget.prototype.handleAccessDrop = function(title) {
+	var mode = this.getActiveProtectionMode();
+	var field = mode === "allow" ? "llm-allow-filter" : "llm-deny-filter";
+	var escaped = "[[" + title + "]]";
+	var negated = "-[[" + title + "]]";
+
+	// Get current per-chat filter value
+	var currentFilter = "";
+	if (this.chatTiddler) {
+		var tid = this.wiki.getTiddler(this.chatTiddler);
+		if (tid) currentFilter = tid.fields[field] || "";
+	}
+
+	if (mode === "allow") {
+		// Allow mode: add tiddler to the whitelist (if not already there)
+		if (currentFilter.indexOf(escaped) === -1) {
+			currentFilter = (currentFilter + " " + escaped).trim();
+		}
+	} else {
+		// Deny mode: add -[[title]] to exclude it from the blacklist (make it accessible)
+		if (currentFilter.indexOf(negated) === -1) {
+			currentFilter = (currentFilter + " " + negated).trim();
+		}
+	}
+
+	// Save back
+	if (this.chatTiddler) {
+		var fields = { title: this.chatTiddler };
+		fields[field] = currentFilter;
+		var existing = this.wiki.getTiddler(this.chatTiddler);
+		if (existing) fields = $tw.utils.extend({}, existing.fields, fields);
+		this.wiki.addTiddler(new $tw.Tiddler(fields));
+	}
+
+	// Update the protection input to reflect the change
+	this.loadProtectionInput();
+	this.refreshAccessPanel();
+	this.refreshDebugPanel();
 };
 
 LlmChatWidget.prototype.resolveProtectionForChat = function(helpers) {

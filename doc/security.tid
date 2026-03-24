@@ -72,6 +72,17 @@ Tools that take an explicit `title` parameter (e.g. `get_tiddler`, `set_field`, 
 
 Files attached via the context filter are fetched from the server via XHR, base64-encoded in the browser, and sent inline in the API request. The max file size is enforced client-side (`$:/config/rimir/llm-connect/max-file-size`, default 20 MB). Files are not cached — they are re-fetched on each send.
 
+!! Accessible tiddlers panel
+
+The chat widget includes an accessible tiddlers panel (👁️ icon) that shows a live, scrollable list of all tiddler titles the LLM can currently access based on the active protection mode and filters.
+
+* In ''allow mode'', the list shows tiddlers matched by the combined allow filter. An empty filter means an empty list (no access).
+* In ''deny mode'', the list shows all tiddlers ''not'' matched by the combined deny filter.
+
+The panel supports drag-and-drop: dropping a tiddler onto the panel grants LLM access to it. In allow mode this appends `[[title]]` to the per-chat allow filter. In deny mode this appends `-[[title]]` to the per-chat deny filter (exempting it from the blacklist). The per-chat filter input (shield icon) updates automatically to reflect the change.
+
+The list refreshes when the protection mode, base filter, or per-chat filter changes.
+
 !! Recommendations
 
 * Start with allow mode (default) — grant access only to the tiddlers the LLM needs
