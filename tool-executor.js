@@ -83,20 +83,21 @@ exports.executeTool = function(toolCall, protection) {
 	protection = protection || { filter: "", mode: "deny" };
 
 	// Check title-based protection
-	if (toolCall.input && toolCall.input.title) {
+	// For create_tiddler with basetitle: skip pre-check (resolved title unknown, wikitext handles it)
+	// For create_tiddler with title on new tiddler: skip (tiddler doesn't exist yet)
+	var hasTitleInput = toolCall.input && toolCall.input.title;
+	var isCreateWithBasetitle = toolCall.name === "create_tiddler" && toolCall.input && toolCall.input.basetitle;
+	if (hasTitleInput && !isCreateWithBasetitle) {
 		var title = toolCall.input.title;
 		var isCreate = toolCall.name === "create_tiddler";
 		if (protection.mode === "allow") {
-			// Allow mode: filter matches are accessible (empty filter = nothing accessible)
 			var allowedTitles = protection.filter ? $tw.wiki.filterTiddlers(protection.filter) : [];
 			if (allowedTitles.indexOf(title) === -1) {
-				// For create: allow if tiddler doesn't exist yet; block if it exists and not in allow list
 				if (!isCreate || $tw.wiki.tiddlerExists(title)) {
 					return "Error: Access denied \u2014 tiddler '" + title + "' is not in the allow list";
 				}
 			}
 		} else if (protection.filter) {
-			// Deny mode: filter matches are protected
 			var protectedTitles = $tw.wiki.filterTiddlers(protection.filter);
 			if (protectedTitles.indexOf(title) !== -1) {
 				return "Error: Access denied \u2014 tiddler '" + title + "' is protected by filter rules";

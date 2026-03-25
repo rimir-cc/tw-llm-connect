@@ -721,6 +721,12 @@ LlmChatWidget.prototype.sendMessage = function() {
 		config.systemPrompt = this.systemPromptAttr;
 	}
 
+	// Append creation rules to system prompt if configured
+	var creationRules = (this.wiki.getTiddlerText("$:/config/rimir/llm-connect/creation-rules") || "").trim();
+	if (creationRules) {
+		config.systemPrompt = (config.systemPrompt || "") + "\n\nTiddler creation rules:\n" + creationRules;
+	}
+
 	var adapter = orchestrator.getAdapter(this.provider);
 	var tools = this.toolsFilter ? helpers.resolveTools(this.toolsFilter, this.toolGroupAttr, this.chatTiddler) : [];
 

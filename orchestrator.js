@@ -120,17 +120,25 @@ exports.runConversation = function(options) {
 							result = "Error: Tool not available in current chat: " + tc.name;
 						} else {
 							result = toolExecutor.executeTool(tc, protection);
-							// Auto-add created tiddlers to protection filter for subsequent calls
-							if (tc.input && tc.input.title && result.indexOf("Error:") !== 0) {
-								var escaped = "[[" + tc.input.title + "]]";
-								if (protection.mode === "allow") {
-									if (protection.filter.indexOf(escaped) === -1) {
-										protection.filter = (protection.filter + " " + escaped).trim();
-									}
-								} else {
-									var negated = "-" + escaped;
-									if (protection.filter.indexOf(negated) === -1) {
-										protection.filter = (protection.filter + " " + negated).trim();
+							// Auto-add created/modified tiddlers to protection filter for subsequent calls
+							if (tc.input && result.indexOf("Error:") !== 0) {
+								var createdTitle = tc.input.title;
+								if (!createdTitle && tc.input.basetitle) {
+									// Extract actual title from basetitle result
+									var match = result.match(/Done — created tiddler '(.+)'/);
+									if (match) createdTitle = match[1];
+								}
+								if (createdTitle) {
+									var escaped = "[[" + createdTitle + "]]";
+									if (protection.mode === "allow") {
+										if (protection.filter.indexOf(escaped) === -1) {
+											protection.filter = (protection.filter + " " + escaped).trim();
+										}
+									} else {
+										var negated = "-" + escaped;
+										if (protection.filter.indexOf(negated) === -1) {
+											protection.filter = (protection.filter + " " + negated).trim();
+										}
 									}
 								}
 							}

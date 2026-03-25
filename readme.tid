@@ -13,7 +13,7 @@ In-browser LLM integration with tool use. Connect TiddlyWiki to Claude, OpenAI, 
 * ''Pair editing'' — toolbar button opens an embedded chat panel on any tiddler for collaborative editing with the LLM
 * ''Provider adapters'' — Claude, OpenAI, and Azure OpenAI out of the box, extensible for other providers
 * ''Dynamic model selection'' — fetch available models from provider APIs; per-chat model selector with provider locking
-* ''Tool system'' — built-in tools for searching, reading, navigating, and modifying tiddlers; user-defined tools via wikitext
+* ''Tool system'' — built-in tools for searching, reading, navigating, and modifying tiddlers; user-defined tools via wikitext. `create_tiddler` supports `basetitle` for auto-numbered titles
 * ''Per-chat tool selection'' — wrench icon opens a dropdown to toggle individual tools per chat; tool groups as quick presets
 * ''Multimodal context'' — attach PDFs, images, and text tiddlers to conversations via a context filter; binary files are fetched, base64-encoded, and sent inline to the LLM
 * ''Context templates'' — wikitext templates that render input for the LLM from one or more source tiddlers

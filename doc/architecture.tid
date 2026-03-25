@@ -128,7 +128,9 @@ Filter operators (`is[tiddler]`, `get`, `has`, etc.) use the overridden accessor
 
 The protection filter is evaluated once per tool call. Tools that take an explicit `title` parameter also get an early "Access denied" error before wikitext execution (defense-in-depth).
 
-''Auto-expanding filter'': when a tool successfully executes with a `title` input (e.g. `create_tiddler`), the orchestrator adds that title to the in-flight protection filter so subsequent tool calls in the same loop can access it. After the conversation turn completes, the widget persists the updated filter to the chat tiddler. The `create_tiddler` tool additionally blocks overwriting existing tiddlers — the LLM must use `set_field` to modify existing content.
+''Auto-expanding filter'': when a tool successfully executes with a `title` or `basetitle` input, the orchestrator adds the created title to the in-flight protection filter. For `basetitle` mode, the actual resolved title is extracted from the result string (`Done — created tiddler '...'`). After the conversation turn completes, the widget persists the updated filter to the chat tiddler.
+
+The `create_tiddler` tool supports two modes: `title` (exact, fails if exists) and `basetitle` (auto-numbered: tries base, then base + ` 1`, ` 2`, ... up to ` 20`). The LLM always receives the actual title created in the result.
 
 !! Multimodal context — file attachments
 

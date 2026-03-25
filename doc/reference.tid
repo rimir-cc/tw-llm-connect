@@ -115,7 +115,7 @@ A tool is considered ''complete'' when `tool-name`, `tool-schema`, and `text` (b
 |`search_tiddlers` |`read` |Run a filter and return matching titles with tags |
 |`get_tiddler` |`read` |Read a tiddler's fields and text |
 |`set_field` |`action` |Set a field value on an existing tiddler |
-|`create_tiddler` |`action` |Create a new tiddler with title, text, and optional tags. Blocks overwriting existing tiddlers (returns error). Auto-added to protection filter |
+|`create_tiddler` |`action` |Create a new tiddler. `title` (exact, fails if exists) or `basetitle` (auto-numbered if taken, returns actual title). Auto-added to protection filter |
 |`delete_tiddler` |`action` |Delete a tiddler |
 |`navigate_to_tiddler` |`action` |Open a tiddler in the story river so the user can see it |
 |`wikitext_render` |`read` |Render wikitext and return the text output |
@@ -239,6 +239,7 @@ Summary tiddler conventions:
 |`$:/config/rimir/llm-connect/max-tool-result-length` |`4000` |Truncation limit |
 |`$:/config/rimir/llm-connect/default-context-template` | |Global default template |
 |`$:/config/rimir/llm-connect/max-file-size` |`20971520` |Maximum file size in bytes for multimodal attachments (default 20 MB) |
+|`$:/config/rimir/llm-connect/creation-rules` |(empty) |Natural-language naming conventions appended to system prompt as "Tiddler creation rules". Guides LLM when using `create_tiddler` with `basetitle` |
 
 !! Accessible tiddlers panel
 

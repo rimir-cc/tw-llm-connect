@@ -1,9 +1,19 @@
 title: $:/plugins/rimir/llm-connect/tools/create-tiddler
 tags: $:/tags/rimir/llm-connect/tool
 tool-name: create_tiddler
-tool-description: Create a new tiddler with the given title, text, and optional tags. Use set_field to add other fields afterwards. Write operation.
-tool-schema: {"type":"object","properties":{"title":{"type":"string","description":"Title for the new tiddler"},"text":{"type":"string","description":"Text content of the tiddler"},"tags":{"type":"string","description":"Space-separated tags (use [[double brackets]] for multi-word tags)"}},"required":["title"]}
+tool-description: Create a new tiddler. Provide either 'title' (exact, fails if exists) or 'basetitle' (auto-numbered if taken, returns actual title). Use set_field to add other fields afterwards. Write operation.
+tool-schema: {"type":"object","properties":{"title":{"type":"string","description":"Exact title for the new tiddler (fails if tiddler already exists)"},"basetitle":{"type":"string","description":"Base title — auto-numbered if taken (e.g. 'Note' → 'Note', 'Note 1', 'Note 2'). Returns the actual title created."},"text":{"type":"string","description":"Text content of the tiddler"},"tags":{"type":"string","description":"Space-separated tags (use [[double brackets]] for multi-word tags)"}}}
 tool-mode: action
 type: text/vnd.tiddlywiki
 
-<$list filter="[<title>minlength[1]]" variable="_" emptyMessage="Error: Missing 'title' parameter"><$list filter="[<title>is[tiddler]]" variable="_" emptyMessage="<$action-setfield $tiddler=<<title>> text=<<text>> tags=<<tags>>/>Done — created tiddler '<<title>>'">Error: Tiddler '<<title>>' already exists — use set_field to modify it</$list></$list>
+\procedure create-exact()
+<$list filter="[<title>is[tiddler]]" variable="_" emptyMessage="<$action-setfield $tiddler=<<title>> text=<<text>> tags=<<tags>>/>Done — created tiddler '<<title>>'">Error: Tiddler '<<title>>' already exists — use set_field to modify it</$list>
+\end
+
+\procedure create-basetitle()
+<$let resolved={{{ [<basetitle>!is[tiddler]] :else[<basetitle>addsuffix[ 1]!is[tiddler]] :else[<basetitle>addsuffix[ 2]!is[tiddler]] :else[<basetitle>addsuffix[ 3]!is[tiddler]] :else[<basetitle>addsuffix[ 4]!is[tiddler]] :else[<basetitle>addsuffix[ 5]!is[tiddler]] :else[<basetitle>addsuffix[ 6]!is[tiddler]] :else[<basetitle>addsuffix[ 7]!is[tiddler]] :else[<basetitle>addsuffix[ 8]!is[tiddler]] :else[<basetitle>addsuffix[ 9]!is[tiddler]] :else[<basetitle>addsuffix[ 10]!is[tiddler]] :else[<basetitle>addsuffix[ 11]!is[tiddler]] :else[<basetitle>addsuffix[ 12]!is[tiddler]] :else[<basetitle>addsuffix[ 13]!is[tiddler]] :else[<basetitle>addsuffix[ 14]!is[tiddler]] :else[<basetitle>addsuffix[ 15]!is[tiddler]] :else[<basetitle>addsuffix[ 16]!is[tiddler]] :else[<basetitle>addsuffix[ 17]!is[tiddler]] :else[<basetitle>addsuffix[ 18]!is[tiddler]] :else[<basetitle>addsuffix[ 19]!is[tiddler]] :else[<basetitle>addsuffix[ 20]!is[tiddler]] }}}>
+<$list filter="[<resolved>minlength[1]]" emptyMessage="Error: Could not find available title for base '<<basetitle>>' (20 suffixes tried)"><$action-setfield $tiddler=<<resolved>> text=<<text>> tags=<<tags>>/>Done — created tiddler '<<resolved>>'</$list>
+</$let>
+\end
+
+<$let hasTitle={{{ [<title>minlength[1]then[yes]else[no]] }}} hasBase={{{ [<basetitle>minlength[1]then[yes]else[no]] }}}><$list filter="[<hasTitle>match[yes]addsuffix<hasBase>match[yesyes]]" variable="_">Error: Provide either 'title' or 'basetitle', not both</$list><$list filter="[<hasTitle>match[yes]addsuffix<hasBase>match[yesno]]" variable="_"><<create-exact>></$list><$list filter="[<hasTitle>match[no]addsuffix<hasBase>match[noyes]]" variable="_"><<create-basetitle>></$list><$list filter="[<hasTitle>match[no]addsuffix<hasBase>match[nono]]" variable="_">Error: Provide either 'title' or 'basetitle'</$list></$let>
