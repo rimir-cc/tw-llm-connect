@@ -27,6 +27,33 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	var container = this.document.createElement("div");
 	container.className = "llm-chat-container";
 
+	// Pin button (top-right, before messages)
+	var self = this;
+	var pinRow = this.document.createElement("div");
+	pinRow.className = "llm-chat-pin-row";
+	var pinBtn = this.document.createElement("button");
+	pinBtn.className = "llm-chat-btn-pin";
+	pinBtn.textContent = "\uD83D\uDCCC"; // 📌
+	this.pinIconDefault = "\uD83D\uDCCC"; // 📌
+	this.pinIconActive = "\uD83D\uDD34"; // 🔴
+	this.pinBtn = pinBtn;
+	this.updatePinDisplay();
+
+	pinBtn.addEventListener("click", function(e) {
+		e.stopPropagation();
+		self.handlePinClick();
+	});
+	pinRow.appendChild(pinBtn);
+
+	// Pin context menu (hidden)
+	var pinMenu = this.document.createElement("div");
+	pinMenu.className = "llm-chat-pin-menu";
+	pinMenu.style.display = "none";
+	this.pinMenu = pinMenu;
+	pinRow.appendChild(pinMenu);
+
+	container.appendChild(pinRow);
+
 	// Messages area
 	var messagesDiv = this.document.createElement("div");
 	messagesDiv.className = "llm-chat-messages";
@@ -56,7 +83,6 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	textarea.rows = 3;
 	this.textarea = textarea;
 
-	var self = this;
 	textarea.addEventListener("keydown", function(e) {
 		if (e.key === "Enter" && !e.ctrlKey && !e.shiftKey) {
 			e.preventDefault();
@@ -121,6 +147,7 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 		self.updateProtectionLabels();
 		self.refreshDebugPanel();
 		self.refreshAccessPanel();
+		self.syncIfPinned();
 	});
 	modeRow.appendChild(modeSelect);
 
@@ -195,6 +222,7 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 			self.wiki.addTiddler(new $tw.Tiddler(fields));
 		}
 		self.refreshDebugPanel();
+		self.syncIfPinned();
 	});
 	contextInput.addEventListener("input", function() {
 		self.refreshDebugPanel();
@@ -484,6 +512,10 @@ LlmChatWidget.prototype.saveMessages = function(messages) {
 			tags: "$:/tags/rimir/llm-connect/chat"
 		}
 	));
+	// Auto-sync to saved tiddler if pinned
+	if (this.isPinned()) {
+		this.syncPinnedSave(messages);
+	}
 };
 
 LlmChatWidget.prototype.renderMessages = function(container) {
@@ -734,6 +766,10 @@ LlmChatWidget.prototype.setStatus = function(text) {
 
 LlmChatWidget.prototype.clearChat = function() {
 	if (!this.chatTiddler) return;
+	// Unpin before clearing (saved tiddler remains for restore)
+	if (this.isPinned()) {
+		this.unpin();
+	}
 	// Clear messages and unlock provider/model
 	this.saveMessages([]);
 	this.contextInjected = false;
@@ -748,6 +784,7 @@ LlmChatWidget.prototype.clearChat = function() {
 	this.renderMessages(this.messagesDiv);
 	this.updateModelDisplay();
 	this.updateTokenDisplay();
+	this.updatePinDisplay();
 	this.setStatus("");
 };
 
@@ -864,6 +901,199 @@ LlmChatWidget.prototype.buildPreview = function() {
 	}
 
 	return JSON.stringify(preview, null, 2);
+};
+
+// --- Pin / Save / Restore ---
+
+LlmChatWidget.prototype.getSaveTitle = function() {
+	if (!this.chatTiddler) return null;
+	return "$:/saved-chats/rimir/llm-connect/" + chatContextSlug(this.chatTiddler);
+};
+
+LlmChatWidget.prototype.isPinned = function() {
+	if (!this.chatTiddler) return false;
+	var tid = this.wiki.getTiddler(this.chatTiddler);
+	return tid && tid.fields["llm-pinned-save"] === "yes";
+};
+
+LlmChatWidget.prototype.hasSavedChat = function() {
+	var saveTitle = this.getSaveTitle();
+	return saveTitle && this.wiki.tiddlerExists(saveTitle);
+};
+
+LlmChatWidget.prototype.pin = function() {
+	if (!this.chatTiddler) return;
+	var chatTid = this.wiki.getTiddler(this.chatTiddler);
+	if (!chatTid) return;
+
+	// Mark chat tiddler as pinned
+	this.wiki.addTiddler(new $tw.Tiddler(chatTid, { "llm-pinned-save": "yes" }));
+
+	// Save current state to saved tiddler
+	var messages = this.getMessages();
+	this.syncPinnedSave(messages);
+	this.updatePinDisplay();
+};
+
+LlmChatWidget.prototype.unpin = function() {
+	if (!this.chatTiddler) return;
+	var chatTid = this.wiki.getTiddler(this.chatTiddler);
+	if (!chatTid) return;
+	this.wiki.addTiddler(new $tw.Tiddler(chatTid, { "llm-pinned-save": "" }));
+	this.updatePinDisplay();
+};
+
+LlmChatWidget.prototype.syncPinnedSave = function(messages) {
+	var saveTitle = this.getSaveTitle();
+	if (!saveTitle) return;
+	var chatTid = this.wiki.getTiddler(this.chatTiddler);
+	if (!messages) messages = this.getMessages();
+	var fields = {
+		title: saveTitle,
+		tags: "$:/tags/rimir/llm-connect/saved-chat",
+		"llm-chat-context": this.chatTiddler,
+		"llm-messages": JSON.stringify(messages),
+		"llm-message-count": String(messages.length),
+		"llm-context-injected": this.contextInjected ? "yes" : "no",
+		"llm-attachments-injected": this.attachmentsInjected ? "yes" : "no",
+		"llm-system-prompt-override": this.systemPromptOverride || ""
+	};
+	// Copy all llm-* fields from chat tiddler
+	if (chatTid) {
+		var chatFields = chatTid.fields;
+		var copyKeys = ["llm-provider", "llm-model", "llm-active-tools", "llm-tools-init",
+			"llm-context-filter", "llm-protection-mode", "llm-allow-filter", "llm-deny-filter"];
+		for (var i = 0; i < copyKeys.length; i++) {
+			if (chatFields[copyKeys[i]]) fields[copyKeys[i]] = chatFields[copyKeys[i]];
+		}
+	}
+	this.wiki.addTiddler(new $tw.Tiddler(fields));
+};
+
+LlmChatWidget.prototype.syncIfPinned = function() {
+	if (this.isPinned()) {
+		this.syncPinnedSave();
+	}
+};
+
+LlmChatWidget.prototype.restoreChat = function() {
+	var saveTitle = this.getSaveTitle();
+	if (!saveTitle) return;
+	var savedTid = this.wiki.getTiddler(saveTitle);
+	if (!savedTid) return;
+
+	// Restore widget instance state
+	this.contextInjected = savedTid.fields["llm-context-injected"] === "yes";
+	this.attachmentsInjected = savedTid.fields["llm-attachments-injected"] === "yes";
+	this.systemPromptOverride = savedTid.fields["llm-system-prompt-override"] || null;
+
+	// Copy fields to chat tiddler
+	var fields = { title: this.chatTiddler, tags: "$:/tags/rimir/llm-connect/chat", "llm-pinned-save": "yes" };
+	var copyKeys = ["llm-messages", "llm-provider", "llm-model", "llm-active-tools", "llm-tools-init",
+		"llm-context-filter", "llm-protection-mode", "llm-allow-filter", "llm-deny-filter"];
+	for (var i = 0; i < copyKeys.length; i++) {
+		if (savedTid.fields[copyKeys[i]]) fields[copyKeys[i]] = savedTid.fields[copyKeys[i]];
+	}
+	this.wiki.addTiddler(new $tw.Tiddler(fields));
+
+	// Restore provider/model on widget
+	this.provider = savedTid.fields["llm-provider"] || this.provider;
+	this.model = savedTid.fields["llm-model"] || this.model;
+
+	// Refresh UI
+	this.renderMessages(this.messagesDiv);
+	this.updateModelDisplay();
+	this.updateTokenDisplay();
+	this.updatePinDisplay();
+	this.loadProtectionInput();
+	this.updateProtectionLabels();
+	this.refreshAccessPanel();
+	this.refreshDebugPanel();
+};
+
+LlmChatWidget.prototype.handlePinClick = function() {
+	var messages = this.getMessages();
+	var hasMessages = messages.length > 0;
+	var hasSave = this.hasSavedChat();
+	var pinned = this.isPinned();
+
+	if (pinned) {
+		// Currently pinned → unpin
+		this.unpin();
+		return;
+	}
+
+	if (!hasSave) {
+		// No save → pin (works for both empty and non-empty chat)
+		this.pin();
+		return;
+	}
+
+	if (hasSave && !hasMessages) {
+		// Has save, empty chat → restore
+		this.restoreChat();
+		return;
+	}
+
+	// Has save AND has messages → show context menu
+	this.showPinMenu();
+};
+
+LlmChatWidget.prototype.showPinMenu = function() {
+	var self = this;
+	var menu = this.pinMenu;
+	menu.innerHTML = "";
+
+	var saveItem = this.document.createElement("div");
+	saveItem.className = "llm-chat-pin-menu-item";
+	saveItem.textContent = "Save current";
+	saveItem.addEventListener("click", function() {
+		menu.style.display = "none";
+		self.pin();
+	});
+	menu.appendChild(saveItem);
+
+	var restoreItem = this.document.createElement("div");
+	restoreItem.className = "llm-chat-pin-menu-item";
+	restoreItem.textContent = "Restore saved";
+	restoreItem.addEventListener("click", function() {
+		menu.style.display = "none";
+		if (confirm("Restore saved chat? This will replace the current conversation.")) {
+			self.restoreChat();
+		}
+	});
+	menu.appendChild(restoreItem);
+
+	menu.style.display = "block";
+
+	// Close on outside click
+	var closeHandler = function(ev) {
+		if (!menu.contains(ev.target) && ev.target !== self.pinBtn) {
+			menu.style.display = "none";
+			self.document.removeEventListener("mousedown", closeHandler, true);
+		}
+	};
+	setTimeout(function() {
+		self.document.addEventListener("mousedown", closeHandler, true);
+	}, 0);
+};
+
+LlmChatWidget.prototype.updatePinDisplay = function() {
+	if (!this.pinBtn) return;
+	var pinned = this.isPinned();
+	var hasSave = this.hasSavedChat();
+
+	this.pinBtn.textContent = pinned ? this.pinIconActive : this.pinIconDefault;
+	this.pinBtn.classList.toggle("llm-chat-btn-pin-active", pinned);
+	this.pinBtn.classList.toggle("llm-chat-btn-pin-has-save", hasSave && !pinned);
+
+	if (pinned) {
+		this.pinBtn.title = "Chat is pinned (click to unpin)";
+	} else if (hasSave) {
+		this.pinBtn.title = "Saved chat available (click to restore)";
+	} else {
+		this.pinBtn.title = "Pin chat to save it";
+	}
 };
 
 LlmChatWidget.prototype.buildAttachmentParts = function(attachments) {
@@ -1051,6 +1281,7 @@ LlmChatWidget.prototype.handleAccessDrop = function(title) {
 	this.loadProtectionInput();
 	this.refreshAccessPanel();
 	this.refreshDebugPanel();
+	this.syncIfPinned();
 };
 
 LlmChatWidget.prototype.resolveProtectionForChat = function(helpers) {
@@ -1066,6 +1297,17 @@ LlmChatWidget.prototype.resolveProtectionForChat = function(helpers) {
 			if (chatAllow) allowFilter = (allowFilter + " " + chatAllow).trim();
 			if (!protMode) protMode = tid.fields["llm-protection-mode"] || "";
 		}
+	}
+	// Always grant access to the source tiddler (e.g. pair-edit target)
+	if (this.sourceTiddler) {
+		var escaped = "[[" + this.sourceTiddler + "]]";
+		var protection = helpers.resolveProtectionFilter({ denyFilter: denyFilter, allowFilter: allowFilter, mode: protMode });
+		if (protection.mode === "allow") {
+			protection.filter = (protection.filter + " " + escaped).trim();
+		} else {
+			protection.filter = (protection.filter + " -" + escaped).trim();
+		}
+		return protection;
 	}
 	return helpers.resolveProtectionFilter({ denyFilter: denyFilter, allowFilter: allowFilter, mode: protMode });
 };
@@ -1188,6 +1430,7 @@ LlmChatWidget.prototype.saveProtectionInput = function() {
 	var existing = this.wiki.getTiddler(this.chatTiddler);
 	if (existing) fields = $tw.utils.extend({}, existing.fields, fields);
 	this.wiki.addTiddler(new $tw.Tiddler(fields));
+	this.syncIfPinned();
 };
 
 LlmChatWidget.prototype.updateProtectionLabels = function() {
@@ -1256,6 +1499,7 @@ LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 		this.renderMessages(this.messagesDiv);
 		this.updateTokenDisplay();
 		this.refreshDebugPanel();
+		this.syncIfPinned();
 	}
 	// Update provider/model display if config changed — but only if chat is empty (not locked)
 	var msgs = this.getMessages();
@@ -1269,6 +1513,10 @@ LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 	}
 	return false;
 };
+
+function chatContextSlug(chatTiddler) {
+	return chatTiddler.replace(/^\$:\/temp\/rimir\//, "").replace(/[^a-zA-Z0-9-]/g, "-");
+}
 
 function negateFilter(filter) {
 	if (!filter) return "";

@@ -261,6 +261,25 @@ The following fields on each chat tiddler control per-chat behaviour. They are m
 |`llm-protection-mode` |Protection mode override for this chat — `allow` or `deny` (managed by shield icon dropdown). Switching modes auto-negates the per-chat filter |
 |`llm-allow-filter` |Additional allow filter for this chat (managed by shield icon). Combined with widget attribute and base allow filter |
 |`llm-deny-filter` |Additional deny filter for this chat (managed by shield icon). Combined with widget attribute and base deny filter |
+|`llm-pinned-save` |`"yes"` when chat is pinned (auto-syncing to saved tiddler). Managed by 📌 icon |
+
+!! Chat pin/save/restore
+
+The 📌 icon at the top-right of the chat container pins the current chat to persist it to disk. Chat tiddlers use `$:/temp/` paths which are lost on browser reload — pinning creates a persistent copy at `$:/saved-chats/rimir/llm-connect/<context-slug>`.
+
+Each widget context (global chat, chat view, each pair-edit tiddler) has one save slot. Pinned chats auto-sync ''all'' state on every change: messages, protection mode/filters, tool selection, context filter, and injection flags.
+
+|!Pin state |!Click action |
+|Not pinned, no save |Pin (create save) |
+|Not pinned, has save, chat empty |Restore saved chat |
+|Not pinned, has save, chat has messages |Context menu: "Save current" / "Restore saved" |
+|Pinned |Unpin (stop syncing; save remains) |
+
+Saved tiddler fields include `llm-context-injected`, `llm-attachments-injected`, and `llm-system-prompt-override` to correctly restore widget-internal state and prevent duplicate context injection.
+
+!! Source tiddler auto-access
+
+When the `tiddler` attribute is set (e.g. pair-edit mode), the source tiddler is automatically added to the allow filter (or exempted from the deny filter). This ensures the LLM can always read and modify the tiddler it is pair-editing.
 
 </$fill>
 </$transclude>

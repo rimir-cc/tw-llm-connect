@@ -32,6 +32,7 @@ llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI) directly from the 
 * ''Resizable chat'' — drag panel edges to resize the chat window; drag the history resize handle to adjust the split between history and debug
 * ''Tiddler protection'' — restricted wiki proxy hides sensitive tiddlers from all LLM tool execution
 * ''Accessible tiddlers panel'' — 👁️ icon shows which tiddlers the LLM can access; drop tiddlers to grant access
+* ''Chat pin/save/restore'' — 📌 icon persists a chat to disk; auto-syncs all state; restore after reload
 * ''Audit logging'' — write operations execute immediately with an audit log to `$:/temp/rimir/llm-connect/write-log`
 
 !! Prerequisites

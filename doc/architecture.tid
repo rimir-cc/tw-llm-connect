@@ -157,6 +157,18 @@ The chat widget includes an accessible tiddlers panel (👁️ icon) that visual
 
 Drag-and-drop modifies the per-chat filter to grant access: `[[title]]` is appended in allow mode, `-[[title]]` in deny mode. The panel, protection input, and debug preview all refresh on change.
 
+!! Chat pin/save/restore
+
+Chat tiddlers use `$:/temp/` paths — the syncer excludes these from sync, so they exist only in browser memory and are lost on reload. The pin feature creates a persistent copy at `$:/saved-chats/rimir/llm-connect/<context-slug>` (one slot per widget context).
+
+When pinned, `syncPinnedSave()` is called from: `saveMessages()` (messages), `refresh()` (tool changes via wikitext), `saveProtectionInput()`, mode switch handler, context filter handler, and `handleAccessDrop()`. This ensures all state changes are captured.
+
+On restore, `restoreChat()` copies all fields back to the chat tiddler and restores widget-instance flags (`contextInjected`, `attachmentsInjected`, `systemPromptOverride`) to prevent duplicate context injection.
+
+!! Source tiddler auto-access
+
+`resolveProtectionForChat()` automatically adds the `sourceTiddler` (from the `tiddler` attribute) to the effective filter — `[[title]]` in allow mode, `-[[title]]` in deny mode. This ensures pair-edit always has tool access to the tiddler being edited.
+
 !! Debug panel
 
 The chat widget includes a debug panel (🐛 icon) that is added/removed from the DOM on toggle — no hidden elements consuming layout space. Two tabs:

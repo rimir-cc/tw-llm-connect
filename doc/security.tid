@@ -85,6 +85,10 @@ The panel supports drag-and-drop: dropping a tiddler onto the panel grants LLM a
 
 The list refreshes when the protection mode, base filter, or per-chat filter changes.
 
+!! Source tiddler auto-access
+
+When the `tiddler` attribute is set on the chat widget (e.g. pair-edit mode), the source tiddler is automatically included in the effective protection filter. In allow mode `[[title]]` is appended; in deny mode `-[[title]]` is appended. This ensures the LLM can always read and modify the tiddler it is pair-editing, without the user needing to manually add it to the allow list.
+
 !! Recommendations
 
 * Start with allow mode (default) — grant access only to the tiddlers the LLM needs
