@@ -26,6 +26,8 @@ The protection system supports two modes, selectable in Settings and per-chat vi
 * ''Allow mode (whitelist)'' — default. Only tiddlers matched by the allow filter are accessible. Everything else is invisible. With an empty filter the LLM has no tiddler access at all.
 * ''Deny mode (blacklist)'' — tiddlers matched by the deny filter are hidden. Everything else is accessible.
 
+Switching modes via the shield icon automatically negates the per-chat filter — each filter run's `-` prefix is toggled, preserving the user's intent. For example, `[[Foo]] [tag[bar]]` becomes `-[[Foo]] -[tag[bar]]` when switching from allow to deny.
+
 Each mode has its own base filter configured in Settings:
 
 * Allow base filter: `$:/config/rimir/llm-connect/allow-filter` (empty by default)

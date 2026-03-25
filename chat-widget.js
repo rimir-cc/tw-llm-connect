@@ -104,16 +104,20 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	this.protectionModeSelect = modeSelect;
 
 	modeSelect.addEventListener("change", function() {
-		// Save current input value to the field for the OLD mode before switching
-		self.saveProtectionInput();
+		// Negate the current filter and carry it over to the new mode
+		var currentFilter = self.protectionInput.value.trim();
+		var negated = negateFilter(currentFilter);
+		// Save negated filter to the NEW mode's field
+		var newMode = modeSelect.value;
+		var newField = newMode === "allow" ? "llm-allow-filter" : "llm-deny-filter";
 		if (self.chatTiddler) {
-			var fields = { title: self.chatTiddler, "llm-protection-mode": modeSelect.value };
+			var fields = { title: self.chatTiddler, "llm-protection-mode": newMode };
+			fields[newField] = negated;
 			var existing = self.wiki.getTiddler(self.chatTiddler);
 			if (existing) fields = $tw.utils.extend({}, existing.fields, fields);
 			self.wiki.addTiddler(new $tw.Tiddler(fields));
 		}
-		// Load the input value for the NEW mode
-		self.loadProtectionInput();
+		self.protectionInput.value = negated;
 		self.updateProtectionLabels();
 		self.refreshDebugPanel();
 		self.refreshAccessPanel();
@@ -1265,6 +1269,43 @@ LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 	}
 	return false;
 };
+
+function negateFilter(filter) {
+	if (!filter) return "";
+	// Parse filter into runs by tracking bracket depth
+	var runs = [];
+	var i = 0;
+	while (i < filter.length) {
+		// Skip whitespace
+		if (filter[i] === " ") { i++; continue; }
+		// Detect optional - prefix
+		var start = i;
+		if (filter[i] === "-" && i + 1 < filter.length && filter[i + 1] === "[") i++;
+		// Must start with [
+		if (filter[i] !== "[") { i++; continue; }
+		// Track bracket depth to find balanced end
+		var depth = 0;
+		var j = i;
+		while (j < filter.length) {
+			if (filter[j] === "[") depth++;
+			else if (filter[j] === "]") { depth--; if (depth === 0) break; }
+			j++;
+		}
+		runs.push(filter.substring(start, j + 1));
+		i = j + 1;
+	}
+	if (runs.length === 0) return filter;
+	var negated = [];
+	for (var k = 0; k < runs.length; k++) {
+		var run = runs[k];
+		if (run.charAt(0) === "-") {
+			negated.push(run.substring(1));
+		} else {
+			negated.push("-" + run);
+		}
+	}
+	return negated.join(" ");
+}
 
 function extractTextLength(content) {
 	if (typeof content === "string") return content.length;

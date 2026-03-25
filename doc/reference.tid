@@ -258,7 +258,7 @@ The following fields on each chat tiddler control per-chat behaviour. They are m
 |!Field |!Description |
 |`llm-active-tools` |TiddlyWiki title list of active tool tiddlers (managed by wrench icon) |
 |`llm-context-filter` |TiddlyWiki filter expression for context attachments (managed by 📎 icon). Results are classified as text or file tiddlers and included in the first message |
-|`llm-protection-mode` |Protection mode override for this chat — `allow` or `deny` (managed by shield icon dropdown) |
+|`llm-protection-mode` |Protection mode override for this chat — `allow` or `deny` (managed by shield icon dropdown). Switching modes auto-negates the per-chat filter |
 |`llm-allow-filter` |Additional allow filter for this chat (managed by shield icon). Combined with widget attribute and base allow filter |
 |`llm-deny-filter` |Additional deny filter for this chat (managed by shield icon). Combined with widget attribute and base deny filter |
 
