@@ -6,4 +6,4 @@ tool-schema: {"type":"object","properties":{"title":{"type":"string","descriptio
 tool-mode: action
 type: text/vnd.tiddlywiki
 
-<$list filter="[<title>minlength[1]]" variable="_" emptyMessage="Error: Missing 'title' parameter"><$action-setfield $tiddler=<<title>> text=<<text>> tags=<<tags>>/>Done — created tiddler '<<title>>'</$list>
+<$list filter="[<title>minlength[1]]" variable="_" emptyMessage="Error: Missing 'title' parameter"><$list filter="[<title>is[tiddler]]" variable="_" emptyMessage="<$action-setfield $tiddler=<<title>> text=<<text>> tags=<<tags>>/>Done — created tiddler '<<title>>'">Error: Tiddler '<<title>>' already exists — use set_field to modify it</$list></$list>

@@ -85,11 +85,15 @@ exports.executeTool = function(toolCall, protection) {
 	// Check title-based protection
 	if (toolCall.input && toolCall.input.title) {
 		var title = toolCall.input.title;
+		var isCreate = toolCall.name === "create_tiddler";
 		if (protection.mode === "allow") {
-			// Allow mode: only filter matches are accessible (empty filter = nothing accessible)
+			// Allow mode: filter matches are accessible (empty filter = nothing accessible)
 			var allowedTitles = protection.filter ? $tw.wiki.filterTiddlers(protection.filter) : [];
 			if (allowedTitles.indexOf(title) === -1) {
-				return "Error: Access denied \u2014 tiddler '" + title + "' is not in the allow list";
+				// For create: allow if tiddler doesn't exist yet; block if it exists and not in allow list
+				if (!isCreate || $tw.wiki.tiddlerExists(title)) {
+					return "Error: Access denied \u2014 tiddler '" + title + "' is not in the allow list";
+				}
 			}
 		} else if (protection.filter) {
 			// Deny mode: filter matches are protected

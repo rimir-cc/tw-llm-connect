@@ -62,6 +62,8 @@ All layers for the active mode are concatenated into a single filter. Per-chat m
 
 Tools that take an explicit `title` parameter (e.g. `get_tiddler`, `set_field`, `delete_tiddler`) check the title against the active filter ''before'' wikitext execution. In allow mode, the title must be in the filter results; in deny mode, it must not be. This provides a clear "Access denied" error message rather than a silent "not found". The restricted wiki proxy provides the second layer — even if a tool bypasses the title check (e.g. via wikitext transclusion), the proxy blocks access.
 
+''Special handling for `create_tiddler`'': new tiddlers (that don't exist yet) are allowed through the title check — the tiddler can't be in any filter if it doesn't exist. However, if a tiddler with that title already exists, the tool returns an error directing the LLM to use `set_field` instead. Protected existing tiddlers cannot be overwritten via create. After successful creation, the orchestrator automatically adds the new title to the active protection filter so subsequent tool calls in the same conversation can access it. The updated filter is persisted to the chat tiddler.
+
 !! What is NOT protected
 
 * ''The LLM conversation itself'' — messages are stored in the chat tiddler as plain JSON. Anyone with wiki access can read them.

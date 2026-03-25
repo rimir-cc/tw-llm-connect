@@ -128,6 +128,8 @@ Filter operators (`is[tiddler]`, `get`, `has`, etc.) use the overridden accessor
 
 The protection filter is evaluated once per tool call. Tools that take an explicit `title` parameter also get an early "Access denied" error before wikitext execution (defense-in-depth).
 
+''Auto-expanding filter'': when a tool successfully executes with a `title` input (e.g. `create_tiddler`), the orchestrator adds that title to the in-flight protection filter so subsequent tool calls in the same loop can access it. After the conversation turn completes, the widget persists the updated filter to the chat tiddler. The `create_tiddler` tool additionally blocks overwriting existing tiddlers — the LLM must use `set_field` to modify existing content.
+
 !! Multimodal context — file attachments
 
 Binary files (PDFs, images) stored via `_canonical_uri` can be attached to conversations. The flow uses a two-phase approach to avoid storing large base64 data in the message history:

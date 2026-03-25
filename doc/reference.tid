@@ -115,7 +115,7 @@ A tool is considered ''complete'' when `tool-name`, `tool-schema`, and `text` (b
 |`search_tiddlers` |`read` |Run a filter and return matching titles with tags |
 |`get_tiddler` |`read` |Read a tiddler's fields and text |
 |`set_field` |`action` |Set a field value on an existing tiddler |
-|`create_tiddler` |`action` |Create a new tiddler with title, text, and optional tags |
+|`create_tiddler` |`action` |Create a new tiddler with title, text, and optional tags. Blocks overwriting existing tiddlers (returns error). Auto-added to protection filter |
 |`delete_tiddler` |`action` |Delete a tiddler |
 |`navigate_to_tiddler` |`action` |Open a tiddler in the story river so the user can see it |
 |`wikitext_render` |`read` |Render wikitext and return the text output |

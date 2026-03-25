@@ -725,6 +725,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 	var tools = this.toolsFilter ? helpers.resolveTools(this.toolsFilter, this.toolGroupAttr, this.chatTiddler) : [];
 
 	var protection = this.resolveProtectionForChat(helpers);
+	var protectionFilterBefore = protection.filter;
 
 	orchestrator.runConversation({
 		messages: messages,
@@ -751,6 +752,10 @@ LlmChatWidget.prototype.sendMessage = function() {
 	}).then(function() {
 		self.setStatus("");
 		self.stopBtn.style.display = "none";
+		// Persist protection filter if tools added new tiddlers
+		if (protection.filter !== protectionFilterBefore) {
+			self.persistProtectionUpdate(protection);
+		}
 	})["catch"](function(err) {
 		self.setStatus("Error: " + err.message);
 		self.stopBtn.style.display = "none";
@@ -1094,6 +1099,19 @@ LlmChatWidget.prototype.updatePinDisplay = function() {
 	} else {
 		this.pinBtn.title = "Pin chat to save it";
 	}
+};
+
+LlmChatWidget.prototype.persistProtectionUpdate = function(protection) {
+	if (!this.chatTiddler) return;
+	var field = protection.mode === "allow" ? "llm-allow-filter" : "llm-deny-filter";
+	var fields = { title: this.chatTiddler };
+	fields[field] = protection.filter;
+	var existing = this.wiki.getTiddler(this.chatTiddler);
+	if (existing) fields = $tw.utils.extend({}, existing.fields, fields);
+	this.wiki.addTiddler(new $tw.Tiddler(fields));
+	this.loadProtectionInput();
+	this.refreshAccessPanel();
+	this.syncIfPinned();
 };
 
 LlmChatWidget.prototype.buildAttachmentParts = function(attachments) {
