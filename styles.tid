@@ -11,11 +11,16 @@ type: text/vnd.tiddlywiki
 
 /* Pin button */
 
-.llm-chat-pin-row {
-	display: flex;
-	justify-content: flex-end;
-	padding: 2px 6px;
+.llm-chat-pin-wrapper {
+	display: inline-block;
 	position: relative;
+	vertical-align: middle;
+}
+
+.llm-chat-panel-header-left {
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .llm-chat-btn-pin {
@@ -56,7 +61,7 @@ type: text/vnd.tiddlywiki
 
 .llm-chat-pin-menu {
 	position: absolute;
-	right: 6px;
+	left: 0;
 	top: 100%;
 	background: <<colour tiddler-background>>;
 	border: 1px solid <<colour tiddler-border>>;
@@ -75,6 +80,15 @@ type: text/vnd.tiddlywiki
 
 .llm-chat-pin-menu-item:hover {
 	background: <<colour notification-background>>;
+}
+
+.llm-chat-pin-menu-item-danger {
+	color: <<colour dirty-indicator>>;
+}
+
+.llm-chat-pin-menu-item-danger:hover {
+	background: <<colour dirty-indicator>>;
+	color: <<colour background>>;
 }
 
 .llm-chat-messages {

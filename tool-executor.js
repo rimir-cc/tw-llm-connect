@@ -113,9 +113,32 @@ exports.executeTool = function(toolCall, protection) {
 		return "Error: Tool has no implementation: " + toolCall.name;
 	}
 
+	// For create_tiddler: temporarily expand protection so the proxy allows writing NEW titles only
+	var effectiveProtection = protection;
+	if (toolCall.name === "create_tiddler" && toolCall.input) {
+		var createTitle = toolCall.input.title || toolCall.input.basetitle;
+		if (createTitle && effectiveProtection.mode === "allow") {
+			effectiveProtection = { filter: protection.filter, mode: protection.mode };
+			// Only add titles that don't already exist (prevents overwriting protected tiddlers)
+			var candidates = [createTitle];
+			if (toolCall.input.basetitle) {
+				for (var si = 1; si <= 20; si++) {
+					candidates.push(createTitle + " " + si);
+				}
+			}
+			for (var ci = 0; ci < candidates.length; ci++) {
+				if (!$tw.wiki.tiddlerExists(candidates[ci])) {
+					effectiveProtection.filter += " [[" + candidates[ci] + "]]";
+				}
+			}
+			effectiveProtection.filter = effectiveProtection.filter.trim();
+		}
+		// Deny mode: no change needed — new titles aren't in the deny list
+	}
+
 	var result;
 	try {
-		result = executeWikitext(wikitext, toolCall.input, mode, protection);
+		result = executeWikitext(wikitext, toolCall.input, mode, effectiveProtection);
 	} catch(e) {
 		result = "Error: " + (e.message || String(e));
 	}

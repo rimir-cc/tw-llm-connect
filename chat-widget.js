@@ -27,32 +27,9 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	var container = this.document.createElement("div");
 	container.className = "llm-chat-container";
 
-	// Pin button (top-right, before messages)
 	var self = this;
-	var pinRow = this.document.createElement("div");
-	pinRow.className = "llm-chat-pin-row";
-	var pinBtn = this.document.createElement("button");
-	pinBtn.className = "llm-chat-btn-pin";
-	pinBtn.textContent = "\uD83D\uDCCC"; // 📌
 	this.pinIconDefault = "\uD83D\uDCCC"; // 📌
 	this.pinIconActive = "\uD83D\uDD34"; // 🔴
-	this.pinBtn = pinBtn;
-	this.updatePinDisplay();
-
-	pinBtn.addEventListener("click", function(e) {
-		e.stopPropagation();
-		self.handlePinClick();
-	});
-	pinRow.appendChild(pinBtn);
-
-	// Pin context menu (hidden)
-	var pinMenu = this.document.createElement("div");
-	pinMenu.className = "llm-chat-pin-menu";
-	pinMenu.style.display = "none";
-	this.pinMenu = pinMenu;
-	pinRow.appendChild(pinMenu);
-
-	container.appendChild(pinRow);
 
 	// Messages area
 	var messagesDiv = this.document.createElement("div");
@@ -458,6 +435,23 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 
 	parent.insertBefore(container, nextSibling);
 	this.domNodes.push(container);
+
+	// Hook into pin button rendered by the wikitext template (sibling of container in header)
+	this.pinBtn = null;
+	this.pinMenu = null;
+	var parentEl = container.parentNode;
+	if (parentEl) {
+		var existingPin = parentEl.querySelector(".llm-chat-btn-pin");
+		if (existingPin) {
+			this.pinBtn = existingPin;
+			this.pinMenu = parentEl.querySelector(".llm-chat-pin-menu");
+			existingPin.addEventListener("click", function(e) {
+				e.stopPropagation();
+				self.handlePinClick();
+			});
+			this.updatePinDisplay();
+		}
+	}
 };
 
 LlmChatWidget.prototype.execute = function() {
@@ -935,10 +929,16 @@ LlmChatWidget.prototype.hasSavedChat = function() {
 LlmChatWidget.prototype.pin = function() {
 	if (!this.chatTiddler) return;
 	var chatTid = this.wiki.getTiddler(this.chatTiddler);
-	if (!chatTid) return;
-
-	// Mark chat tiddler as pinned
-	this.wiki.addTiddler(new $tw.Tiddler(chatTid, { "llm-pinned-save": "yes" }));
+	if (!chatTid) {
+		// Create the chat tiddler if it doesn't exist yet
+		this.wiki.addTiddler(new $tw.Tiddler({
+			title: this.chatTiddler,
+			tags: "$:/tags/rimir/llm-connect/chat",
+			"llm-pinned-save": "yes"
+		}));
+	} else {
+		this.wiki.addTiddler(new $tw.Tiddler(chatTid, { "llm-pinned-save": "yes" }));
+	}
 
 	// Save current state to saved tiddler
 	var messages = this.getMessages();
@@ -1074,6 +1074,22 @@ LlmChatWidget.prototype.showPinMenu = function() {
 		}
 	});
 	menu.appendChild(restoreItem);
+
+	var clearItem = this.document.createElement("div");
+	clearItem.className = "llm-chat-pin-menu-item llm-chat-pin-menu-item-danger";
+	clearItem.textContent = "Clear all";
+	clearItem.addEventListener("click", function() {
+		menu.style.display = "none";
+		if (confirm("Clear chat and delete saved chat? This cannot be undone.")) {
+			// Delete saved tiddler
+			var saveTitle = self.getSaveTitle();
+			if (saveTitle && self.wiki.tiddlerExists(saveTitle)) {
+				self.wiki.deleteTiddler(saveTitle);
+			}
+			self.clearChat();
+		}
+	});
+	menu.appendChild(clearItem);
 
 	menu.style.display = "block";
 

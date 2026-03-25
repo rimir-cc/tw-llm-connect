@@ -130,7 +130,7 @@ The protection filter is evaluated once per tool call. Tools that take an explic
 
 ''Auto-expanding filter'': when a tool successfully executes with a `title` or `basetitle` input, the orchestrator adds the created title to the in-flight protection filter. For `basetitle` mode, the actual resolved title is extracted from the result string (`Done — created tiddler '...'`). After the conversation turn completes, the widget persists the updated filter to the chat tiddler.
 
-The `create_tiddler` tool supports two modes: `title` (exact, fails if exists) and `basetitle` (auto-numbered: tries base, then base + ` 1`, ` 2`, ... up to ` 20`). The LLM always receives the actual title created in the result.
+The `create_tiddler` tool supports two modes: `title` (exact, fails if exists) and `basetitle` (auto-numbered: tries base, then base + ` 1`, ` 2`, ... up to ` 20`). The LLM always receives the actual title created in the result. The restricted wiki proxy is temporarily expanded during creation to allow writing only non-existing titles — existing tiddlers remain protected from overwrite.
 
 !! Multimodal context — file attachments
 

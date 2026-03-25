@@ -6,6 +6,7 @@ type: text/vnd.tiddlywiki
 \import [[$:/plugins/rimir/llm-connect/ui/tool-selector]]
 \procedure llm-chat-view()
 <div class="llm-tool-selector-bar">
+<span class="llm-chat-pin-wrapper"><button class="llm-chat-btn-pin">&#x1F4CC;</button><div class="llm-chat-pin-menu" style="display:none;"></div></span>
 <<llm-tool-selector "$:/temp/rimir/llm-connect/default-chat">>
 </div>
 <$llm-chat
