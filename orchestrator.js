@@ -125,10 +125,11 @@ exports.runConversation = function(options) {
 								var createdTitle = tc.input.title;
 								if (!createdTitle && tc.input.basetitle) {
 									// Extract actual title from basetitle result
-									var match = result.match(/Done — created tiddler '(.+)'/);
+									var match = result.match(/Done — created tiddler '(.+)'$/);
 									if (match) createdTitle = match[1];
 								}
 								if (createdTitle) {
+									// Note: [[title]] notation breaks if title contains "]]" — extremely rare in TiddlyWiki
 									var escaped = "[[" + createdTitle + "]]";
 									if (protection.mode === "allow") {
 										if (protection.filter.indexOf(escaped) === -1) {

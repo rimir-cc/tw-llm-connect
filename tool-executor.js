@@ -126,12 +126,16 @@ exports.executeTool = function(toolCall, protection) {
 					candidates.push(createTitle + " " + si);
 				}
 			}
+			// Note: [[title]] notation breaks if title contains "]]" — extremely rare in TiddlyWiki
+			var additions = [];
 			for (var ci = 0; ci < candidates.length; ci++) {
 				if (!$tw.wiki.tiddlerExists(candidates[ci])) {
-					effectiveProtection.filter += " [[" + candidates[ci] + "]]";
+					additions.push("[[" + candidates[ci] + "]]");
 				}
 			}
-			effectiveProtection.filter = effectiveProtection.filter.trim();
+			if (additions.length > 0) {
+				effectiveProtection.filter = (effectiveProtection.filter + " " + additions.join(" ")).trim();
+			}
 		}
 		// Deny mode: no change needed — new titles aren't in the deny list
 	}

@@ -12,6 +12,9 @@ module-type: widget
 
 var Widget = require("$:/core/modules/widgets/widget.js").widget;
 
+var CHAT_STATE_FIELDS = ["llm-provider", "llm-model", "llm-active-tools", "llm-tools-init",
+	"llm-context-filter", "llm-protection-mode", "llm-allow-filter", "llm-deny-filter"];
+
 var LlmChatWidget = function(parseTreeNode, options) {
 	this.initialise(parseTreeNode, options);
 };
@@ -972,10 +975,8 @@ LlmChatWidget.prototype.syncPinnedSave = function(messages) {
 	// Copy all llm-* fields from chat tiddler
 	if (chatTid) {
 		var chatFields = chatTid.fields;
-		var copyKeys = ["llm-provider", "llm-model", "llm-active-tools", "llm-tools-init",
-			"llm-context-filter", "llm-protection-mode", "llm-allow-filter", "llm-deny-filter"];
-		for (var i = 0; i < copyKeys.length; i++) {
-			if (chatFields[copyKeys[i]]) fields[copyKeys[i]] = chatFields[copyKeys[i]];
+		for (var i = 0; i < CHAT_STATE_FIELDS.length; i++) {
+			if (chatFields[CHAT_STATE_FIELDS[i]]) fields[CHAT_STATE_FIELDS[i]] = chatFields[CHAT_STATE_FIELDS[i]];
 		}
 	}
 	this.wiki.addTiddler(new $tw.Tiddler(fields));
@@ -1000,10 +1001,9 @@ LlmChatWidget.prototype.restoreChat = function() {
 
 	// Copy fields to chat tiddler
 	var fields = { title: this.chatTiddler, tags: "$:/tags/rimir/llm-connect/chat", "llm-pinned-save": "yes" };
-	var copyKeys = ["llm-messages", "llm-provider", "llm-model", "llm-active-tools", "llm-tools-init",
-		"llm-context-filter", "llm-protection-mode", "llm-allow-filter", "llm-deny-filter"];
-	for (var i = 0; i < copyKeys.length; i++) {
-		if (savedTid.fields[copyKeys[i]]) fields[copyKeys[i]] = savedTid.fields[copyKeys[i]];
+	var restoreKeys = ["llm-messages"].concat(CHAT_STATE_FIELDS);
+	for (var i = 0; i < restoreKeys.length; i++) {
+		if (savedTid.fields[restoreKeys[i]]) fields[restoreKeys[i]] = savedTid.fields[restoreKeys[i]];
 	}
 	this.wiki.addTiddler(new $tw.Tiddler(fields));
 
@@ -1286,6 +1286,7 @@ LlmChatWidget.prototype.refreshAccessPanel = function() {
 LlmChatWidget.prototype.handleAccessDrop = function(title) {
 	var mode = this.getActiveProtectionMode();
 	var field = mode === "allow" ? "llm-allow-filter" : "llm-deny-filter";
+	// Note: [[title]] notation breaks if title contains "]]" — extremely rare in TiddlyWiki
 	var escaped = "[[" + title + "]]";
 	var negated = "-[[" + title + "]]";
 
@@ -1309,13 +1310,7 @@ LlmChatWidget.prototype.handleAccessDrop = function(title) {
 	}
 
 	// Save back
-	if (this.chatTiddler) {
-		var fields = { title: this.chatTiddler };
-		fields[field] = currentFilter;
-		var existing = this.wiki.getTiddler(this.chatTiddler);
-		if (existing) fields = $tw.utils.extend({}, existing.fields, fields);
-		this.wiki.addTiddler(new $tw.Tiddler(fields));
-	}
+	this.saveChatField(field, currentFilter);
 
 	// Update the protection input to reflect the change
 	this.loadProtectionInput();
@@ -1461,15 +1456,20 @@ LlmChatWidget.prototype.loadProtectionInput = function() {
 	this.protectionInput.value = value;
 };
 
+LlmChatWidget.prototype.saveChatField = function(fieldName, value) {
+	if (!this.chatTiddler) return;
+	var fields = { title: this.chatTiddler };
+	fields[fieldName] = value;
+	var existing = this.wiki.getTiddler(this.chatTiddler);
+	if (existing) fields = $tw.utils.extend({}, existing.fields, fields);
+	this.wiki.addTiddler(new $tw.Tiddler(fields));
+};
+
 LlmChatWidget.prototype.saveProtectionInput = function() {
 	if (!this.protectionInput || !this.chatTiddler) return;
 	var mode = this.getActiveProtectionMode();
 	var field = mode === "allow" ? "llm-allow-filter" : "llm-deny-filter";
-	var fields = { title: this.chatTiddler };
-	fields[field] = this.protectionInput.value;
-	var existing = this.wiki.getTiddler(this.chatTiddler);
-	if (existing) fields = $tw.utils.extend({}, existing.fields, fields);
-	this.wiki.addTiddler(new $tw.Tiddler(fields));
+	this.saveChatField(field, this.protectionInput.value);
 	this.syncIfPinned();
 };
 
