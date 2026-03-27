@@ -16,13 +16,13 @@ type: text/vnd.tiddlywiki
 
 !! What it does
 
-llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI) directly from the browser. The wiki acts as the orchestrator: sends prompts, receives tool calls, executes them against `$tw.wiki`, and returns results — all without a server.
+llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI, Azure OpenAI) directly from the browser. The wiki acts as the orchestrator: sends prompts, receives tool calls, executes them against `$tw.wiki`, and returns results — all without a server.
 
 !! Features
 
 * ''Two modes'' — interactive chat (multi-turn with tools) and one-shot actions (context template → LLM → output target)
 * ''Pair editing'' — toolbar button opens an embedded chat panel on any tiddler for collaborative editing with the LLM
-* ''Provider adapters'' — Claude and OpenAI out of the box, extensible adapter interface
+* ''Provider adapters'' — Claude, OpenAI, and Azure OpenAI out of the box, extensible adapter interface
 * ''Tool system'' — search, read, navigate, create, modify, delete tiddlers; user-defined tools via wikitext
 * ''Multimodal context'' — attach PDFs, images, and text tiddlers via a context filter (📎 icon); binaries are base64-encoded and sent inline
 * ''Context templates'' — wikitext templates that render input from source tiddlers before sending to the LLM
@@ -37,7 +37,7 @@ llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI) directly from the 
 
 !! Prerequisites
 
-* API key for a supported provider (Claude or OpenAI)
+* API key for a supported provider (Claude, OpenAI, or Azure OpenAI)
 * Modern browser (async/await, XMLHttpRequest)
 
 !! Quick start

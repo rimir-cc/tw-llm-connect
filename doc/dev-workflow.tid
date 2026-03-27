@@ -51,7 +51,6 @@ On Windows, use `taskkill //F //PID <pid> //T` to kill the server before restart
 !! Dependencies
 
 * ''theme'' — CSS utility classes (`rr-*` prefix)
-* ''json-dsl'' — used internally for building tool schemas
 
 </$fill>
 </$transclude>
