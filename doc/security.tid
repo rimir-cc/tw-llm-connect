@@ -31,12 +31,13 @@ Switching modes via the shield icon automatically negates the per-chat filter �
 Each mode has its own base filter configured in Settings:
 
 * Allow base filter: `$:/config/rimir/llm-connect/allow-filter` (empty by default)
-* Deny base filter: `$:/config/rimir/llm-connect/protection-filter` (default: `[tag[sensitive]] [all[shadows+tiddlers]prefix[$:/plugins/rimir/]]`)
+* Deny base filter: `$:/config/rimir/llm-connect/protection-filter` (default: `[tag[sensitive]]`)
 
 The deny base filter protects:
 
 * Tiddlers tagged `sensitive` — user-designated sensitive content
-* All rimir plugin internals (`$:/plugins/rimir/`) — prevents the LLM from reading plugin source code, configuration, tool implementations, or API keys
+
+To hide additional tiddlers, extend the deny filter in Settings or use the excluded-plugins checkbox list to block entire plugin namespaces.
 
 !! Restricted wiki proxy
 
