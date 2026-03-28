@@ -121,10 +121,13 @@ All tool wikitext executes against a ''restricted wiki proxy'' rather than the r
 |`isShadowTiddler(title)` |returns `false` |
 |`each(callback)` |skips blocked titles |
 |`forEachTiddler(options, callback)` |skips blocked titles |
+|`eachShadow(callback)` |skips blocked titles |
+|`eachTiddlerPlusShadows(callback)` |skips blocked titles |
+|`eachShadowPlusTiddlers(callback)` |skips blocked titles |
 |`addTiddler(tiddler)` |silently blocked |
 |`deleteTiddler(title)` |silently blocked |
 
-Filter operators (`is[tiddler]`, `get`, `has`, etc.) use the overridden accessors via the prototype chain — no separate `filterTiddlers` override is needed.
+The proxy has its own `filterCache` so compiled filters bind `self` to the proxy rather than the real `$tw.wiki`. This ensures all filter operations (including `[all[shadows+tiddlers]]`) respect the proxy's overridden iteration methods.
 
 The protection filter is evaluated once per tool call. Tools that take an explicit `title` parameter also get an early "Access denied" error before wikitext execution (defense-in-depth).
 

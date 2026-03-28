@@ -188,6 +188,11 @@ function createRestrictedWiki(protection) {
 
 	var wiki = Object.create($tw.wiki);
 
+	// Own filter cache so compileFilter binds `self = wiki` (the proxy) instead of
+	// reusing $tw.wiki's cached filters which have `self = $tw.wiki` baked in
+	wiki.filterCache = Object.create(null);
+	wiki.filterCacheCount = 0;
+
 	// Guard single-title read methods: return blocked value if title is blocked, else delegate
 	function guardRead(method, blockedValue) {
 		wiki[method] = function(title) {
@@ -213,6 +218,25 @@ function createRestrictedWiki(protection) {
 			options = undefined;
 		}
 		$tw.wiki.forEachTiddler(options, function(tiddler, title) {
+			if (!isBlocked(title)) callback(tiddler, title);
+		});
+	};
+
+	// Guard shadow iteration methods: needed for [all[shadows+tiddlers]] filters
+	wiki.eachShadow = function(callback) {
+		$tw.wiki.eachShadow(function(tiddler, title) {
+			if (!isBlocked(title)) callback(tiddler, title);
+		});
+	};
+
+	wiki.eachTiddlerPlusShadows = function(callback) {
+		$tw.wiki.eachTiddlerPlusShadows(function(tiddler, title) {
+			if (!isBlocked(title)) callback(tiddler, title);
+		});
+	};
+
+	wiki.eachShadowPlusTiddlers = function(callback) {
+		$tw.wiki.eachShadowPlusTiddlers(function(tiddler, title) {
 			if (!isBlocked(title)) callback(tiddler, title);
 		});
 	};

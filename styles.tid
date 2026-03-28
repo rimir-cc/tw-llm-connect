@@ -151,6 +151,19 @@ type: text/vnd.tiddlywiki
 	font-family: {{$:/themes/tiddlywiki/vanilla/settings/codefontfamily}};
 	border-left: 3px solid <<colour muted-foreground>>;
 	border-radius: 0 8px 8px 0;
+	max-height: 1.8em;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	cursor: pointer;
+	transition: max-height 0.2s ease, white-space 0.1s;
+}
+
+.llm-chat-message-tool.llm-chat-tool-expanded {
+	max-height: 300px;
+	overflow-y: auto;
+	white-space: pre-wrap;
+	text-overflow: unset;
 }
 
 .llm-chat-status {
@@ -537,6 +550,17 @@ type: text/vnd.tiddlywiki
 	gap: 2px 12px;
 }
 
+.llm-excluded-plugins-grid {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin-top: 4px;
+}
+
+.llm-excluded-plugin-item {
+	cursor: pointer;
+}
+
 .llm-group-tool-item {
 	cursor: pointer;
 	font-size: 0.85em;
@@ -853,6 +877,82 @@ type: text/vnd.tiddlywiki
 
 .llm-chat-btn-access:hover {
 	opacity: 1;
+}
+
+.llm-chat-btn-tool-toggle {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 0.85em;
+	padding: 1px 4px;
+	opacity: 0.5;
+}
+
+.llm-chat-btn-tool-toggle:hover {
+	opacity: 1;
+}
+
+.llm-chat-btn-tool-toggle.llm-chat-btn-active {
+	opacity: 1;
+}
+
+/* Markdown rendering in assistant messages — tighten spacing for chat context */
+
+.llm-chat-md p {
+	margin: 0.3em 0;
+}
+
+.llm-chat-md p:first-child {
+	margin-top: 0;
+}
+
+.llm-chat-md p:last-child {
+	margin-bottom: 0;
+}
+
+.llm-chat-md h1, .llm-chat-md h2, .llm-chat-md h3,
+.llm-chat-md h4, .llm-chat-md h5, .llm-chat-md h6 {
+	margin: 0.4em 0 0.2em;
+	line-height: 1.3;
+}
+
+.llm-chat-md h1 { font-size: 1.2em; }
+.llm-chat-md h2 { font-size: 1.1em; }
+.llm-chat-md h3 { font-size: 1.05em; }
+
+.llm-chat-md pre {
+	margin: 0.4em 0;
+	overflow-x: auto;
+}
+
+.llm-chat-md ul, .llm-chat-md ol {
+	margin: 0.3em 0;
+	padding-left: 1.5em;
+}
+
+.llm-chat-md li {
+	margin: 0.1em 0;
+}
+
+.llm-chat-md table {
+	border-collapse: collapse;
+	margin: 0.3em 0;
+	font-size: 0.9em;
+}
+
+.llm-chat-md th, .llm-chat-md td {
+	border: 1px solid <<colour table-border>>;
+	padding: 2px 6px;
+}
+
+.llm-chat-md th {
+	background: <<colour table-header-background>>;
+}
+
+.llm-chat-md hr {
+	border: none;
+	border-top: 1px solid <<colour muted-foreground>>;
+	margin: 0.5em 0;
 }
 
 /* Debug panel */

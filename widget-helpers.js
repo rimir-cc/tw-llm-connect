@@ -25,8 +25,19 @@ exports.resolveProtectionFilter = function(options) {
 		: "$:/config/rimir/llm-connect/protection-filter";
 	var base = $tw.wiki.getTiddlerText(baseConfigTiddler) || "";
 	var extra = (mode === "allow" ? options.allowFilter : options.denyFilter) || "";
+	// Append excluded plugin filters from checkbox config
+	var excludedText = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/excluded-plugins") || "";
+	var excluded = $tw.utils.parseStringArray(excludedText);
+	var pluginFilter = "";
+	for (var i = 0; i < excluded.length; i++) {
+		if (mode === "deny") {
+			pluginFilter += " [all[shadows+tiddlers]prefix[" + excluded[i] + "]]";
+		} else {
+			pluginFilter += " -[all[shadows+tiddlers]prefix[" + excluded[i] + "]]";
+		}
+	}
 	return {
-		filter: (base + " " + extra).trim(),
+		filter: (base + " " + extra + pluginFilter).trim(),
 		mode: mode
 	};
 };

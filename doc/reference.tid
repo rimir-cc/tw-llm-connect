@@ -235,7 +235,8 @@ Summary tiddler conventions:
 |`$:/config/rimir/llm-connect/system-prompt` |default text |Global system prompt |
 |`$:/config/rimir/llm-connect/protection-mode` |`allow` |Protection mode — `allow` (whitelist, default) or `deny` (blacklist) |
 |`$:/config/rimir/llm-connect/allow-filter` |(empty) |Allow filter — only matched tiddlers are accessible to LLM tools (allow mode) |
-|`$:/config/rimir/llm-connect/protection-filter` |`[tag[sensitive]] [all[shadows+tiddlers]prefix[$:/plugins/rimir/]]` |Deny filter — matched tiddlers are invisible to LLM tools (deny mode) |
+|`$:/config/rimir/llm-connect/protection-filter` |`[tag[sensitive]]` |Deny filter — matched tiddlers are invisible to LLM tools (deny mode) |
+|`$:/config/rimir/llm-connect/excluded-plugins` |(empty) |Space-separated list of plugin tiddler titles whose shadows are excluded from LLM access (appended to deny filter or subtracted from allow filter) |
 |`$:/config/rimir/llm-connect/max-tool-result-length` |`4000` |Truncation limit |
 |`$:/config/rimir/llm-connect/default-context-template` | |Global default template |
 |`$:/config/rimir/llm-connect/max-file-size` |`20971520` |Maximum file size in bytes for multimodal attachments (default 20 MB) |

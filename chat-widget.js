@@ -15,6 +15,19 @@ var Widget = require("$:/core/modules/widgets/widget.js").widget;
 var CHAT_STATE_FIELDS = ["llm-provider", "llm-model", "llm-active-tools", "llm-tools-init",
 	"llm-context-filter", "llm-protection-mode", "llm-allow-filter", "llm-deny-filter"];
 
+/*
+Render markdown text to HTML using TW's markdown plugin (text/x-markdown parser).
+Falls back to plain text with escaped HTML if the parser is unavailable.
+*/
+function markdownToHtml(text) {
+	if (!text) return "";
+	try {
+		return $tw.wiki.renderText("text/html", "text/x-markdown", text);
+	} catch(e) {
+		return "<p>" + text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>") + "</p>";
+	}
+}
+
 var LlmChatWidget = function(parseTreeNode, options) {
 	this.initialise(parseTreeNode, options);
 };
@@ -345,6 +358,27 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	buttonRow.appendChild(accessBtn);
 	inputArea.appendChild(accessPanel);
 
+	// Tool output toggle (expand/collapse tool messages in chat)
+	this.toolOutputExpanded = false;
+	var toolToggleBtn = this.document.createElement("button");
+	toolToggleBtn.className = "llm-chat-btn-tool-toggle";
+	toolToggleBtn.textContent = "\u2699\uFE0F";
+	toolToggleBtn.title = "Expand tool call details (currently collapsed)";
+	this.toolToggleBtn = toolToggleBtn;
+	toolToggleBtn.addEventListener("click", function() {
+		self.toolOutputExpanded = !self.toolOutputExpanded;
+		toolToggleBtn.title = self.toolOutputExpanded
+			? "Collapse tool call details (currently expanded)"
+			: "Expand tool call details (currently collapsed)";
+		toolToggleBtn.classList.toggle("llm-chat-btn-active", self.toolOutputExpanded);
+		// Toggle all tool messages in the chat
+		var toolMsgs = self.messagesDiv.querySelectorAll(".llm-chat-message-tool");
+		for (var t = 0; t < toolMsgs.length; t++) {
+			toolMsgs[t].classList.toggle("llm-chat-tool-expanded", self.toolOutputExpanded);
+		}
+	});
+	buttonRow.appendChild(toolToggleBtn);
+
 	// Debug button + panel
 	var debugBtn = this.document.createElement("button");
 	debugBtn.className = "llm-chat-btn-debug";
@@ -439,6 +473,11 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	parent.insertBefore(container, nextSibling);
 	this.domNodes.push(container);
 
+	// Auto-focus textarea when chat opens (defer to next tick so DOM is settled)
+	if (this.textarea && this.textarea.focus) {
+		setTimeout(function() { textarea.focus(); }, 50);
+	}
+
 	// Hook into pin button rendered by the wikitext template (sibling of container in header)
 	this.pinBtn = null;
 	this.pinMenu = null;
@@ -528,6 +567,14 @@ LlmChatWidget.prototype.renderMessages = function(container) {
 			}
 		}
 	}
+	// Click-to-toggle individual tool messages (delegated, attach once)
+	if (!container._toolClickBound) {
+		container.addEventListener("click", function(e) {
+			var el = e.target.closest(".llm-chat-message-tool");
+			if (el) el.classList.toggle("llm-chat-tool-expanded");
+		});
+		container._toolClickBound = true;
+	}
 
 	container.scrollTop = container.scrollHeight;
 };
@@ -536,13 +583,15 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 	var elements = [];
 	var doc = this.document;
 
+	var toolExpandedClass = this.toolOutputExpanded ? " llm-chat-tool-expanded" : "";
+
 	// User message with tool_result content (Claude format)
 	if (msg.role === "user" && Array.isArray(msg.content)) {
 		for (var i = 0; i < msg.content.length; i++) {
 			var block = msg.content[i];
 			if (block.type === "tool_result") {
 				var toolDiv = doc.createElement("div");
-				toolDiv.className = "llm-chat-message llm-chat-message-tool";
+				toolDiv.className = "llm-chat-message llm-chat-message-tool" + toolExpandedClass;
 				var preview = typeof block.content === "string" ? block.content : JSON.stringify(block.content);
 				if (preview.length > 300) preview = preview.substring(0, 300) + "...";
 				toolDiv.textContent = preview;
@@ -624,13 +673,13 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 					// Render any text before this tool call
 					if (textParts.length > 0) {
 						var textDiv = doc.createElement("div");
-						textDiv.className = "llm-chat-message llm-chat-message-assistant";
-						textDiv.textContent = textParts.join("\n");
+						textDiv.className = "llm-chat-message llm-chat-message-assistant llm-chat-md";
+						textDiv.innerHTML = markdownToHtml(textParts.join("\n"));
 						elements.push(textDiv);
 						textParts = [];
 					}
 					var toolCallDiv = doc.createElement("div");
-					toolCallDiv.className = "llm-chat-message llm-chat-message-tool";
+					toolCallDiv.className = "llm-chat-message llm-chat-message-tool" + toolExpandedClass;
 					var inputPreview = JSON.stringify(aBlock.input);
 					if (inputPreview.length > 100) inputPreview = inputPreview.substring(0, 100) + "...";
 					toolCallDiv.textContent = "\u{1F527} " + aBlock.name + "(" + inputPreview + ")";
@@ -639,14 +688,14 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 			}
 			if (textParts.length > 0) {
 				var remainingDiv = doc.createElement("div");
-				remainingDiv.className = "llm-chat-message llm-chat-message-assistant";
-				remainingDiv.textContent = textParts.join("\n");
+				remainingDiv.className = "llm-chat-message llm-chat-message-assistant llm-chat-md";
+				remainingDiv.innerHTML = markdownToHtml(textParts.join("\n"));
 				elements.push(remainingDiv);
 			}
 		} else if (typeof msg.content === "string" && msg.content) {
 			var assistDiv = doc.createElement("div");
-			assistDiv.className = "llm-chat-message llm-chat-message-assistant";
-			assistDiv.textContent = msg.content;
+			assistDiv.className = "llm-chat-message llm-chat-message-assistant llm-chat-md";
+			assistDiv.innerHTML = markdownToHtml(msg.content);
 			elements.push(assistDiv);
 		}
 		return elements;
@@ -655,7 +704,7 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 	// OpenAI tool result
 	if (msg.role === "tool") {
 		var toolResDiv = doc.createElement("div");
-		toolResDiv.className = "llm-chat-message llm-chat-message-tool";
+		toolResDiv.className = "llm-chat-message llm-chat-message-tool" + toolExpandedClass;
 		var content = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
 		if (content.length > 300) content = content.substring(0, 300) + "...";
 		toolResDiv.textContent = content;
@@ -1240,7 +1289,7 @@ LlmChatWidget.prototype.refreshAccessPanel = function() {
 
 	this.accessList.innerHTML = "";
 
-	var allTitles = this.wiki.filterTiddlers("[all[tiddlers]sort[title]]");
+	var allTitles = this.wiki.filterTiddlers("[all[tiddlers+shadows]sort[title]]");
 	var accessible = [];
 
 	if (protection.mode === "allow") {
@@ -1550,6 +1599,14 @@ LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 		this.provider = config.provider;
 		this.model = config.model;
 		this.updateModelDisplay();
+	}
+	// Refresh accessible panel when protection-related config changes
+	if (changedTiddlers["$:/config/rimir/llm-connect/excluded-plugins"] ||
+		changedTiddlers["$:/config/rimir/llm-connect/protection-mode"] ||
+		changedTiddlers["$:/config/rimir/llm-connect/protection-filter"] ||
+		changedTiddlers["$:/config/rimir/llm-connect/allow-filter"]) {
+		this.updateProtectionLabels();
+		this.refreshAccessPanel();
 	}
 	return false;
 };

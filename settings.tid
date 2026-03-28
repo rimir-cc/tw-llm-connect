@@ -198,6 +198,18 @@ toggle list</$button>
 </$reveal><%else%><%if [<protMode>match[allow]] %><span class="rr-muted">No allow filter defined — LLM has no access to any tiddlers.</span><%else%><span class="rr-muted">No deny filter active — all tiddlers are accessible to the LLM.</span><%endif%><%endif%>
 </div>
 
+!! Plugin visibility
+
+<span class="rr-muted rr-small">Tick plugins to hide their shadow tiddlers from the LLM. Unticked = readable. Applied on top of the protection filter above.</span>
+
+<div class="llm-excluded-plugins-grid">
+<$list filter="[all[shadows+tiddlers]field:plugin-type[plugin]sort[title]]" variable="plugin">
+<label class="llm-excluded-plugin-item">
+<$checkbox tiddler="$:/config/rimir/llm-connect/excluded-plugins" listField="text" checked=<<plugin>>/> <$text text={{{ [<plugin>get[description]else<plugin>] }}}/> <span class="rr-muted rr-small">(<$text text={{{ [<plugin>removeprefix[$:/plugins/]] }}}/>)</span>
+</label>
+</$list>
+</div>
+
 </$let>
 
 <div class="rr-input-row">

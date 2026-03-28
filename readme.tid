@@ -20,8 +20,11 @@ In-browser LLM integration with tool use. Connect TiddlyWiki to Claude, OpenAI, 
 * ''Output targets'' — write LLM responses to fields, new tiddlers, or just display in chat
 * ''Debug panel'' — toggle a live preview of the request payload or inspect the last sent request; base64 data abbreviated for readability
 * ''Resizable chat'' — drag the chat panel edges or the chat history resize handle to adjust layout
-* ''Tiddler protection'' — allow/deny modes with restricted wiki proxy. Default: allow mode (whitelist) — LLM has no access until you define an allow filter. Deny mode (blacklist) hides matched tiddlers. Per-chat mode and filter overrides via shield icon; switching modes auto-negates the filter. Widget-level `allowFilter`/`denyFilter` attributes for recipe panels
-* ''Accessible tiddlers panel'' — eye icon (👁️) shows a live list of all tiddlers the LLM can currently access based on the active protection filter. Drop tiddlers onto the panel to grant access (adds to whitelist in allow mode, exempts from blacklist in deny mode)
+* ''Markdown rendering'' — assistant messages are rendered as formatted markdown (tables, code blocks, lists, etc.) using the TiddlyWiki markdown plugin
+* ''Collapsible tool messages'' — tool call and result messages are collapsed by default; click to expand individually or use the ⚙️ toggle for all
+* ''Tiddler protection'' — allow/deny modes with restricted wiki proxy. Default: deny mode (blacklist) — `[tag[sensitive]]` hides tagged tiddlers. Allow mode (whitelist) restricts to matched tiddlers. Per-chat mode and filter overrides via shield icon; switching modes auto-negates the filter. Widget-level `allowFilter`/`denyFilter` attributes for recipe panels
+* ''Plugin visibility'' — tick plugins in settings to exclude their shadow tiddlers from LLM access (all readable by default)
+* ''Accessible tiddlers panel'' — eye icon (👁️) shows a live list of all tiddlers (including shadows) the LLM can currently access based on the active protection filter. Drop tiddlers onto the panel to grant access (adds to whitelist in allow mode, exempts from blacklist in deny mode)
 * ''Chat pin/save/restore'' — 📌 icon pins a chat to persist it to disk. Pinned chats auto-sync all state on every change. Restore saved chats after browser reload or server restart. One save slot per widget context (global chat, chat view, each pair-edit tiddler)
 * ''Audit logging'' — write operations (set-field, create, delete) execute immediately with an audit log
 

@@ -1,3 +1,3 @@
 title: $:/config/rimir/llm-connect/protection-filter
 
-[tag[sensitive]] [all[shadows+tiddlers]prefix[$:/plugins/rimir/]] -[all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]] -[[$:/plugins/rimir/llm-help/functions]] -[[$:/plugins/rimir/orga/llm-help/type-info-macro]] -[[$:/plugins/rimir/typed/functions]] -[all[shadows+tiddlers]rrt.type[type]] -[all[shadows+tiddlers]rrt.type[field]] -[all[shadows+tiddlers]rrt.type[enum]]
+[tag[sensitive]]

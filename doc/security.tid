@@ -85,7 +85,7 @@ The chat widget includes an accessible tiddlers panel (👁️ icon) that shows 
 
 The panel supports drag-and-drop: dropping a tiddler onto the panel grants LLM access to it. In allow mode this appends `[[title]]` to the per-chat allow filter. In deny mode this appends `-[[title]]` to the per-chat deny filter (exempting it from the blacklist). The per-chat filter input (shield icon) updates automatically to reflect the change.
 
-The list refreshes when the protection mode, base filter, or per-chat filter changes.
+The list includes both real tiddlers and shadow tiddlers. It refreshes automatically when the protection mode, base filter, per-chat filter, or excluded plugins config changes.
 
 !! Source tiddler auto-access
 
