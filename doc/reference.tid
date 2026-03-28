@@ -240,7 +240,6 @@ Summary tiddler conventions:
 |`$:/config/rimir/llm-connect/max-tool-result-length` |`4000` |Truncation limit |
 |`$:/config/rimir/llm-connect/default-context-template` | |Global default template |
 |`$:/config/rimir/llm-connect/max-file-size` |`20971520` |Maximum file size in bytes for multimodal attachments (default 20 MB) |
-|`$:/config/rimir/llm-connect/creation-rules` |(empty) |Natural-language naming conventions appended to system prompt as "Tiddler creation rules". Guides LLM when using `create_tiddler` with `basetitle` |
 
 !! Accessible tiddlers panel
 

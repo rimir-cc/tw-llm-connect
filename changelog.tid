@@ -6,6 +6,7 @@ type: text/vnd.tiddlywiki
 ! Changelog
 
 |!Version |!Date |!Changes |
+|v0.1.30 |2026-03-28 |Remove "Creation rules" setting — naming conventions belong in context-specific llm-help pages, not as a global system prompt injection |
 |v0.1.29 |2026-03-28 |Markdown rendering for assistant messages (uses TW markdown plugin). Collapsible tool messages — collapsed by default, per-message click or chat-wide toggle (⚙️ button). Plugin visibility settings — tick plugins to exclude their shadows from LLM access. Simplified default deny filter to `[tag[sensitive]]`. Restricted wiki proxy: own filter cache + shadow iteration overrides fix shadow tiddler access. Accessible tiddlers panel now includes shadows, auto-refreshes on protection config changes. Auto-focus textarea on chat open |
 |v0.1.28 |2026-03-28 |Switch default protection to deny mode. Deny-filter blocks plugin internals and sensitive tiddlers but exempts llm-help pages, typed schema definitions, and supporting functions so the llm_help tool works. Revert allow-filter to empty. |
 |v0.1.27 |2026-03-28 |Add llm-help pages to base allow-filter so LLM can read help documentation via llm_help tool |

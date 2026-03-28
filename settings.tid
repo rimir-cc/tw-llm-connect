@@ -230,14 +230,6 @@ Default context template: <$edit-text tiddler="$:/config/rimir/llm-connect/defau
 
 <$edit-text tiddler="$:/config/rimir/llm-connect/system-prompt" class="rr-textarea" tag="textarea" default="You are a helpful TiddlyWiki assistant. You can search, read, and modify tiddlers using the available tools."/>
 
-!! Creation rules
-
-<div class="rr-settings-info-card">
-Optional naming conventions for tiddler creation. Appended to the system prompt as "Tiddler creation rules". The LLM will follow these when using `create_tiddler` with `basetitle`.
-</div>
-
-<$edit-text tiddler="$:/config/rimir/llm-connect/creation-rules" class="rr-textarea" tag="textarea" placeholder="e.g. New tiddlers should use the pattern 'Notes/<topic>' and be tagged 'notes'. Use basetitle for auto-numbering."/>
-
 !! Tools
 
 <$let newToolState="$:/temp/rimir/llm-connect/new-tool-form">
