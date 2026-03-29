@@ -1,0 +1,51 @@
+title: $:/plugins/rimir/llm-connect/ui/context-selector
+type: text/vnd.tiddlywiki
+
+\procedure llm-context-selector()
+\whitespace trim
+<%if [[$:/plugins/rimir/llm-help]has[plugin-type]] %>
+<$let all-ctx-keys={{{ [all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]get[llm-help-context]enlist-input[]] +[unique[]sort[]join[ ]] }}}>
+<%if [<all-ctx-keys>minlength[1]] %>
+<div class="llm-context-selector-wrapper">
+<$let selectorState="$:/state/rimir/llm-connect/context-selector">
+<$button class="tc-btn-invisible llm-tool-selector-btn" tooltip="Select help context">
+<$action-setfield $tiddler=<<selectorState>> text={{{ [<selectorState>get[text]match[open]then[closed]else[open]] }}}/>
+<$transclude $tiddler="$:/plugins/rimir/llm-connect/icon/help-context"/>
+</$button>
+<$reveal type="match" state=<<selectorState>> text="open" animate="yes">
+<$click-outside state=<<selectorState>> closedValue="closed">
+<div class="llm-tool-selector-dropdown">
+<div class="llm-tool-selector-actions">
+<$button class="llm-tool-selector-action-btn" tooltip="Enable all context">
+<$action-setfield $tiddler="$:/temp/rimir/llm-help/active-context" text=<<all-ctx-keys>>/>
+All
+</$button>
+<$button class="llm-tool-selector-action-btn" tooltip="Clear all context">
+<$action-setfield $tiddler="$:/temp/rimir/llm-help/active-context" text=""/>
+None
+</$button>
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/context-group]sort[group-name]]" variable="group">
+<$button class="llm-tool-selector-action-btn llm-tool-selector-group-btn" tooltip={{{ [<group>get[group-description]else[Apply context group]] }}}>
+<$action-setfield $tiddler="$:/temp/rimir/llm-help/active-context" text={{{ [<group>get[group-contexts]] }}}/>
+<$text text={{{ [<group>get[group-name]] }}}/>
+</$button>
+</$list>
+</div>
+<div class="llm-tool-selector-list">
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]get[llm-help-context]enlist-input[]] +[unique[]sort[]]" variable="ctx-key">
+<$let ctx-page-count={{{ [all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]has[llm-help-context]] :filter[get[llm-help-context]enlist-input[]match<ctx-key>] +[count[]] }}}>
+<label class="llm-tool-selector-item" title={{{ [<ctx-page-count>addsuffix[ help pages]] }}}>
+<$checkbox tiddler="$:/temp/rimir/llm-help/active-context" listField="text" checked=<<ctx-key>> unchecked="" default=""/>&nbsp;<$text text=<<ctx-key>>/> <span class="llm-context-selector-count">(<$text text=<<ctx-page-count>>/>)</span>
+</label>
+</$let>
+</$list>
+</div>
+</div>
+</$click-outside>
+</$reveal>
+</$let>
+</div>
+<%endif%>
+</$let>
+<%endif%>
+\end

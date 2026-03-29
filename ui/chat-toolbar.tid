@@ -1,0 +1,16 @@
+title: $:/plugins/rimir/llm-connect/ui/chat-toolbar
+type: text/vnd.tiddlywiki
+
+\procedure llm-chat-toolbar-left(label)
+\whitespace trim
+<span class="llm-chat-panel-header-left"><span class="llm-chat-pin-wrapper"><button class="llm-chat-btn-pin">&#x1F4CC;</button><div class="llm-chat-pin-menu" style="display:none;"></div></span> <<label>></span>
+\end
+
+\procedure llm-chat-toolbar-actions(chatTiddler)
+\whitespace trim
+<$importvariables filter="[[$:/plugins/rimir/llm-connect/ui/tool-selector]] [[$:/plugins/rimir/llm-connect/ui/context-selector]]">
+<span class="llm-chat-io-wrapper"><button class="llm-chat-btn-export tc-btn-invisible" title="Export chat to clipboard">{{$:/plugins/rimir/llm-connect/icon/export}}</button><button class="llm-chat-btn-import tc-btn-invisible" title="Import chat from clipboard">{{$:/plugins/rimir/llm-connect/icon/import}}</button></span>
+<$transclude $variable="llm-tool-selector" chatTiddler=<<chatTiddler>>/>
+<<llm-context-selector>>
+</$importvariables>
+\end

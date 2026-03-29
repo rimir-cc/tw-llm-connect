@@ -598,6 +598,16 @@ type: text/vnd.tiddlywiki
 	background: <<colour tag-background>>;
 }
 
+.llm-context-selector-wrapper {
+	position: relative;
+	display: inline-block;
+}
+
+.llm-context-selector-count {
+	opacity: 0.5;
+	font-size: 0.85em;
+}
+
 .llm-tool-selector-bar {
 	margin-bottom: 4px;
 }

@@ -264,6 +264,31 @@ The following fields on each chat tiddler control per-chat behaviour. They are m
 |`llm-deny-filter` |Additional deny filter for this chat (managed by shield icon). Combined with widget attribute and base deny filter |
 |`llm-pinned-save` |`"yes"` when chat is pinned (auto-syncing to saved tiddler). Managed by 📌 icon |
 
+!! Help context selector
+
+The ? icon in the chat header allows toggling llm-help context keys directly from the chat. This button is only visible when the `$:/plugins/rimir/llm-help` plugin is installed and at least one context key exists.
+
+* ''All'' / ''None'' — enable or clear all context keys
+* ''Context groups'' — predefined sets of context keys, configured via tiddlers tagged `$:/tags/rimir/llm-connect/context-group`
+
+Context group tiddlers use the same pattern as tool groups:
+
+|!Field |!Description |
+|`group-name` |Display name for the group button |
+|`group-contexts` |Space-separated list of context keys to activate |
+|`group-description` |Tooltip text |
+
+The selector writes to `$:/temp/rimir/llm-help/active-context` — the same state tiddler used by the llm-help settings page, so changes are reflected in both places.
+
+!! Shared chat toolbar
+
+The chat header toolbar (pin, export/import, tool selector, context selector) is defined once in `$:/plugins/rimir/llm-connect/ui/chat-toolbar` and imported by all chat panel templates. Two procedures are available:
+
+* `<<llm-chat-toolbar-left "Label">>` — renders the pin button and label
+* `<<llm-chat-toolbar-actions "chatTiddler">>` — renders export/import buttons, tool selector, and context selector
+
+External plugins (e.g. appify) can import `chat-toolbar` to get the full toolbar without duplicating markup.
+
 !! Chat export/import
 
 The ↑ (export) and ↓ (import) arrow buttons in the chat header allow transferring conversations between browser sessions, devices, or users.

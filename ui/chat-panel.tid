@@ -1,15 +1,14 @@
 title: $:/plugins/rimir/llm-connect/ui/chat-panel
 tags: $:/tags/PageTemplate
 
-\import [[$:/plugins/rimir/llm-connect/ui/tool-selector]]
+\import [[$:/plugins/rimir/llm-connect/ui/chat-toolbar]]
 \whitespace trim
 <$reveal state="$:/state/rimir/llm-connect/chat-open" type="match" text="yes" animate="yes">
 <div class="llm-chat-panel">
 <div class="llm-chat-panel-header">
-<span class="llm-chat-panel-header-left"><span class="llm-chat-pin-wrapper"><button class="llm-chat-btn-pin">&#x1F4CC;</button><div class="llm-chat-pin-menu" style="display:none;"></div></span> LLM Chat</span>
+<<llm-chat-toolbar-left "LLM Chat">>
 <span class="llm-chat-panel-header-actions">
-<span class="llm-chat-io-wrapper"><button class="llm-chat-btn-export tc-btn-invisible" title="Export chat to clipboard">{{$:/plugins/rimir/llm-connect/icon/export}}</button><button class="llm-chat-btn-import tc-btn-invisible" title="Import chat from clipboard">{{$:/plugins/rimir/llm-connect/icon/import}}</button></span>
-<<llm-tool-selector "$:/temp/rimir/llm-connect/toolbar-chat">>
+<<llm-chat-toolbar-actions "$:/temp/rimir/llm-connect/toolbar-chat">>
 <$button set="$:/state/rimir/llm-connect/chat-open" setTo="no" class="tc-btn-invisible">&times;</$button>
 </span>
 </div>
