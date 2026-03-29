@@ -6,4 +6,4 @@ tool-schema: {"type":"object","properties":{"title":{"type":"string","descriptio
 tool-mode: action
 type: text/vnd.tiddlywiki
 
-<$list filter="[<title>is[tiddler]] [<title>is[shadow]] +[limit[1]]" variable="_" emptyMessage="Error: Tiddler not found"><$action-listops $tiddler="$:/StoryList" $field="list" $subfilter="+[prepend<title>unique[]]"/><$action-setfield $tiddler="$:/HistoryList" current-tiddler=<<title>>/>Opened tiddler: <<title>></$list>
+<$list filter="[<title>is[tiddler]] [<title>is[shadow]] +[limit[1]]" variable="_" emptyMessage="Error: Tiddler not found"><$action-setfield $tiddler="$:/StoryList" list={{{ [<title>] [list[$:/StoryList]] +[unique[]] +[format:titlelist[]join[ ]] }}}/><$action-setfield $tiddler="$:/HistoryList" current-tiddler=<<title>>/>Opened tiddler: <<title>></$list>
