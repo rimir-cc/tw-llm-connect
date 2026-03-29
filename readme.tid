@@ -25,6 +25,7 @@ In-browser LLM integration with tool use. Connect TiddlyWiki to Claude, OpenAI, 
 * ''Tiddler protection'' — allow/deny modes with restricted wiki proxy. Default: deny mode (blacklist) — `[tag[sensitive]]` hides tagged tiddlers. Allow mode (whitelist) restricts to matched tiddlers. Per-chat mode and filter overrides via shield icon; switching modes auto-negates the filter. Widget-level `allowFilter`/`denyFilter` attributes for recipe panels
 * ''Plugin visibility'' — tick plugins in settings to exclude their shadow tiddlers from LLM access (all readable by default)
 * ''Accessible tiddlers panel'' — eye icon (👁️) shows a live list of all tiddlers (including shadows) the LLM can currently access based on the active protection filter. Drop tiddlers onto the panel to grant access (adds to whitelist in allow mode, exempts from blacklist in deny mode)
+* ''Chat export/import'' — arrow buttons in the chat header export the entire conversation as JSON to the clipboard, or import a previously exported chat from the clipboard (falls back to a paste dialog if clipboard read access is denied). All state is preserved: messages, provider, model, tool selection, protection filters, and context
 * ''Chat pin/save/restore'' — 📌 icon pins a chat to persist it to disk. Pinned chats auto-sync all state on every change. Restore saved chats after browser reload or server restart. One save slot per widget context (global chat, chat view, each pair-edit tiddler)
 * ''Audit logging'' — write operations (set-field, create, delete) execute immediately with an audit log
 

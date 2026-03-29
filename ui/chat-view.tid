@@ -7,6 +7,7 @@ type: text/vnd.tiddlywiki
 \procedure llm-chat-view()
 <div class="llm-tool-selector-bar">
 <span class="llm-chat-pin-wrapper"><button class="llm-chat-btn-pin">&#x1F4CC;</button><div class="llm-chat-pin-menu" style="display:none;"></div></span>
+<span class="llm-chat-io-wrapper"><button class="llm-chat-btn-export tc-btn-invisible" title="Export chat to clipboard">{{$:/plugins/rimir/llm-connect/icon/export}}</button><button class="llm-chat-btn-import tc-btn-invisible" title="Import chat from clipboard">{{$:/plugins/rimir/llm-connect/icon/import}}</button></span>
 <<llm-tool-selector "$:/temp/rimir/llm-connect/default-chat">>
 </div>
 <$llm-chat

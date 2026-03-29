@@ -493,6 +493,21 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 			});
 			this.updatePinDisplay();
 		}
+		// Hook into export/import buttons
+		var exportBtn = parentEl.querySelector(".llm-chat-btn-export");
+		var importBtn = parentEl.querySelector(".llm-chat-btn-import");
+		if (exportBtn) {
+			exportBtn.addEventListener("click", function(e) {
+				e.stopPropagation();
+				self.exportChat();
+			});
+		}
+		if (importBtn) {
+			importBtn.addEventListener("click", function(e) {
+				e.stopPropagation();
+				self.importChat();
+			});
+		}
 	}
 };
 
@@ -1029,6 +1044,173 @@ LlmChatWidget.prototype.syncIfPinned = function() {
 	if (this.isPinned()) {
 		this.syncPinnedSave();
 	}
+};
+
+// --- Export / Import ---
+
+LlmChatWidget.prototype.exportChat = function() {
+	var self = this;
+	var messages = this.getMessages();
+	if (!messages.length) {
+		this.setStatus("Nothing to export");
+		setTimeout(function() { self.setStatus(""); }, 2000);
+		return;
+	}
+	var chatTid = this.wiki.getTiddler(this.chatTiddler);
+	var exportData = {
+		version: 1,
+		exported: new Date().toISOString(),
+		messages: messages,
+		provider: this.provider || "",
+		model: this.model || ""
+	};
+	// Include all llm state fields
+	if (chatTid) {
+		for (var i = 0; i < CHAT_STATE_FIELDS.length; i++) {
+			var key = CHAT_STATE_FIELDS[i];
+			if (chatTid.fields[key]) exportData[key] = chatTid.fields[key];
+		}
+	}
+	// Include widget instance state
+	if (this.contextInjected) exportData["context-injected"] = true;
+	if (this.attachmentsInjected) exportData["attachments-injected"] = true;
+	if (this.systemPromptOverride) exportData["system-prompt-override"] = this.systemPromptOverride;
+	var json = JSON.stringify(exportData, null, 2);
+	if (navigator.clipboard && navigator.clipboard.writeText) {
+		navigator.clipboard.writeText(json).then(function() {
+			self.setStatus("Chat exported to clipboard (" + messages.length + " messages)");
+			setTimeout(function() { self.setStatus(""); }, 3000);
+		}, function() {
+			self.fallbackCopyToClipboard(json);
+		});
+	} else {
+		this.fallbackCopyToClipboard(json);
+	}
+};
+
+LlmChatWidget.prototype.fallbackCopyToClipboard = function(text) {
+	var self = this;
+	var ta = this.document.createElement("textarea");
+	ta.value = text;
+	ta.style.position = "fixed";
+	ta.style.left = "-9999px";
+	this.document.body.appendChild(ta);
+	ta.select();
+	try {
+		this.document.execCommand("copy");
+		self.setStatus("Chat exported to clipboard");
+		setTimeout(function() { self.setStatus(""); }, 3000);
+	} catch(e) {
+		self.setStatus("Export failed — could not copy to clipboard");
+		setTimeout(function() { self.setStatus(""); }, 3000);
+	}
+	this.document.body.removeChild(ta);
+};
+
+LlmChatWidget.prototype.importChat = function() {
+	var self = this;
+	if (navigator.clipboard && navigator.clipboard.readText) {
+		navigator.clipboard.readText().then(function(text) {
+			self.processImport(text);
+		}, function() {
+			// Clipboard read denied — show paste dialog
+			self.showImportDialog();
+		});
+	} else {
+		this.showImportDialog();
+	}
+};
+
+LlmChatWidget.prototype.showImportDialog = function() {
+	var self = this;
+	var overlay = this.document.createElement("div");
+	overlay.className = "llm-chat-import-overlay";
+	var dialog = this.document.createElement("div");
+	dialog.className = "llm-chat-import-dialog";
+	var label = this.document.createElement("div");
+	label.textContent = "Paste exported chat JSON:";
+	label.style.marginBottom = "8px";
+	label.style.fontWeight = "bold";
+	dialog.appendChild(label);
+	var ta = this.document.createElement("textarea");
+	ta.className = "llm-chat-import-textarea";
+	ta.placeholder = "Paste JSON here...";
+	dialog.appendChild(ta);
+	var btnRow = this.document.createElement("div");
+	btnRow.style.display = "flex";
+	btnRow.style.justifyContent = "flex-end";
+	btnRow.style.gap = "8px";
+	btnRow.style.marginTop = "8px";
+	var cancelBtn = this.document.createElement("button");
+	cancelBtn.textContent = "Cancel";
+	cancelBtn.className = "llm-chat-import-btn";
+	cancelBtn.addEventListener("click", function() {
+		self.document.body.removeChild(overlay);
+	});
+	var importBtn = this.document.createElement("button");
+	importBtn.textContent = "Import";
+	importBtn.className = "llm-chat-import-btn llm-chat-import-btn-primary";
+	importBtn.addEventListener("click", function() {
+		self.processImport(ta.value);
+		self.document.body.removeChild(overlay);
+	});
+	btnRow.appendChild(cancelBtn);
+	btnRow.appendChild(importBtn);
+	dialog.appendChild(btnRow);
+	overlay.appendChild(dialog);
+	this.document.body.appendChild(overlay);
+	ta.focus();
+};
+
+LlmChatWidget.prototype.processImport = function(text) {
+	var self = this;
+	if (!text || !text.trim()) {
+		this.setStatus("Clipboard is empty");
+		setTimeout(function() { self.setStatus(""); }, 2000);
+		return;
+	}
+	var data;
+	try {
+		data = JSON.parse(text);
+	} catch(e) {
+		this.setStatus("Import failed — invalid JSON");
+		setTimeout(function() { self.setStatus(""); }, 3000);
+		return;
+	}
+	if (!data.messages || !Array.isArray(data.messages)) {
+		this.setStatus("Import failed — no messages found in data");
+		setTimeout(function() { self.setStatus(""); }, 3000);
+		return;
+	}
+	// Restore provider/model
+	if (data.provider) this.provider = data.provider;
+	if (data.model) this.model = data.model;
+	// Restore widget instance state
+	this.contextInjected = !!data["context-injected"];
+	this.attachmentsInjected = !!data["attachments-injected"];
+	this.systemPromptOverride = data["system-prompt-override"] || null;
+	// Build fields for chat tiddler
+	var fields = {
+		title: this.chatTiddler,
+		tags: "$:/tags/rimir/llm-connect/chat",
+		"llm-messages": JSON.stringify(data.messages),
+		"llm-provider": this.provider,
+		"llm-model": this.model
+	};
+	for (var i = 0; i < CHAT_STATE_FIELDS.length; i++) {
+		var key = CHAT_STATE_FIELDS[i];
+		if (data[key]) fields[key] = data[key];
+	}
+	this.wiki.addTiddler(new $tw.Tiddler(fields));
+	// Refresh UI
+	this.renderMessages(this.messagesDiv);
+	this.updateModelDisplay();
+	this.updateTokenDisplay();
+	if (this.isPinned()) {
+		this.syncPinnedSave(data.messages);
+	}
+	this.setStatus("Chat imported (" + data.messages.length + " messages)");
+	setTimeout(function() { self.setStatus(""); }, 3000);
 };
 
 LlmChatWidget.prototype.restoreChat = function() {

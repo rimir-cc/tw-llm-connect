@@ -91,6 +91,92 @@ type: text/vnd.tiddlywiki
 	color: <<colour background>>;
 }
 
+/* Export/Import buttons */
+.llm-chat-io-wrapper {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+}
+
+.llm-chat-btn-export,
+.llm-chat-btn-import {
+	padding: 2px 4px;
+	vertical-align: middle;
+	opacity: 0.6;
+	transition: opacity 0.15s;
+}
+
+.llm-chat-btn-export:hover,
+.llm-chat-btn-import:hover {
+	opacity: 1;
+}
+
+.llm-chat-btn-export svg,
+.llm-chat-btn-import svg {
+	vertical-align: middle;
+}
+
+/* Import dialog */
+.llm-chat-import-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0,0,0,0.4);
+	z-index: 10000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.llm-chat-import-dialog {
+	background: <<colour tiddler-background>>;
+	color: <<colour foreground>>;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 8px;
+	padding: 16px;
+	width: 500px;
+	max-width: 90vw;
+	box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+.llm-chat-import-textarea {
+	width: 100%;
+	height: 200px;
+	font-family: monospace;
+	font-size: 0.85em;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 4px;
+	padding: 8px;
+	resize: vertical;
+	background: <<colour page-background>>;
+	color: <<colour foreground>>;
+}
+
+.llm-chat-import-btn {
+	padding: 6px 16px;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 4px;
+	background: <<colour page-background>>;
+	color: <<colour foreground>>;
+	cursor: pointer;
+}
+
+.llm-chat-import-btn:hover {
+	background: <<colour tag-background>>;
+}
+
+.llm-chat-import-btn-primary {
+	background: <<colour primary>>;
+	color: <<colour background>>;
+	border-color: <<colour primary>>;
+}
+
+.llm-chat-import-btn-primary:hover {
+	opacity: 0.9;
+}
+
 .llm-chat-messages {
 	flex: 1;
 	overflow-y: auto;

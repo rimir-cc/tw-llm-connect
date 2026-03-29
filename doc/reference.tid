@@ -264,6 +264,16 @@ The following fields on each chat tiddler control per-chat behaviour. They are m
 |`llm-deny-filter` |Additional deny filter for this chat (managed by shield icon). Combined with widget attribute and base deny filter |
 |`llm-pinned-save` |`"yes"` when chat is pinned (auto-syncing to saved tiddler). Managed by 📌 icon |
 
+!! Chat export/import
+
+The ↑ (export) and ↓ (import) arrow buttons in the chat header allow transferring conversations between browser sessions, devices, or users.
+
+''Export'' copies a JSON snapshot of the entire chat to the clipboard — messages, provider, model, tool selection, protection mode/filters, context filter, and injection state. The status bar confirms success with a message count.
+
+''Import'' reads JSON from the clipboard and restores the chat. If the browser blocks clipboard read access, a paste dialog appears as fallback. Importing overwrites the current chat state (clear first if you want to preserve it).
+
+The JSON format includes a `version` field for forward compatibility and an `exported` timestamp.
+
 !! Chat pin/save/restore
 
 The 📌 icon at the top-right of the chat container pins the current chat to persist it to disk. Chat tiddlers use `$:/temp/` paths which are lost on browser reload — pinning creates a persistent copy at `$:/saved-chats/rimir/llm-connect/<context-slug>`.

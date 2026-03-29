@@ -6,6 +6,7 @@ type: text/vnd.tiddlywiki
 ! Changelog
 
 |!Version |!Date |!Changes |
+|v0.1.33 |2026-03-29 |Chat export/import — arrow buttons in chat header copy conversation as JSON to clipboard (export) or restore from clipboard/paste dialog (import). All state preserved: messages, provider, model, tools, protection, context filter |
 |v0.1.32 |2026-03-29 |Add tw-gotchas reminder to default system prompt — LLM must read gotchas before writing wikitext/filters |
 |v0.1.31 |2026-03-28 |Fix docs: update security.tid deny filter default to match actual value (`[tag[sensitive]]`), remove stale reference to `prefix[$:/plugins/rimir/]` blocking |
 |v0.1.30 |2026-03-28 |Remove "Creation rules" setting — naming conventions belong in context-specific llm-help pages, not as a global system prompt injection |
