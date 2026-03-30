@@ -270,6 +270,7 @@ function executeWikitext(wikitext, input, mode, protection) {
 	variables.__timestamp = $tw.utils.stringifyDate(new Date());
 	variables.__provider = provider;
 	variables.__model = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/providers/" + provider + "/model") || provider;
+	variables.__helpContext = (protection && protection.helpContext) || "";
 
 	var wiki = createRestrictedWiki(protection);
 	var parser = wiki.parseText("text/vnd.tiddlywiki", wikitext);

@@ -22,6 +22,7 @@ list-after: $:/core/ui/ViewTemplate/body
   contextTemplate="$:/plugins/rimir/llm-connect/context-templates/pair-edit"
   protectionMode="allow"
   allowFilter=<<pair-edit-allow-filter>>
+  defaultContext="rimir/typed tw-gotchas shortcuts"
 />
 </div>
 </$reveal>

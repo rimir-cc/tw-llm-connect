@@ -12,6 +12,7 @@ type: text/vnd.tiddlywiki
 <$llm-chat
   chatTiddler="$:/temp/rimir/llm-connect/default-chat"
   tools="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]]"
+  defaultContext="rimir/typed tw-gotchas shortcuts"
 />
 \end
 

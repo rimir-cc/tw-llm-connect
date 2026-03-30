@@ -608,6 +608,89 @@ type: text/vnd.tiddlywiki
 	font-size: 0.85em;
 }
 
+/* Context tree */
+
+.llm-ctx-tree {
+	padding: 4px 8px;
+	font-size: 0.85em;
+}
+
+.llm-ctx-tree-node {
+	display: flex;
+	align-items: center;
+	padding: 1px 0;
+	gap: 2px;
+}
+
+.llm-ctx-tree-children {
+	padding-left: 16px;
+}
+
+.llm-ctx-cb {
+	width: 16px;
+	height: 16px;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 2px;
+	background: <<colour tiddler-background>>;
+	cursor: pointer;
+	font-size: 10px;
+	line-height: 14px;
+	text-align: center;
+	padding: 0;
+	flex-shrink: 0;
+}
+
+.llm-ctx-cb:hover {
+	border-color: <<colour primary>>;
+}
+
+.llm-ctx-checked {
+	background: <<colour primary>>;
+	color: <<colour background>>;
+	border-color: <<colour primary>>;
+}
+
+.llm-ctx-checked::after {
+	content: "✓";
+}
+
+.llm-ctx-indeterminate {
+	background: <<colour primary>>;
+	color: <<colour background>>;
+	border-color: <<colour primary>>;
+	opacity: 0.6;
+}
+
+.llm-ctx-indeterminate::after {
+	content: "–";
+}
+
+.llm-ctx-unchecked {
+	border-color: <<colour muted-foreground>>;
+}
+
+.llm-ctx-unchecked:hover {
+	border-color: <<colour primary>>;
+}
+
+.llm-ctx-toggle {
+	font-size: 8px;
+	padding: 0 2px;
+	cursor: pointer;
+	opacity: 0.5;
+	flex-shrink: 0;
+}
+
+.llm-ctx-toggle:hover {
+	opacity: 1;
+}
+
+.llm-ctx-label {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 .llm-tool-selector-bar {
 	margin-bottom: 4px;
 }
@@ -749,6 +832,39 @@ type: text/vnd.tiddlywiki
 	color: <<colour muted-foreground>>;
 	white-space: nowrap;
 	opacity: 0.7;
+}
+
+.llm-chat-help-ctx-btn {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 0.75em;
+	color: <<colour muted-foreground>>;
+	white-space: nowrap;
+	padding: 2px 4px;
+	opacity: 0.8;
+}
+
+.llm-chat-help-ctx-btn:hover {
+	opacity: 1;
+	color: <<colour foreground>>;
+}
+
+.llm-chat-help-ctx-panel {
+	margin-top: 4px;
+	background: <<colour code-background>>;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 4px;
+	padding: 6px 8px;
+	max-height: 180px;
+	overflow-y: auto;
+	font-size: 0.75em;
+	color: <<colour muted-foreground>>;
+}
+
+.llm-chat-help-ctx-keys {
+	white-space: pre;
+	font-family: monospace;
 }
 
 /* Fetch models button in settings */

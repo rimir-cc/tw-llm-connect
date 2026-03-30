@@ -51,6 +51,53 @@ None
 </div>
 \end
 
+\procedure llm-ctx-tree-node(prefix, chatTiddler, all-keys, depth:"0")
+\whitespace trim
+<$let children={{{ [enlist<all-keys>prefix<prefix>removeprefix<prefix>] :map[split[/]first[]] +[!is[blank]unique[]sort[]join[ ]] }}}
+  next-depth={{{ [<depth>add[1]] }}}
+>
+<$list filter="[enlist<children>]" variable="segment">
+<$let
+  node-key={{{ [<prefix>match[]then<segment>] ~[<prefix>addsuffix<segment>] }}}
+  node-prefix={{{ [<node-key>addsuffix[/]] }}}
+  descendants={{{ [enlist<all-keys>prefix<node-prefix>] [enlist<all-keys>match<node-key>] +[unique[]join[ ]] }}}
+  desc-count={{{ [enlist<descendants>count[]] }}}
+  active-count={{{ [enlist<descendants>] :filter[<chatTiddler>get[llm-help-context]enlist-input[]match<currentTiddler>] +[count[]] }}}
+  has-children={{{ [enlist<all-keys>prefix<node-prefix>first[]] }}}
+  state={{{ [<active-count>match[0]then[unchecked]] ~[<active-count>match<desc-count>then[checked]] ~[[indeterminate]] }}}
+  collapse-state={{{ [[$:/state/rimir/llm-connect/ctx-tree/]addsuffix<chatTiddler>addsuffix[/]addsuffix<node-key>] }}}
+  default-collapsed={{{ [<depth>compare:integer:gteq[1]then[closed]] }}}
+  is-collapsed={{{ [<collapse-state>get[text]] ~[<default-collapsed>] }}}
+  display-label={{{ [<segment>search-replace:g[_],[ ]] }}}
+>
+<div class="llm-ctx-tree-node">
+<$button class={{{ [[llm-ctx-cb llm-ctx-]addsuffix<state>] }}} tooltip={{{ [<desc-count>addsuffix[ context keys]] }}}>
+<%if [<state>match[checked]] %>
+<$action-setfield $tiddler=<<chatTiddler>> llm-help-context={{{ [<chatTiddler>get[llm-help-context]enlist-input[]] -[enlist<descendants>] +[join[ ]] }}}/>
+<%else%>
+<$action-setfield $tiddler=<<chatTiddler>> llm-help-context={{{ [<chatTiddler>get[llm-help-context]enlist-input[]] [enlist<descendants>] +[unique[]sort[]join[ ]] }}}/>
+<%endif%>
+</$button>
+<%if [<has-children>minlength[1]] %>
+<$button class="llm-ctx-toggle tc-btn-invisible" tooltip="Expand/collapse">
+<$action-setfield $tiddler=<<collapse-state>> text={{{ [<collapse-state>get[text]match[closed]then[open]else[closed]] }}}/>
+<%if [<is-collapsed>match[closed]] %>&#x25B6;<%else%>&#x25BC;<%endif%>
+</$button>
+<%endif%>
+<span class="llm-ctx-label"><$text text=<<display-label>>/></span>
+</div>
+<%if [<has-children>minlength[1]] %>
+<$reveal type="nomatch" state=<<collapse-state>> text="closed" default=<<default-collapsed>> animate="yes">
+<div class="llm-ctx-tree-children">
+<$transclude $variable="llm-ctx-tree-node" prefix=<<node-prefix>> chatTiddler=<<chatTiddler>> all-keys=<<all-keys>> depth=<<next-depth>>/>
+</div>
+</$reveal>
+<%endif%>
+</$let>
+</$list>
+</$let>
+\end
+
 \procedure llm-context-selector(chatTiddler)
 \whitespace trim
 <%if [[$:/plugins/rimir/llm-help]has[plugin-type]] %>
@@ -81,14 +128,8 @@ None
 </$button>
 </$list>
 </div>
-<div class="llm-tool-selector-list">
-<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]get[llm-help-context]enlist-input[]] +[unique[]sort[]]" variable="ctx-key">
-<$let ctx-page-count={{{ [all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]has[llm-help-context]] :filter[get[llm-help-context]enlist-input[]match<ctx-key>] +[count[]] }}}>
-<label class="llm-tool-selector-item" title={{{ [<ctx-page-count>addsuffix[ help pages]] }}}>
-<$checkbox tiddler=<<chatTiddler>> listField="llm-help-context" checked=<<ctx-key>> unchecked="" default=""/>&nbsp;<$text text=<<ctx-key>>/> <span class="llm-context-selector-count">(<$text text=<<ctx-page-count>>/>)</span>
-</label>
-</$let>
-</$list>
+<div class="llm-ctx-tree">
+<$transclude $variable="llm-ctx-tree-node" prefix="" chatTiddler=<<chatTiddler>> all-keys=<<all-ctx-keys>>/>
 </div>
 </div>
 </$click-outside>

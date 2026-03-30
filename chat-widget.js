@@ -14,7 +14,7 @@ var Widget = require("$:/core/modules/widgets/widget.js").widget;
 
 var CHAT_STATE_FIELDS = ["llm-provider", "llm-model", "llm-active-tools", "llm-tools-init",
 	"llm-context-filter", "llm-protection-mode", "llm-allow-filter", "llm-deny-filter",
-	"llm-help-context"];
+	"llm-help-context", "llm-help-context-init"];
 
 /*
 Render markdown text to HTML using TW's markdown plugin (text/x-markdown parser).
@@ -296,6 +296,26 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	this.updateTokenDisplay();
 	buttonRow.appendChild(tokenLabel);
 
+	// Help context button + debug panel
+	var helpCtxBtn = this.document.createElement("button");
+	helpCtxBtn.className = "llm-chat-help-ctx-btn";
+	helpCtxBtn.title = "Show/hide active help context keys for this chat";
+	this.helpCtxBtn = helpCtxBtn;
+	this.updateHelpContextDisplay();
+
+	var helpCtxPanel = this.document.createElement("div");
+	helpCtxPanel.className = "llm-chat-help-ctx-panel";
+	helpCtxPanel.style.display = "none";
+	this.helpCtxPanel = helpCtxPanel;
+
+	helpCtxBtn.addEventListener("click", function() {
+		var visible = helpCtxPanel.style.display !== "none";
+		helpCtxPanel.style.display = visible ? "none" : "block";
+		if (!visible) self.refreshHelpContextPanel();
+	});
+	buttonRow.appendChild(helpCtxBtn);
+	inputArea.appendChild(helpCtxPanel);
+
 	// Paperclip icon to toggle context filter
 	var contextBtn = this.document.createElement("button");
 	contextBtn.className = "llm-chat-btn-context";
@@ -540,6 +560,7 @@ LlmChatWidget.prototype.execute = function() {
 	this.denyFilterAttr = this.getAttribute("denyFilter", "");
 	this.allowFilterAttr = this.getAttribute("allowFilter", "");
 	this.protectionModeAttr = this.getAttribute("protectionMode", "");
+	this.defaultContextAttr = this.getAttribute("defaultContext", "");
 	this.actionMode = this.getAttribute("actionMode", "") === "yes";
 
 	// Use chat tiddler's locked provider/model if conversation has started, otherwise global config
@@ -805,10 +826,31 @@ LlmChatWidget.prototype.sendMessage = function() {
 	var protection = this.resolveProtectionForChat(helpers);
 	var protectionFilterBefore = protection.filter;
 
-	// Sync per-chat help context to global tiddler so llm_help tool picks it up
+	// Initialize default help context on first message if not yet initialized
 	var chatTid = this.chatTiddler ? this.wiki.getTiddler(this.chatTiddler) : null;
+	if (this.chatTiddler && (!chatTid || chatTid.fields["llm-help-context-init"] !== "yes")) {
+		var allCtxKeys = this.wiki.filterTiddlers("[function[_llm-help-all-context-keys]]");
+		// Match keys whose prefix appears in the defaultContext attribute
+		var defaultPrefixes = this.defaultContextAttr ? $tw.utils.parseStringArray(this.defaultContextAttr) : [];
+		var defaultKeys = allCtxKeys.filter(function(k) {
+			return defaultPrefixes.some(function(p) { return k === p || k.indexOf(p + "/") === 0; });
+		});
+		var fields = { title: this.chatTiddler, "llm-help-context-init": "yes", "llm-help-context": defaultKeys.join(" ") };
+		var existing = this.wiki.getTiddler(this.chatTiddler);
+		if (existing) {
+			// Preserve existing context if already set (e.g. by environment)
+			if (existing.fields["llm-help-context"]) {
+				fields["llm-help-context"] = existing.fields["llm-help-context"];
+			}
+			fields = $tw.utils.extend({}, existing.fields, fields);
+		}
+		this.wiki.addTiddler(new $tw.Tiddler(fields));
+		chatTid = this.wiki.getTiddler(this.chatTiddler);
+	}
+
+	// Pass help context directly to tool execution via protection object
 	var helpCtx = chatTid && chatTid.fields["llm-help-context"] || "";
-	this.wiki.setText("$:/temp/rimir/llm-help/active-context", "text", null, helpCtx);
+	protection.helpContext = helpCtx;
 
 	orchestrator.runConversation({
 		messages: messages,
@@ -1789,10 +1831,46 @@ LlmChatWidget.prototype.updateTokenDisplay = function() {
 	this.tokenLabel.title = "Estimate (~4 chars/token)\nIn (assistant): " + inChars + " chars / ~" + inTokens + " tokens\nOut (user+context+tools): " + outChars + " chars / ~" + outTokens + " tokens";
 };
 
+LlmChatWidget.prototype.updateHelpContextDisplay = function() {
+	if (!this.helpCtxBtn) return;
+	if (!this.chatTiddler) { this.helpCtxBtn.textContent = "\uD83D\uDCD6"; return; }
+	var tid = this.wiki.getTiddler(this.chatTiddler);
+	var ctx = tid && tid.fields["llm-help-context"] || "";
+	var keys = ctx ? $tw.utils.parseStringArray(ctx) : [];
+	if (keys.length === 0) {
+		this.helpCtxBtn.textContent = "\uD83D\uDCD6 0";
+		this.helpCtxBtn.title = "No help context selected";
+	} else {
+		this.helpCtxBtn.textContent = "\uD83D\uDCD6 " + keys.length;
+		this.helpCtxBtn.title = "Active help context: " + keys.length + " keys\nClick to view";
+	}
+	// Refresh the panel content if visible
+	if (this.helpCtxPanel && this.helpCtxPanel.style.display !== "none") {
+		this.refreshHelpContextPanel();
+	}
+};
+
+LlmChatWidget.prototype.refreshHelpContextPanel = function() {
+	if (!this.helpCtxPanel || !this.chatTiddler) return;
+	this.helpCtxPanel.innerHTML = "";
+	var tid = this.wiki.getTiddler(this.chatTiddler);
+	var ctx = tid && tid.fields["llm-help-context"] || "";
+	var keys = ctx ? $tw.utils.parseStringArray(ctx) : [];
+	if (keys.length === 0) {
+		this.helpCtxPanel.textContent = "(no help context active)";
+		return;
+	}
+	var code = this.document.createElement("code");
+	code.className = "llm-chat-help-ctx-keys";
+	code.textContent = keys.join("\n");
+	this.helpCtxPanel.appendChild(code);
+};
+
 LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 	if (changedTiddlers[this.chatTiddler]) {
 		this.renderMessages(this.messagesDiv);
 		this.updateTokenDisplay();
+		this.updateHelpContextDisplay();
 		this.refreshDebugPanel();
 		this.syncIfPinned();
 	}

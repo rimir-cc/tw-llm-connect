@@ -26,6 +26,7 @@ type: text/vnd.tiddlywiki
 |`protectionMode` |`allow` (whitelist) or `deny` (blacklist) |global config |
 |`allowFilter` |Allow filter (combined with base allow filter) |none |
 |`denyFilter` |Deny filter (combined with base deny filter) |none |
+|`defaultContext` |Space-separated prefixes for default help context keys (e.g. `rimir/typed tw-gotchas`). Matched keys are pre-selected on first message |none |
 
 !! Widget: `<$llm-action>`
 
