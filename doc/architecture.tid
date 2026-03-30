@@ -110,7 +110,7 @@ Protection supports two modes, configurable in Settings and per-chat:
 * ''Allow mode (whitelist)'' — default. Only filter-matched tiddlers are accessible; everything else is blocked. Empty filter = no access.
 * ''Deny mode (blacklist)'' — filter-matched tiddlers are hidden; everything else is accessible. Empty filter = full access.
 
-Each mode has its own base filter (`$:/config/rimir/llm-connect/allow-filter` and `$:/config/rimir/llm-connect/protection-filter`). Filters are combined in three layers: base config + widget attributes (`allowFilter`/`denyFilter`) + per-chat tiddler fields (`llm-allow-filter`/`llm-deny-filter`).
+Each mode has its own base filter (`$:/config/rimir/llm-connect/allow-filter` and `$:/config/rimir/llm-connect/protection-filter`). Filters are combined in multiple layers: base config + widget attributes + per-chat fields + base protection + excluded plugins + hard protection + help page access (see security docs for full order).
 
 All tool wikitext executes against a ''restricted wiki proxy'' rather than the real `$tw.wiki`. The proxy is created via `Object.create($tw.wiki)` and overrides core access methods so blocked tiddlers are completely invisible:
 

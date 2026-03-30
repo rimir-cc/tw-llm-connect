@@ -62,6 +62,7 @@ Protection filters are combined in this order:
 # ''Per-chat filter'' — additional filter set via the shield icon. Stored on the chat tiddler.
 # ''Excluded plugins'' — plugins ticked in settings are blocked.
 # ''Hard protection filter'' — absolute final gate. Applied after everything else. Cannot be overridden.
+# ''Help page access'' — when the llm-help plugin is installed, all help pages, the functions tiddler, and help temp tiddlers are always accessible. Added after hard protection (hard protection still wins for `[tag[sensitive]]` help pages).
 
 All layers are concatenated into a single filter expression. Per-chat mode can be overridden via the mode dropdown in the shield panel.
 

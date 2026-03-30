@@ -54,8 +54,15 @@ exports.resolveProtectionFilter = function(options) {
 			? " -[subfilter{$:/config/rimir/llm-connect/hard-protection-filter}]"
 			: " [subfilter{$:/config/rimir/llm-connect/hard-protection-filter}]";
 	}
+	// Always grant access to llm-help pages so tools can read documentation
+	var helpSuffix = "";
+	if ($tw.wiki.isShadowTiddler("$:/plugins/rimir/llm-help/functions")) {
+		helpSuffix = mode === "allow"
+			? " [all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]] [[$:/plugins/rimir/llm-help/functions]] [prefix[$:/temp/rimir/llm-help/]]"
+			: " -[all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]] -[[$:/plugins/rimir/llm-help/functions]] -[prefix[$:/temp/rimir/llm-help/]]";
+	}
 	return {
-		filter: (base + " " + extra + baseProtectionSuffix + pluginFilter + hardSuffix).trim(),
+		filter: (base + " " + extra + baseProtectionSuffix + pluginFilter + hardSuffix + helpSuffix).trim(),
 		mode: mode
 	};
 };

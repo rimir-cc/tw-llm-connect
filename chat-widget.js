@@ -1744,7 +1744,7 @@ LlmChatWidget.prototype.updateProtectionLabels = function() {
 	// Update hard protection display (below user input)
 	if (this.hardProtectionSpan && this.hardProtectionRow) {
 		var hardProt = this.wiki.getTiddlerText("$:/config/rimir/llm-connect/hard-protection-filter") || "";
-		this.hardProtectionSpan.textContent = hardProt;
+		this.hardProtectionSpan.textContent = hardProt ? (mode === "allow" ? "-" : "") + hardProt : "";
 		this.hardProtectionRow.style.display = hardProt ? "" : "none";
 	}
 };
