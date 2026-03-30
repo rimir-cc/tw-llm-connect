@@ -1714,12 +1714,15 @@ LlmChatWidget.prototype.updateProtectionLabels = function() {
 			? " — only matching tiddlers are accessible"
 			: " — matching tiddlers are hidden from LLM";
 	}
-	// Update base filter display for the active mode
+	// Update base filter display for the active mode (settings + widget attribute)
 	if (this.protectionBaseFilterSpan && this.protectionBaseRow) {
 		var baseConfigTiddler = mode === "allow"
 			? "$:/config/rimir/llm-connect/allow-filter"
 			: "$:/config/rimir/llm-connect/protection-filter";
-		var baseFilter = this.wiki.getTiddlerText(baseConfigTiddler) || "";
+		var settingsFilter = this.wiki.getTiddlerText(baseConfigTiddler) || "";
+		var widgetFilter = mode === "allow" ? (this.allowFilterAttr || "") : (this.denyFilterAttr || "");
+		var parts = [settingsFilter, widgetFilter].filter(function(s) { return s; });
+		var baseFilter = parts.join(" ");
 		this.protectionBaseFilterSpan.textContent = baseFilter;
 		this.protectionBaseRow.style.display = baseFilter ? "" : "none";
 	}

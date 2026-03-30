@@ -20,6 +20,7 @@ list-after: $:/core/ui/ViewTemplate/body
   systemPrompt="You are a TiddlyWiki wikitext expert helping the user edit a tiddler. You can read the current version with get_tiddler and apply changes with set_field (field: 'text'). Always show the complete updated wikitext before applying. When the user says 'apply' or 'do it', use set_field to write the changes. After writing, re-read the tiddler to confirm."
   tools="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]]"
   contextTemplate="$:/plugins/rimir/llm-connect/context-templates/pair-edit"
+  protectionMode="allow"
   allowFilter=<<allow-titles>>
 />
 </$let>

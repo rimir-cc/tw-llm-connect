@@ -6,6 +6,7 @@ type: text/vnd.tiddlywiki
 ! Changelog
 
 |!Version |!Date |!Changes |
+|v0.1.38 |2026-03-30 |Pair-edit always starts in allow (whitelist) mode. Base filter display now includes widget-level `allowFilter`/`denyFilter` attributes so users see the full effective filter |
 |v0.1.37 |2026-03-30 |Set default allow-filter to include all llm-help pages and functions. Pair-edit: auto-allow current tiddler + its links + child tiddlers (prefix/) in allow mode |
 |v0.1.36 |2026-03-30 |Per-chat help context — `llm-help-context` field on each chat tiddler replaces the shared global tiddler. Context selector popup state is now per-chat. Before tool execution, the chat's context is synced to the global tiddler so `llm_help` picks it up. Persisted with pin/save/restore |
 |v0.1.35 |2026-03-30 |Consolidate tool-selector and context-selector into `chat-toolbar.tid` — eliminates `$importvariables` nesting that caused widget tree rebuilds. `$click-outside` widget: global handler registry prevents duplicates, `wrapper.contains()` for robust hit testing. Drag handler skips interactive elements (checkboxes, labels) inside header. Remove dead `tool-selector.tid` and `context-selector.tid` |
