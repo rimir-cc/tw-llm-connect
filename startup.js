@@ -16,17 +16,17 @@ exports.after = ["startup"];
 
 exports.startup = function() {
 	// Verify modules are loadable
-	try {
-		require("$:/plugins/rimir/llm-connect/orchestrator");
-		require("$:/plugins/rimir/llm-connect/tool-executor");
-		require("$:/plugins/rimir/llm-connect/context-resolver");
-		require("$:/plugins/rimir/llm-connect/adapter-claude");
-		require("$:/plugins/rimir/llm-connect/adapter-openai-base");
-		require("$:/plugins/rimir/llm-connect/adapter-openai");
-		require("$:/plugins/rimir/llm-connect/adapter-azure");
-		require("$:/plugins/rimir/llm-connect/widget-helpers");
-	} catch(e) {
-		console.error("llm-connect: Failed to load modules:", e);
+	var modules = [
+		"orchestrator", "tool-executor", "context-resolver",
+		"adapter-claude", "adapter-openai-base", "adapter-openai",
+		"adapter-azure", "widget-helpers"
+	];
+	for (var i = 0; i < modules.length; i++) {
+		try {
+			require("$:/plugins/rimir/llm-connect/" + modules[i]);
+		} catch(e) {
+			console.error("llm-connect: Failed to load " + modules[i] + ":", e);
+		}
 	}
 
 	// Handle tm-llm-fetch-models message

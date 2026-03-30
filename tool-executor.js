@@ -42,7 +42,7 @@ exports.resolveToolGroup = function(groupName) {
 exports.getToolDefinitions = function(filter, activeTitles) {
 	var titles;
 	if (filter) {
-		if (filter.indexOf("all[") === -1) {
+		if (filter.length > 1 && filter.indexOf("all[") === -1) {
 			filter = "[all[shadows+tiddlers]" + filter.substring(1);
 		}
 		titles = $tw.wiki.filterTiddlers(filter);

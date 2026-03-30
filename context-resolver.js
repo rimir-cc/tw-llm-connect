@@ -162,7 +162,7 @@ exports.createOutputTiddler = function(templateTitle, sourceTiddler, content) {
 		var parsed = JSON.parse(substituteVars(fieldsJson, sourceTiddler));
 		extraFields = parsed;
 	} catch(e) {
-		// ignore
+		console.warn("llm-connect: Failed to parse output-fields JSON:", e);
 	}
 
 	var tiddlerFields = $tw.utils.extend({}, extraFields, {

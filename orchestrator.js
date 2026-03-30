@@ -85,12 +85,12 @@ exports.runConversation = function(options) {
 				messages = resolvedMessages;
 				var request = adapter.buildRequest(messages, tools, config);
 				if (options.onRequest) {
-					try { options.onRequest(request); } catch(e) { /* ignore */ }
+					try { options.onRequest(request); } catch(e) { console.warn("llm-connect: hook error:", e); }
 				}
 				return httpRequest(request, options.signal);
 			}).then(function(responseText) {
 				if (options.onResponse) {
-					try { options.onResponse(responseText); } catch(e) { /* ignore */ }
+					try { options.onResponse(responseText); } catch(e) { console.warn("llm-connect: hook error:", e); }
 				}
 				var parsed;
 				try {
@@ -237,7 +237,7 @@ exports.runAction = function(options) {
 	return exports.resolveFileRefs(messages, adapter).then(function(resolvedMessages) {
 		var request = adapter.buildRequest(resolvedMessages, [], config);
 		if (options.onRequest) {
-			try { options.onRequest(request); } catch(e) { /* ignore */ }
+			try { options.onRequest(request); } catch(e) { console.warn("llm-connect: hook error:", e); }
 		}
 		return httpRequest(request);
 	}).then(function(responseText) {
@@ -278,7 +278,7 @@ Get cached models for a provider, or empty array.
 exports.getCachedModels = function(providerName) {
 	var text = $tw.wiki.getTiddlerText("$:/temp/rimir/llm-connect/models/" + providerName);
 	if (!text) return [];
-	try { return JSON.parse(text); } catch(e) { return []; }
+	try { return JSON.parse(text); } catch(e) { console.warn("llm-connect: Failed to parse model cache for " + providerName + ":", e); return []; }
 };
 
 /*

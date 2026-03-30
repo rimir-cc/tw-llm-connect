@@ -16,6 +16,9 @@ Returns { type, content, toolCalls, usage }.
 */
 exports.parseResponse = function(responseText) {
 	var data = JSON.parse(responseText);
+	if (!data.choices || !data.choices[0]) {
+		throw new Error("Invalid API response: missing choices array");
+	}
 	var choice = data.choices[0];
 	var message = choice.message;
 	var result = {
