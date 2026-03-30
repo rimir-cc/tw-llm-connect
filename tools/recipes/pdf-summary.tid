@@ -5,7 +5,7 @@ recipe-name: PDF Summary
 recipe-order: 100
 type: text/vnd.tiddlywiki
 
-\import [[$:/plugins/rimir/llm-connect/ui/tool-selector]]
+\import [[$:/plugins/rimir/llm-connect/ui/chat-toolbar]]
 \whitespace trim
 
 \define panelState() $:/state/rimir/llm-connect/tools-panel/$(currentTiddler)$/open

@@ -23,8 +23,8 @@ exports.startup = function() {
 	document.addEventListener("mousedown", function(e) {
 		var header = e.target.closest(".llm-chat-panel-header");
 		if (!header) return;
-		// Don't drag when clicking buttons
-		if (e.target.closest("button")) return;
+		// Don't drag when clicking interactive elements
+		if (e.target.closest("button, input, label, select, textarea, .llm-tool-selector-dropdown")) return;
 
 		panel = header.closest(".llm-chat-panel");
 		if (!panel) return;

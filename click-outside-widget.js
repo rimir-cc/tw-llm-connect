@@ -12,6 +12,9 @@ module-type: widget
 
 var Widget = require("$:/core/modules/widgets/widget.js").widget;
 
+// One active handler per state tiddler — prevents duplicates from stale widget instances
+var activeHandlers = {};
+
 var ClickOutsideWidget = function(parseTreeNode, options) {
 	this.initialise(parseTreeNode, options);
 };
@@ -22,8 +25,6 @@ ClickOutsideWidget.prototype.render = function(parent, nextSibling) {
 	this.parentDomNode = parent;
 	this.computeAttributes();
 	this.execute();
-
-	// Clean up any previous handler before re-registering
 	this._removeHandler();
 
 	var wrapper = this.document.createElement("div");
@@ -33,26 +34,24 @@ ClickOutsideWidget.prototype.render = function(parent, nextSibling) {
 	var self = this;
 
 	if (this.stateTitle && this.document.addEventListener) {
+		if (activeHandlers[this.stateTitle]) {
+			activeHandlers[this.stateTitle]._removeHandler();
+		}
+		activeHandlers[this.stateTitle] = this;
+
 		this._handler = function(e) {
-			// If wrapper is no longer in the document, clean up and bail
 			if (!self.domWrapper || !self.domWrapper.ownerDocument.contains(self.domWrapper)) {
 				self._removeHandler();
 				return;
 			}
-			// If click is inside our wrapper, ignore
 			if (self.domWrapper.contains(e.target)) {
-				return;
-			}
-			// Also ignore if click is on the toggle button that opens this dropdown
-			// (the button is a sibling, not inside wrapper — let the button's own toggle handle it)
-			var btn = e.target.closest && e.target.closest(".llm-tool-selector-btn");
-			if (btn) {
 				return;
 			}
 			self.wiki.setText(self.stateTitle, "text", null, self.closedValue);
 		};
 		// Defer so the opening click doesn't immediately close
 		setTimeout(function() {
+			if (activeHandlers[self.stateTitle] !== self) return;
 			if (self.domWrapper && self.domWrapper.ownerDocument.contains(self.domWrapper)) {
 				self.document.addEventListener("mousedown", self._handler, true);
 			}
@@ -77,6 +76,9 @@ ClickOutsideWidget.prototype._removeHandler = function() {
 	if (this._handler && this.document.removeEventListener) {
 		this.document.removeEventListener("mousedown", this._handler, true);
 		this._handler = null;
+	}
+	if (activeHandlers[this.stateTitle] === this) {
+		delete activeHandlers[this.stateTitle];
 	}
 };
 

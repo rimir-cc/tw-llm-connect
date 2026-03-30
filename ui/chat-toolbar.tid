@@ -6,11 +6,103 @@ type: text/vnd.tiddlywiki
 <span class="llm-chat-panel-header-left"><span class="llm-chat-pin-wrapper"><button class="llm-chat-btn-pin">&#x1F4CC;</button><div class="llm-chat-pin-menu" style="display:none;"></div></span> <<label>></span>
 \end
 
+\procedure llm-tool-selector(chatTiddler)
+\whitespace trim
+<div class="llm-tool-selector-wrapper">
+<$let selectorState={{{ [[$:/state/rimir/llm-connect/tool-selector/]addsuffix<chatTiddler>] }}}>
+<$button class="tc-btn-invisible llm-tool-selector-btn" tooltip="Select active tools">
+<$list filter="[<chatTiddler>get[llm-tools-init]else[no]!match[yes]]" variable="_">
+<$action-setfield $tiddler=<<chatTiddler>> llm-tools-init="yes"/>
+<$action-listops $tiddler=<<chatTiddler>> $field="llm-active-tools" $filter="[all[shadows]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]]"/>
+</$list>
+<$action-setfield $tiddler=<<selectorState>> text={{{ [<selectorState>get[text]match[open]then[closed]else[open]] }}}/>
+<$transclude $tiddler="$:/plugins/rimir/llm-connect/icon/tools"/>
+</$button>
+<$reveal type="match" state=<<selectorState>> text="open" animate="yes">
+<$click-outside state=<<selectorState>> closedValue="closed">
+<div class="llm-tool-selector-dropdown">
+<div class="llm-tool-selector-actions">
+<$button class="llm-tool-selector-action-btn" tooltip="Enable all tools">
+<$action-listops $tiddler=<<chatTiddler>> $field="llm-active-tools" $filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]]"/>
+All
+</$button>
+<$button class="llm-tool-selector-action-btn" tooltip="Disable all tools">
+<$action-setfield $tiddler=<<chatTiddler>> llm-active-tools=""/>
+None
+</$button>
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool-group]sort[group-name]]" variable="group">
+<$button class="llm-tool-selector-action-btn llm-tool-selector-group-btn" tooltip={{{ [<group>get[group-description]else[Apply tool group]] }}}>
+<$action-setfield $tiddler=<<chatTiddler>> llm-active-tools={{{ [<group>get[group-tools]] }}}/>
+<$text text={{{ [<group>get[group-name]] }}}/>
+</$button>
+</$list>
+</div>
+<div class="llm-tool-selector-list">
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]sort[tool-name]]" variable="tool">
+<label class="llm-tool-selector-item" title={{{ [<tool>get[tool-description]] }}}>
+<$checkbox tiddler=<<chatTiddler>> listField="llm-active-tools" checked=<<tool>>/>&nbsp;<$text text={{{ [<tool>get[tool-name]] }}}/>
+</label>
+</$list>
+</div>
+</div>
+</$click-outside>
+</$reveal>
+</$let>
+</div>
+\end
+
+\procedure llm-context-selector()
+\whitespace trim
+<%if [[$:/plugins/rimir/llm-help]has[plugin-type]] %>
+<$let all-ctx-keys={{{ [all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]get[llm-help-context]enlist-input[]] +[unique[]sort[]join[ ]] }}}>
+<%if [<all-ctx-keys>minlength[1]] %>
+<div class="llm-context-selector-wrapper">
+<$let selectorState="$:/state/rimir/llm-connect/context-selector">
+<$button class="tc-btn-invisible llm-tool-selector-btn" tooltip="Select help context">
+<$action-setfield $tiddler=<<selectorState>> text={{{ [<selectorState>get[text]match[open]then[closed]else[open]] }}}/>
+<$transclude $tiddler="$:/plugins/rimir/llm-connect/icon/help-context"/>
+</$button>
+<$reveal type="match" state=<<selectorState>> text="open" animate="yes">
+<$click-outside state=<<selectorState>> closedValue="closed">
+<div class="llm-tool-selector-dropdown">
+<div class="llm-tool-selector-actions">
+<$button class="llm-tool-selector-action-btn" tooltip="Enable all context">
+<$action-setfield $tiddler="$:/temp/rimir/llm-help/active-context" text=<<all-ctx-keys>>/>
+All
+</$button>
+<$button class="llm-tool-selector-action-btn" tooltip="Clear all context">
+<$action-setfield $tiddler="$:/temp/rimir/llm-help/active-context" text=""/>
+None
+</$button>
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/context-group]sort[group-name]]" variable="group">
+<$button class="llm-tool-selector-action-btn llm-tool-selector-group-btn" tooltip={{{ [<group>get[group-description]else[Apply context group]] }}}>
+<$action-setfield $tiddler="$:/temp/rimir/llm-help/active-context" text={{{ [<group>get[group-contexts]] }}}/>
+<$text text={{{ [<group>get[group-name]] }}}/>
+</$button>
+</$list>
+</div>
+<div class="llm-tool-selector-list">
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]get[llm-help-context]enlist-input[]] +[unique[]sort[]]" variable="ctx-key">
+<$let ctx-page-count={{{ [all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]has[llm-help-context]] :filter[get[llm-help-context]enlist-input[]match<ctx-key>] +[count[]] }}}>
+<label class="llm-tool-selector-item" title={{{ [<ctx-page-count>addsuffix[ help pages]] }}}>
+<$checkbox tiddler="$:/temp/rimir/llm-help/active-context" listField="text" checked=<<ctx-key>> unchecked="" default=""/>&nbsp;<$text text=<<ctx-key>>/> <span class="llm-context-selector-count">(<$text text=<<ctx-page-count>>/>)</span>
+</label>
+</$let>
+</$list>
+</div>
+</div>
+</$click-outside>
+</$reveal>
+</$let>
+</div>
+<%endif%>
+</$let>
+<%endif%>
+\end
+
 \procedure llm-chat-toolbar-actions(chatTiddler)
 \whitespace trim
-<$importvariables filter="[[$:/plugins/rimir/llm-connect/ui/tool-selector]] [[$:/plugins/rimir/llm-connect/ui/context-selector]]">
 <span class="llm-chat-io-wrapper"><button class="llm-chat-btn-export tc-btn-invisible" title="Export chat to clipboard">{{$:/plugins/rimir/llm-connect/icon/export}}</button><button class="llm-chat-btn-import tc-btn-invisible" title="Import chat from clipboard">{{$:/plugins/rimir/llm-connect/icon/import}}</button></span>
 <$transclude $variable="llm-tool-selector" chatTiddler=<<chatTiddler>>/>
 <<llm-context-selector>>
-</$importvariables>
 \end
