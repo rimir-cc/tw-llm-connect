@@ -13,7 +13,8 @@ module-type: widget
 var Widget = require("$:/core/modules/widgets/widget.js").widget;
 
 var CHAT_STATE_FIELDS = ["llm-provider", "llm-model", "llm-active-tools", "llm-tools-init",
-	"llm-context-filter", "llm-protection-mode", "llm-allow-filter", "llm-deny-filter"];
+	"llm-context-filter", "llm-protection-mode", "llm-allow-filter", "llm-deny-filter",
+	"llm-help-context"];
 
 /*
 Render markdown text to HTML using TW's markdown plugin (text/x-markdown parser).
@@ -787,6 +788,11 @@ LlmChatWidget.prototype.sendMessage = function() {
 
 	var protection = this.resolveProtectionForChat(helpers);
 	var protectionFilterBefore = protection.filter;
+
+	// Sync per-chat help context to global tiddler so llm_help tool picks it up
+	var chatTid = this.chatTiddler ? this.wiki.getTiddler(this.chatTiddler) : null;
+	var helpCtx = chatTid && chatTid.fields["llm-help-context"] || "";
+	this.wiki.setText("$:/temp/rimir/llm-help/active-context", "text", null, helpCtx);
 
 	orchestrator.runConversation({
 		messages: messages,

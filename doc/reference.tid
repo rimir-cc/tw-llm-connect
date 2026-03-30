@@ -262,11 +262,14 @@ The following fields on each chat tiddler control per-chat behaviour. They are m
 |`llm-protection-mode` |Protection mode override for this chat — `allow` or `deny` (managed by shield icon dropdown). Switching modes auto-negates the per-chat filter |
 |`llm-allow-filter` |Additional allow filter for this chat (managed by shield icon). Combined with widget attribute and base allow filter |
 |`llm-deny-filter` |Additional deny filter for this chat (managed by shield icon). Combined with widget attribute and base deny filter |
+|`llm-help-context` |Space-separated list of active llm-help context keys (managed by ? icon). Each chat has its own context — synced to the global tiddler before tool execution |
 |`llm-pinned-save` |`"yes"` when chat is pinned (auto-syncing to saved tiddler). Managed by 📌 icon |
 
 !! Help context selector
 
 The ? icon in the chat header allows toggling llm-help context keys directly from the chat. This button is only visible when the `$:/plugins/rimir/llm-help` plugin is installed and at least one context key exists.
+
+Context is stored per-chat on the `llm-help-context` field (like tool selection). When the LLM executes tools, the chat's context is synced to the global `$:/temp/rimir/llm-help/active-context` tiddler so the `llm_help` tool picks it up. Both popup state and context values are independent across global chat, pair-edit panels, and appify chat.
 
 * ''All'' / ''None'' — enable or clear all context keys
 * ''Context groups'' — predefined sets of context keys, configured via tiddlers tagged `$:/tags/rimir/llm-connect/context-group`
