@@ -281,7 +281,7 @@ Context group tiddlers use the same pattern as tool groups:
 |`group-contexts` |Space-separated list of context keys to activate |
 |`group-description` |Tooltip text |
 
-The selector writes to `$:/temp/rimir/llm-help/active-context` — the same state tiddler used by the llm-help settings page, so changes are reflected in both places.
+The selector writes to the chat tiddler's `llm-help-context` field — each chat has independent context. Before tool execution, the chat's context is synced to the global `$:/temp/rimir/llm-help/active-context` tiddler so the `llm_help` tool picks it up.
 
 !! Shared chat toolbar
 

@@ -174,7 +174,25 @@ Max tokens: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/azure/max
   activeConfigTiddler={{{ [<protMode>match[allow]then[$:/config/rimir/llm-connect/allow-filter]else[$:/config/rimir/llm-connect/protection-filter]] }}}
   activeFilter={{{ [<activeConfigTiddler>get[text]] }}}
   isCustom={{{ [<activeConfigTiddler>is[tiddler]then[yes]else[no]] }}}
+  baseProtFilter={{{ [[$:/config/rimir/llm-connect/base-protection-filter]get[text]] }}}
+  baseProtIsCustom={{{ [[$:/config/rimir/llm-connect/base-protection-filter]is[tiddler]then[yes]else[no]] }}}
 >
+
+<div class="rr-input-row">
+Base protection filter: <$edit-text tiddler="$:/config/rimir/llm-connect/base-protection-filter" tag="input" class="rr-input" size="50" placeholder="e.g. [tag[sensitive]]"/> <%if [<baseProtIsCustom>match[yes]] %><$button class="tc-btn-invisible rr-link-btn" style="font-size:inherit;" tooltip="Reset to default">
+<$action-deletetiddler $tiddler="$:/config/rimir/llm-connect/base-protection-filter"/>
+reset to default</$button><%endif%>
+</div>
+<div class="rr-input-row rr-small rr-muted">Part of the base filter — subtracted in allow mode, added in deny mode.</div>
+
+<$let hardProtFilter={{{ [[$:/config/rimir/llm-connect/hard-protection-filter]get[text]] }}} hardProtIsCustom={{{ [[$:/config/rimir/llm-connect/hard-protection-filter]is[tiddler]then[yes]else[no]] }}}>
+<div class="rr-input-row">
+Hard protection filter: <$edit-text tiddler="$:/config/rimir/llm-connect/hard-protection-filter" tag="input" class="rr-input" size="50" placeholder="e.g. [tag[sensitive]]"/> <%if [<hardProtIsCustom>match[yes]] %><$button class="tc-btn-invisible rr-link-btn" style="font-size:inherit;" tooltip="Reset to default">
+<$action-deletetiddler $tiddler="$:/config/rimir/llm-connect/hard-protection-filter"/>
+reset to default</$button><%endif%>
+</div>
+<div class="rr-input-row rr-small rr-muted">Final safety net — applied after all user input (per-chat filters, drag-drop). Cannot be overridden. Tiddlers matching this filter are never accessible to the LLM.</div>
+</$let>
 
 <div class="rr-input-row">
 Protection mode: <$select tiddler=<<modeTiddler>> default="allow" class="rr-input">

@@ -190,6 +190,22 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	addRow.appendChild(protectionInput);
 	protectionRow.appendChild(addRow);
 
+	// Hard protection row (read-only, below user input)
+	var hardRow = this.document.createElement("div");
+	hardRow.className = "llm-chat-protection-base-row";
+	var hardLabel = this.document.createElement("span");
+	hardLabel.className = "llm-chat-protection-label llm-chat-protection-hard-label";
+	hardLabel.textContent = "\uD83D\uDD12";
+	hardLabel.title = "Hard protection — always enforced, cannot be overridden";
+	hardRow.appendChild(hardLabel);
+	var hardSpan = this.document.createElement("code");
+	hardSpan.className = "llm-chat-protection-base";
+	hardSpan.title = "Hard protection filter (from settings — always enforced after all user input)";
+	this.hardProtectionSpan = hardSpan;
+	hardRow.appendChild(hardSpan);
+	this.hardProtectionRow = hardRow;
+	protectionRow.appendChild(hardRow);
+
 	this.updateProtectionLabels();
 	inputArea.appendChild(protectionRow);
 
@@ -1678,11 +1694,10 @@ LlmChatWidget.prototype.loadProtectionInput = function() {
 	if (!this.protectionInput) return;
 	var mode = this.getActiveProtectionMode();
 	var field = mode === "allow" ? "llm-allow-filter" : "llm-deny-filter";
-	var widgetDefault = mode === "allow" ? (this.allowFilterAttr || "") : (this.denyFilterAttr || "");
-	var value = widgetDefault;
+	var value = "";
 	if (this.chatTiddler) {
 		var tid = this.wiki.getTiddler(this.chatTiddler);
-		if (tid && tid.fields[field]) value = tid.fields[field];
+		if (tid) value = tid.fields[field] || "";
 	}
 	this.protectionInput.value = value;
 };
@@ -1725,6 +1740,12 @@ LlmChatWidget.prototype.updateProtectionLabels = function() {
 		var baseFilter = parts.join(" ");
 		this.protectionBaseFilterSpan.textContent = baseFilter;
 		this.protectionBaseRow.style.display = baseFilter ? "" : "none";
+	}
+	// Update hard protection display (below user input)
+	if (this.hardProtectionSpan && this.hardProtectionRow) {
+		var hardProt = this.wiki.getTiddlerText("$:/config/rimir/llm-connect/hard-protection-filter") || "";
+		this.hardProtectionSpan.textContent = hardProt;
+		this.hardProtectionRow.style.display = hardProt ? "" : "none";
 	}
 };
 
@@ -1789,7 +1810,9 @@ LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 	if (changedTiddlers["$:/config/rimir/llm-connect/excluded-plugins"] ||
 		changedTiddlers["$:/config/rimir/llm-connect/protection-mode"] ||
 		changedTiddlers["$:/config/rimir/llm-connect/protection-filter"] ||
-		changedTiddlers["$:/config/rimir/llm-connect/allow-filter"]) {
+		changedTiddlers["$:/config/rimir/llm-connect/allow-filter"] ||
+		changedTiddlers["$:/config/rimir/llm-connect/base-protection-filter"] ||
+		changedTiddlers["$:/config/rimir/llm-connect/hard-protection-filter"]) {
 		this.updateProtectionLabels();
 		this.refreshAccessPanel();
 	}

@@ -25,6 +25,15 @@ exports.resolveProtectionFilter = function(options) {
 		: "$:/config/rimir/llm-connect/protection-filter";
 	var base = $tw.wiki.getTiddlerText(baseConfigTiddler) || "";
 	var extra = (mode === "allow" ? options.allowFilter : options.denyFilter) || "";
+	// Base protection filter — always blocks these tiddlers regardless of mode
+	// Uses {tiddler-reference} to avoid nested-bracket parsing issues
+	var baseProtection = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/base-protection-filter") || "";
+	var baseProtectionSuffix = "";
+	if (baseProtection) {
+		baseProtectionSuffix = mode === "allow"
+			? " -[subfilter{$:/config/rimir/llm-connect/base-protection-filter}]"
+			: " [subfilter{$:/config/rimir/llm-connect/base-protection-filter}]";
+	}
 	// Append excluded plugin filters from checkbox config
 	var excludedText = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/excluded-plugins") || "";
 	var excluded = $tw.utils.parseStringArray(excludedText);
@@ -36,8 +45,17 @@ exports.resolveProtectionFilter = function(options) {
 			pluginFilter += " -[all[shadows+tiddlers]prefix[" + excluded[i] + "]]";
 		}
 	}
+	// Hard protection — absolute final gate, applied after all user input.
+	// Uses {tiddler-reference} to avoid nested-bracket parsing issues
+	var hardProtection = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/hard-protection-filter") || "";
+	var hardSuffix = "";
+	if (hardProtection) {
+		hardSuffix = mode === "allow"
+			? " -[subfilter{$:/config/rimir/llm-connect/hard-protection-filter}]"
+			: " [subfilter{$:/config/rimir/llm-connect/hard-protection-filter}]";
+	}
 	return {
-		filter: (base + " " + extra + pluginFilter).trim(),
+		filter: (base + " " + extra + baseProtectionSuffix + pluginFilter + hardSuffix).trim(),
 		mode: mode
 	};
 };

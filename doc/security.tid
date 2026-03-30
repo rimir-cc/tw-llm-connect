@@ -30,14 +30,17 @@ Switching modes via the shield icon automatically negates the per-chat filter �
 
 Each mode has its own base filter configured in Settings:
 
-* Allow base filter: `$:/config/rimir/llm-connect/allow-filter` (empty by default)
-* Deny base filter: `$:/config/rimir/llm-connect/protection-filter` (default: `[tag[sensitive]]`)
+* Allow base filter: `$:/config/rimir/llm-connect/allow-filter` — defines which tiddlers are accessible in whitelist mode
+* Deny base filter: `$:/config/rimir/llm-connect/protection-filter` — defines which tiddlers are blocked in blacklist mode
 
-The deny base filter protects:
+Two additional cross-mode filters enforce protection regardless of the active mode:
 
-* Tiddlers tagged `sensitive` — user-designated sensitive content
+* ''Base protection filter'': `$:/config/rimir/llm-connect/base-protection-filter` (default: `[tag[sensitive]]`) — part of the base filter chain. Subtracted in allow mode, added in deny mode.
+* ''Hard protection filter'': `$:/config/rimir/llm-connect/hard-protection-filter` (default: `[tag[sensitive]]`) — applied ''after'' all user input (per-chat filters, drag-drop, widget attributes). Cannot be overridden. Shown with a lock icon below the per-chat filter input.
 
-To hide additional tiddlers, extend the deny filter in Settings or use the excluded-plugins checkbox list to block entire plugin namespaces.
+This ensures that `tag[sensitive]` tiddlers are never accessible, even if they appear in a pair-edit whitelist (e.g. because they're linked from the edited tiddler).
+
+To hide additional tiddlers, extend the filters in Settings or use the excluded-plugins checkbox list to block entire plugin namespaces.
 
 !! Restricted wiki proxy
 
@@ -51,13 +54,16 @@ Filter operators (`is[tiddler]`, `get`, `has`, etc.) go through the overridden a
 
 !! Protection filter layers
 
-Protection filters are combined in three layers:
+Protection filters are combined in this order:
 
-# ''Base filter'' — configured in Settings for the active mode. Always active for all chats and actions. Resettable to default via the settings UI.
+# ''Mode-specific base filter'' — configured in Settings for the active mode (allow or deny). Always active.
 # ''Widget attributes'' — `denyFilter` and `allowFilter` on `<$llm-chat>` / `<$llm-action>`. Useful for recipe-based panels that need specific access rules.
-# ''Per-chat filter'' — additional filter set via the shield icon in the chat header. Stored in `llm-deny-filter` / `llm-allow-filter` fields on the chat tiddler.
+# ''Base protection filter'' — always enforced regardless of mode. Subtracted in allow, added in deny.
+# ''Per-chat filter'' — additional filter set via the shield icon. Stored on the chat tiddler.
+# ''Excluded plugins'' — plugins ticked in settings are blocked.
+# ''Hard protection filter'' — absolute final gate. Applied after everything else. Cannot be overridden.
 
-All layers for the active mode are concatenated into a single filter. Per-chat mode can be overridden via the mode dropdown in the shield panel.
+All layers are concatenated into a single filter expression. Per-chat mode can be overridden via the mode dropdown in the shield panel.
 
 !! Defense-in-depth
 

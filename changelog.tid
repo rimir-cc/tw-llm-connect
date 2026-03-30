@@ -6,6 +6,7 @@ type: text/vnd.tiddlywiki
 ! Changelog
 
 |!Version |!Date |!Changes |
+|v0.1.39 |2026-03-30 |Base + hard protection filters. Base protection (`$:/config/rimir/llm-connect/base-protection-filter`, default `[tag[sensitive]]`) is part of the base filter chain. Hard protection (`$:/config/rimir/llm-connect/hard-protection-filter`, default `[tag[sensitive]]`) is the final safety net — applied after all user input, shown with lock icon below the per-chat filter input. Uses `{tiddler-reference}` indirection in `subfilter` to avoid nested-bracket parsing. Deny-mode default filter cleared (sensitive handling moved to base/hard). Pair-edit `allowFilter` uses `\define` with `$(currentTiddler)$` substitution for a readable dynamic filter. Per-chat input no longer pre-filled with widget attribute |
 |v0.1.38 |2026-03-30 |Pair-edit always starts in allow (whitelist) mode. Base filter display now includes widget-level `allowFilter`/`denyFilter` attributes so users see the full effective filter |
 |v0.1.37 |2026-03-30 |Set default allow-filter to include all llm-help pages and functions. Pair-edit: auto-allow current tiddler + its links + child tiddlers (prefix/) in allow mode |
 |v0.1.36 |2026-03-30 |Per-chat help context — `llm-help-context` field on each chat tiddler replaces the shared global tiddler. Context selector popup state is now per-chat. Before tool execution, the chat's context is synced to the global tiddler so `llm_help` picks it up. Persisted with pin/save/restore |
