@@ -15,7 +15,18 @@ var SUPPORTED_MEDIA = {
 	"image/png": "image",
 	"image/gif": "image",
 	"image/webp": "image",
-	"application/pdf": "document"
+	"application/pdf": "document",
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": "document",
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "document",
+	"application/msword": "document",
+	"application/vnd.ms-excel": "document"
+};
+
+// Document types that can be extracted to markdown text via runner
+var EXTRACTABLE_TYPES = {
+	"application/pdf": "extract-pdf",
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": "extract-docx",
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "extract-xlsx"
 };
 
 var EXT_TO_MEDIA = {
@@ -118,6 +129,76 @@ Check if a media type is natively supported by LLM APIs.
 */
 exports.isSupported = function(mediaType) {
 	return !!SUPPORTED_MEDIA[mediaType];
+};
+
+/*
+Check if a media type can be extracted to text via runner.
+*/
+exports.isExtractable = function(mediaType) {
+	return !!EXTRACTABLE_TYPES[mediaType];
+};
+
+/*
+Get cached extracted text for a tiddler title.
+Returns the text string or null if no cache exists.
+*/
+exports.getExtractedText = function(title) {
+	var cacheTitle = title + ".extracted";
+	var tiddler = $tw.wiki.getTiddler(cacheTitle);
+	if (!tiddler) return null;
+	return tiddler.fields.text || null;
+};
+
+/*
+Extract document text via the server-side extraction route and cache the result.
+The route handles download, temp file management, and pandoc/python execution.
+fileInfo: { title, uri, mediaType, filename }
+Returns Promise<string> with extracted markdown text.
+*/
+exports.extractDocument = function(fileInfo) {
+	if (!EXTRACTABLE_TYPES[fileInfo.mediaType]) {
+		return Promise.reject(new Error("Unsupported type for extraction: " + fileInfo.mediaType));
+	}
+
+	var maxOutput = parseInt($tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/max-extraction-size")) || 500000;
+
+	return new Promise(function(resolve, reject) {
+		var xhr = new XMLHttpRequest();
+		var url = "/api/extract?uri=" + encodeURIComponent(fileInfo.uri);
+		xhr.open("GET", url, true);
+		xhr.onload = function() {
+			if (xhr.status >= 200 && xhr.status < 300) {
+				var result;
+				try { result = JSON.parse(xhr.responseText); } catch(e) {
+					reject(new Error("Invalid extraction response"));
+					return;
+				}
+				if (result.status === "ok" && result.output) {
+					var text = result.output;
+					if (text.length > maxOutput) {
+						text = text.substring(0, maxOutput) + "\n\n... [extraction truncated at " + maxOutput + " chars]";
+					}
+					// Cache the extraction as a tiddler
+					var cacheTitle = fileInfo.title + ".extracted";
+					$tw.wiki.addTiddler(new $tw.Tiddler({
+						title: cacheTitle,
+						text: text,
+						type: "text/x-markdown",
+						"extraction-source": fileInfo.title,
+						"extraction-date": new Date().toISOString(),
+						"extraction-media-type": fileInfo.mediaType
+					}));
+					resolve(text);
+				} else {
+					reject(new Error("Extraction failed: " + (result.error || result.output || "unknown error")));
+				}
+			} else {
+				reject(new Error("Extraction request failed: HTTP " + xhr.status));
+			}
+		};
+		xhr.onerror = function() { reject(new Error("Network error calling extraction route")); };
+		xhr.send();
+	});
 };
 
 function inferMediaType(uri) {

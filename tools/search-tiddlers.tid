@@ -4,6 +4,7 @@ tool-name: search_tiddlers
 tool-description: Search tiddlers using a TiddlyWiki filter expression. Returns matching titles with tags. Use filters like [tag[X]], [search[term]], [prefix[$:/]], etc.
 tool-schema: {"type":"object","properties":{"filter":{"type":"string","description":"TiddlyWiki filter expression, e.g. [tag[Project]], [search[meeting]], [!is[system]sort[modified]last[10]]"}},"required":["filter"]}
 tool-mode: read
+tool-model-tier: cheap
 tool-category: core
 type: text/vnd.tiddlywiki
 

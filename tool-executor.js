@@ -64,7 +64,8 @@ exports.getToolDefinitions = function(filter, activeTitles) {
 		tools.push({
 			name: tiddler.fields["tool-name"],
 			description: tiddler.fields["tool-description"] || "",
-			schema: schema
+			schema: schema,
+			tier: tiddler.fields["tool-model-tier"] || "default"
 		});
 	}
 	return tools;

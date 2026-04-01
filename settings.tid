@@ -17,6 +17,7 @@ type: text/vnd.tiddlywiki
 </$button></td>
 <td><code><$text text={{{ [<tool>get[tool-name]] }}}/></code><%if [<isComplete>match[no]] %> <span class="rr-badge-rect llm-tool-badge-incomplete">incomplete</span><%endif%></td>
 <td><span class={{{ [<tool>get[tool-mode]match[action]then[rr-badge-rect llm-tool-badge-action]else[rr-badge-rect llm-tool-badge-read]] }}}><$text text={{{ [<tool>get[tool-mode]] }}}/></span></td>
+<td><span class="rr-muted rr-small"><$text text={{{ [<tool>get[tool-model-tier]else[default]] }}}/></span></td>
 <td><$text text={{{ [<tool>get[tool-description]] }}}/></td>
 <td class="llm-tool-enabled-cell"><%if [<isComplete>match[yes]] %><$checkbox tiddler=<<tool>> field="tool-enabled" checked="yes" unchecked="no" default="yes"/><%endif%></td>
 <td class="llm-tool-actions-cell">
@@ -36,7 +37,7 @@ type: text/vnd.tiddlywiki
 </td>
 </tr>
 <$reveal type="match" state=<<detailState>> text="open" tag="tr">
-<td colspan="6" class="llm-tool-detail-cell">
+<td colspan="7" class="llm-tool-detail-cell">
 <div class="llm-tool-detail">
 <$reveal type="nomatch" state=<<editState>> text="yes">
 <div class="llm-tool-detail-section">
@@ -66,6 +67,14 @@ type: text/vnd.tiddlywiki
 <$select tiddler=<<tool>> field="tool-mode">
 <option value="read">read</option>
 <option value="action">action</option>
+</$select>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Model tier</div>
+<$select tiddler=<<tool>> field="tool-model-tier" default="default">
+<option value="cheap">cheap</option>
+<option value="default">default</option>
+<option value="expensive">expensive</option>
 </$select>
 </div>
 <div class="llm-tool-detail-section">
@@ -106,6 +115,42 @@ type: text/vnd.tiddlywiki
 </$let>
 <span class="rr-muted" style="margin-left:4px;">active provider + model for all chats</span>
 </div>
+
+!! Model tier routing
+
+<span class="rr-muted rr-small">Route tool-use rounds to different models based on tool cost tier. When enabled, the orchestrator switches provider/model per iteration based on the highest tier among called tools. Disabled = all tools use the default model above.</span>
+
+<div class="rr-input-row">
+<$checkbox tiddler="$:/config/rimir/llm-connect/tier-routing-enabled" field="text" checked="yes" unchecked="no" default="no"/> Enable model tier routing
+</div>
+
+<$reveal type="match" state="$:/config/rimir/llm-connect/tier-routing-enabled" text="yes" animate="yes">
+<div class="rr-input-row">
+<strong>Cheap tier</strong> <span class="rr-muted rr-small">(search, get, render, navigate)</span><br/>
+<$select tiddler="$:/config/rimir/llm-connect/tiers/cheap/provider" default="" class="rr-input">
+<option value="">— select provider —</option>
+<option value="claude">Claude</option>
+<option value="openai">OpenAI</option>
+<option value="azure">Azure</option>
+</$select> /
+<$edit-text tiddler="$:/config/rimir/llm-connect/tiers/cheap/model" tag="input" class="rr-input" size="30" placeholder="model id (e.g. gpt-4o-mini)"/>
+</div>
+
+<div class="rr-input-row">
+<strong>Default tier</strong> <span class="rr-muted rr-small">(create, set, delete, attach)</span> — uses chat model above
+</div>
+
+<div class="rr-input-row">
+<strong>Expensive tier</strong> <span class="rr-muted rr-small">(pdf summary, document analysis)</span><br/>
+<$select tiddler="$:/config/rimir/llm-connect/tiers/expensive/provider" default="" class="rr-input">
+<option value="">— select provider —</option>
+<option value="claude">Claude</option>
+<option value="openai">OpenAI</option>
+<option value="azure">Azure</option>
+</$select> /
+<$edit-text tiddler="$:/config/rimir/llm-connect/tiers/expensive/model" tag="input" class="rr-input" size="30" placeholder="model id (e.g. claude-sonnet-4-20250514)"/>
+</div>
+</$reveal>
 
 !! Providers
 
@@ -238,6 +283,18 @@ Max tool result length: <$edit-text tiddler="$:/config/rimir/llm-connect/max-too
 Max file size: <$edit-text tiddler="$:/config/rimir/llm-connect/max-file-size" tag="input" default="20971520" class="rr-input" size="12"/> <span class="rr-muted">bytes — files larger than this are rejected (default 20MB)</span>
 </div>
 
+!! Document extraction
+
+<span class="rr-muted rr-small">When enabled, PDF/DOCX/XLSX files are converted to markdown text via pandoc/python before sending to the LLM. Extracted text is cached per document. Requires the runner plugin and pandoc on the server.</span>
+
+<div class="rr-input-row">
+<$checkbox tiddler="$:/config/rimir/llm-connect/extraction-enabled" field="text" checked="yes" unchecked="no" default="yes"/> Enable document extraction <span class="rr-muted">(uses extracted text instead of base64 — major token savings)</span>
+</div>
+
+<div class="rr-input-row">
+Max extraction size: <$edit-text tiddler="$:/config/rimir/llm-connect/max-extraction-size" tag="input" default="500000" class="rr-input" size="10"/> <span class="rr-muted">characters — truncates extracted text beyond this limit</span>
+</div>
+
 !! Context
 
 <div class="rr-input-row">
@@ -253,12 +310,12 @@ Default context template: <$edit-text tiddler="$:/config/rimir/llm-connect/defau
 <$let newToolState="$:/temp/rimir/llm-connect/new-tool-form">
 
 <table class="rr-table llm-tool-table">
-<tr><th></th><th>Name</th><th>Mode</th><th>Description</th><th>Active</th><th>Actions</th></tr>
+<tr><th></th><th>Name</th><th>Mode</th><th>Tier</th><th>Description</th><th>Active</th><th>Actions</th></tr>
 <$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]is[shadow]sort[tool-name]]" variable="tool">
 <<llm-tool-row>>
 </$list>
 <$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!is[shadow]limit[1]]" variable="_">
-<tr class="llm-tool-divider"><td colspan="6"><span class="rr-muted rr-small">Custom tools</span></td></tr>
+<tr class="llm-tool-divider"><td colspan="7"><span class="rr-muted rr-small">Custom tools</span></td></tr>
 </$list>
 <$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!is[shadow]sort[tool-name]]" variable="tool">
 <<llm-tool-row>>
@@ -293,6 +350,11 @@ Mode: <$select tiddler=<<newToolState>> field="tool-mode" default="read">
 <option value="read">read — render wikitext, return text output</option>
 <option value="action">action — execute action widgets + return confirmation</option>
 </$select>
+Model tier: <$select tiddler=<<newToolState>> field="tool-model-tier" default="default">
+<option value="cheap">cheap</option>
+<option value="default">default</option>
+<option value="expensive">expensive</option>
+</$select>
 </div>
 
 <div class="rr-input-row">
@@ -315,6 +377,7 @@ Wikitext body:
   tool-mode={{{ [<newToolState>get[tool-mode]] }}}
   tool-schema={{{ [<newToolState>get[tool-schema]] }}}
   tool-enabled={{{ [<newToolState>get[tool-enabled]] }}}
+  tool-model-tier={{{ [<newToolState>get[tool-model-tier]] }}}
   text={{{ [<newToolState>get[tool-text]] }}}
   type="text/vnd.tiddlywiki"
 />

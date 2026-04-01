@@ -12,6 +12,67 @@ Tool-use loop orchestrator — manages LLM conversation with tool calls
 
 var MAX_ITERATIONS = 10;
 
+var TIER_PRIORITY = { "cheap": 0, "default": 1, "expensive": 2 };
+
+/*
+Read model-tier routing config from individual config tiddlers.
+Returns config object or null if disabled.
+*/
+function getTierConfig() {
+	var enabled = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/tier-routing-enabled");
+	if (enabled !== "yes") return null;
+	return {
+		tiers: {
+			cheap: {
+				provider: $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/tiers/cheap/provider") || "",
+				model: $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/tiers/cheap/model") || ""
+			},
+			expensive: {
+				provider: $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/tiers/expensive/provider") || "",
+				model: $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/tiers/expensive/model") || ""
+			}
+		}
+	};
+}
+
+/*
+Determine the highest tier among a set of tool calls.
+toolCalls: array of { name, ... } from the API response.
+tools: array of tool definitions (with tier field) from getToolDefinitions.
+Returns "cheap", "default", or "expensive".
+*/
+function getMaxTier(toolCalls, tools) {
+	var toolTierMap = {};
+	for (var i = 0; i < tools.length; i++) {
+		toolTierMap[tools[i].name] = tools[i].tier || "default";
+	}
+	var maxPriority = -1;
+	var maxTier = "default";
+	for (var j = 0; j < toolCalls.length; j++) {
+		var tier = toolTierMap[toolCalls[j].name] || "default";
+		var priority = TIER_PRIORITY[tier] !== undefined ? TIER_PRIORITY[tier] : 1;
+		if (priority > maxPriority) {
+			maxPriority = priority;
+			maxTier = tier;
+		}
+	}
+	return maxTier;
+}
+
+/*
+Build a config override for a given tier.
+Returns a new config object with the tier's provider/model, or the original config if tier is "default".
+*/
+function applyTierConfig(baseConfig, tierConfig, tier) {
+	if (tier === "default" || !tierConfig || !tierConfig.tiers) return baseConfig;
+	var tierDef = tierConfig.tiers[tier];
+	if (!tierDef || !tierDef.provider || !tierDef.model) return baseConfig;
+	// Cross-provider switching within a conversation is unsafe (message formats differ).
+	// Only switch model if provider matches, otherwise skip.
+	if (tierDef.provider !== baseConfig.provider) return baseConfig;
+	return $tw.utils.extend({}, baseConfig, { model: tierDef.model });
+}
+
 exports.getAdapter = function(providerName) {
 	var moduleName = "$:/plugins/rimir/llm-connect/adapter-" + providerName;
 	try {
@@ -54,11 +115,13 @@ exports.runConversation = function(options) {
 	var messages = options.messages;
 	var tools = options.tools || [];
 	var config = options.config;
+	var baseConfig = options.config;
 	var adapter = options.adapter;
 	var toolExecutor = options.toolExecutor;
 	var onUpdate = options.onUpdate || function() {};
 	var onError = options.onError || function() {};
 	var protection = options.protectionFilter || { filter: "", mode: "allow" };
+	var tierConfig = getTierConfig();
 
 	// Build allowed tool names set for execution-time enforcement
 	var allowedToolNames = null;
@@ -66,6 +129,14 @@ exports.runConversation = function(options) {
 		allowedToolNames = {};
 		for (var t = 0; t < tools.length; t++) {
 			allowedToolNames[tools[t].name] = true;
+		}
+	}
+
+	// Ensure the chat tiddler is writable by tools (needed for attach_document's pending queue)
+	if (protection.chatTiddler && protection.mode === "allow") {
+		var chatEscaped = "[[" + protection.chatTiddler + "]]";
+		if (protection.filter.indexOf(chatEscaped) === -1) {
+			protection.filter = (protection.filter + " " + chatEscaped).trim();
 		}
 	}
 
@@ -148,6 +219,12 @@ exports.runConversation = function(options) {
 					}
 
 					onUpdate(messages);
+
+					// Model tier routing: switch model for next iteration based on tool tiers
+					if (tierConfig) {
+						var maxTier = getMaxTier(parsed.toolCalls, tools);
+						config = applyTierConfig(baseConfig, tierConfig, maxTier);
+					}
 
 					// Resolve pending attachments queued by attach_document tool
 					resolvePendingAttachments(protection, adapter).then(function(attachParts) {
@@ -314,6 +391,7 @@ Returns a Promise that resolves with the modified messages array.
 */
 exports.resolveFileRefs = function(messages, adapter) {
 	var fileResolver = require("$:/plugins/rimir/llm-connect/file-resolver");
+	var extractionEnabled = ($tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/extraction-enabled") || "yes") !== "no";
 	var refs = [];
 
 	// Collect all file_ref blocks with their location
@@ -334,23 +412,64 @@ exports.resolveFileRefs = function(messages, adapter) {
 
 	if (refs.length === 0) return Promise.resolve(messages);
 
-	// Fetch all files in parallel
-	var fetchPromises = refs.map(function(r) {
+	// Resolve each ref: try text extraction first (if enabled), fall back to base64
+	var resolvePromises = refs.map(function(r) {
+		var ref = r.ref;
+
+		// If extraction is enabled and the type is extractable, prefer text
+		if (extractionEnabled && fileResolver.isExtractable(ref.mediaType)) {
+			// Check cache first
+			var cached = fileResolver.getExtractedText(ref.title || "");
+			if (cached) {
+				return Promise.resolve({ mode: "extracted", text: cached, title: ref.title || ref.filename });
+			}
+			// Attempt live extraction via runner
+			return fileResolver.extractDocument({
+				title: ref.title || "",
+				uri: ref.uri,
+				mediaType: ref.mediaType,
+				filename: ref.filename
+			}).then(function(text) {
+				return { mode: "extracted", text: text, title: ref.title || ref.filename };
+			})["catch"](function() {
+				// Extraction failed — fall back to base64
+				return fileResolver.fetchAsBase64({
+					uri: ref.uri,
+					mediaType: ref.mediaType,
+					category: ref.category || "document",
+					filename: ref.filename,
+					title: ref.title || ""
+				}).then(function(fileData) {
+					return { mode: "base64", data: fileData };
+				});
+			});
+		}
+
+		// Not extractable (images, unsupported types) — use base64 as before
 		return fileResolver.fetchAsBase64({
-			uri: r.ref.uri,
-			mediaType: r.ref.mediaType,
-			category: r.ref.category || (r.ref.mediaType.indexOf("image/") === 0 ? "image" : "document"),
-			filename: r.ref.filename,
-			title: r.ref.title || ""
+			uri: ref.uri,
+			mediaType: ref.mediaType,
+			category: ref.category || (ref.mediaType.indexOf("image/") === 0 ? "image" : "document"),
+			filename: ref.filename,
+			title: ref.title || ""
+		}).then(function(fileData) {
+			return { mode: "base64", data: fileData };
 		});
 	});
 
-	return Promise.all(fetchPromises).then(function(results) {
-		// Replace file_ref blocks with adapter-specific content blocks
+	return Promise.all(resolvePromises).then(function(results) {
 		for (var k = 0; k < refs.length; k++) {
 			var loc = refs[k];
-			var fileData = results[k];
-			messages[loc.msgIdx].content[loc.blockIdx] = adapter.buildFileBlock(fileData);
+			var result = results[k];
+			if (result.mode === "extracted") {
+				// Replace file_ref with text block containing extracted markdown
+				messages[loc.msgIdx].content[loc.blockIdx] = {
+					type: "text",
+					text: "--- Document: " + result.title + " (extracted text) ---\n" + result.text
+				};
+			} else {
+				messages[loc.msgIdx].content[loc.blockIdx] = adapter.buildFileBlock(result.data);
+			}
 		}
 		return messages;
 	});

@@ -1,0 +1,4 @@
+title: $:/config/rimir/llm-connect/max-extraction-size
+type: text/vnd.tiddlywiki
+
+500000
