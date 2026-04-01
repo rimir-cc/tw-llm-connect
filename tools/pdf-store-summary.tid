@@ -5,6 +5,7 @@ tool-description: Store a summary of a PDF document. Creates a summary tiddler l
 tool-schema: {"type":"object","properties":{"parent_title":{"type":"string","description":"Title of the PDF tiddler being summarized"},"summary":{"type":"string","description":"The summary content in wikitext format with sections and bullet points"},"additional_requirements":{"type":"string","description":"Any additional requirements the user specified (empty string if none)"}},"required":["parent_title","summary"]}
 tool-mode: action
 tool-enabled: yes
+tool-category: pdf
 type: text/vnd.tiddlywiki
 
 <$list filter="[<parent_title>minlength[1]]" variable="_" emptyMessage="Error: Missing 'parent_title' parameter">

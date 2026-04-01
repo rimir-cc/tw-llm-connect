@@ -13,7 +13,7 @@ type: text/vnd.tiddlywiki
 <$button class="tc-btn-invisible llm-tool-selector-btn" tooltip="Select active tools">
 <$list filter="[<chatTiddler>get[llm-tools-init]else[no]!match[yes]]" variable="_">
 <$action-setfield $tiddler=<<chatTiddler>> llm-tools-init="yes"/>
-<$action-listops $tiddler=<<chatTiddler>> $field="llm-active-tools" $filter="[all[shadows]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]]"/>
+<$action-listops $tiddler=<<chatTiddler>> $field="llm-active-tools" $filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]]"/>
 </$list>
 <$action-setfield $tiddler=<<selectorState>> text={{{ [<selectorState>get[text]match[open]then[closed]else[open]] }}}/>
 <$transclude $tiddler="$:/plugins/rimir/llm-connect/icon/tools"/>
@@ -30,19 +30,44 @@ All
 <$action-setfield $tiddler=<<chatTiddler>> llm-active-tools=""/>
 None
 </$button>
-<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool-group]sort[group-name]]" variable="group">
-<$button class="llm-tool-selector-action-btn llm-tool-selector-group-btn" tooltip={{{ [<group>get[group-description]else[Apply tool group]] }}}>
-<$action-setfield $tiddler=<<chatTiddler>> llm-active-tools={{{ [<group>get[group-tools]] }}}/>
-<$text text={{{ [<group>get[group-name]] }}}/>
-</$button>
-</$list>
 </div>
-<div class="llm-tool-selector-list">
-<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]sort[tool-name]]" variable="tool">
+<div class="llm-ctx-tree">
+<$let all-cats={{{ [all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]get[tool-category]] +[unique[]sort[]join[ ]] }}}>
+<$list filter="[enlist<all-cats>]" variable="cat">
+<$let
+  cat-tools={{{ [all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]] :filter[get[tool-category]match<cat>] +[format:titlelist[]join[ ]] }}}
+  cat-count={{{ [enlist<cat-tools>count[]] }}}
+  active-count={{{ [enlist<cat-tools>] :filter[<chatTiddler>get[llm-active-tools]enlist-input[]match<currentTiddler>] +[count[]] }}}
+  state={{{ [<active-count>match[0]then[unchecked]] ~[<active-count>match<cat-count>then[checked]] ~[[indeterminate]] }}}
+  collapse-state={{{ [[$:/state/rimir/llm-connect/tool-tree/]addsuffix<chatTiddler>addsuffix[/]addsuffix<cat>] }}}
+  is-collapsed={{{ [<collapse-state>get[text]] ~[[closed]] }}}
+>
+<div class="llm-ctx-tree-node">
+<$button class={{{ [[llm-ctx-cb llm-ctx-]addsuffix<state>] }}} tooltip={{{ [<cat-count>addsuffix[ tools]] }}}>
+<%if [<state>match[checked]] %>
+<$action-setfield $tiddler=<<chatTiddler>> llm-active-tools={{{ [<chatTiddler>get[llm-active-tools]enlist-input[]] -[enlist<cat-tools>] +[join[ ]] }}}/>
+<%else%>
+<$action-setfield $tiddler=<<chatTiddler>> llm-active-tools={{{ [<chatTiddler>get[llm-active-tools]enlist-input[]] [enlist<cat-tools>] +[unique[]join[ ]] }}}/>
+<%endif%>
+</$button>
+<$button class="llm-ctx-toggle tc-btn-invisible" tooltip="Expand/collapse">
+<$action-setfield $tiddler=<<collapse-state>> text={{{ [<collapse-state>get[text]match[closed]then[open]else[closed]] }}}/>
+<%if [<is-collapsed>match[closed]] %>&#x25B6;<%else%>&#x25BC;<%endif%>
+</$button>
+<span class="llm-ctx-label"><$text text=<<cat>>/> (<$text text=<<cat-count>>/>)</span>
+</div>
+<$reveal type="nomatch" state=<<collapse-state>> text="closed" default="closed" animate="yes">
+<div class="llm-ctx-tree-children">
+<$list filter="[enlist<cat-tools>sort[tool-name]]" variable="tool">
 <label class="llm-tool-selector-item" title={{{ [<tool>get[tool-description]] }}}>
 <$checkbox tiddler=<<chatTiddler>> listField="llm-active-tools" checked=<<tool>>/>&nbsp;<$text text={{{ [<tool>get[tool-name]] }}}/>
 </label>
 </$list>
+</div>
+</$reveal>
+</$let>
+</$list>
+</$let>
 </div>
 </div>
 </$click-outside>

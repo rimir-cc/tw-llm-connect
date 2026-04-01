@@ -4,6 +4,7 @@ tool-name: create_tiddler
 tool-description: Create a new tiddler. Provide either 'title' (exact, fails if exists) or 'basetitle' (auto-numbered if taken, returns actual title). Use set_field to add other fields afterwards. Write operation.
 tool-schema: {"type":"object","properties":{"title":{"type":"string","description":"Exact title for the new tiddler (fails if tiddler already exists)"},"basetitle":{"type":"string","description":"Base title — auto-numbered if taken (e.g. 'Note' → 'Note', 'Note 1', 'Note 2'). Returns the actual title created."},"text":{"type":"string","description":"Text content of the tiddler"},"tags":{"type":"string","description":"Space-separated tags (use [[double brackets]] for multi-word tags)"}}}
 tool-mode: action
+tool-category: core
 type: text/vnd.tiddlywiki
 
 \procedure create-exact()
