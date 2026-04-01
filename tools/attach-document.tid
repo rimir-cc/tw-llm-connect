@@ -7,4 +7,4 @@ tool-mode: action
 tool-category: core
 type: text/vnd.tiddlywiki
 
-<%if [<title>match[]] %>Error: Missing 'title' parameter<%elseif [<title>!is[tiddler]!is[shadow]] %>Error: Tiddler not found: <<title>><%else%><$let chat=<<__chatTiddler__>>><$action-listops $tiddler=<<chat>> $field="llm-pending-attachments" $subfilter="[<title>]"/>Attached: <<title>> — content will be available in the next message.</$let><%endif%>
+<%if [<title>match[]] %>Error: Missing 'title' parameter<%elseif [<title>!is[tiddler]!is[shadow]] %>Error: Tiddler not found: <<title>><%else%><$let chat=<<__chatTiddler>>><$action-listops $tiddler=<<chat>> $field="llm-pending-attachments" $subfilter="[<title>]"/>Attached: <<title>> — content will be available in the next message.</$let><%endif%>
