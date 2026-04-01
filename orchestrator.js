@@ -438,18 +438,22 @@ function resolvePendingAttachments(protection, adapter) {
 
 	var fileResolver = require("$:/plugins/rimir/llm-connect/file-resolver");
 	var parts = [];
-	var fetchPromises = [];
 
 	for (var i = 0; i < pending.length; i++) {
 		var title = pending[i];
 		var fileInfo = fileResolver.detectFile(title);
-		if (fileInfo && fileResolver.isSupported(fileInfo.mediaType)) {
-			fetchPromises.push(fileResolver.fetchAsBase64(fileInfo));
-		} else if (fileInfo) {
-			// Unsupported binary — add metadata only
-			parts.push({ type: "text", text: "[Attached: " + title + " (" + (fileInfo.mediaType || "unknown type") + ") — binary format not supported for inline reading]" });
+		if (fileInfo) {
+			// Binary file — push file_ref with uri for resolveFileRefs to fetch
+			parts.push({
+				type: "file_ref",
+				title: fileInfo.title,
+				uri: fileInfo.uri,
+				mediaType: fileInfo.mediaType,
+				category: fileInfo.category,
+				filename: fileInfo.filename
+			});
 		} else {
-			// Regular text tiddler — include its content
+			// Regular text tiddler — include its content directly
 			var text = $tw.wiki.getTiddlerText(title);
 			if (text) {
 				parts.push({ type: "text", text: "--- Attached: " + title + " ---\n" + text });
@@ -457,24 +461,7 @@ function resolvePendingAttachments(protection, adapter) {
 		}
 	}
 
-	if (fetchPromises.length === 0) {
-		return Promise.resolve(parts.length > 0 ? parts : null);
-	}
-
-	return Promise.all(fetchPromises).then(function(fileDataArray) {
-		for (var f = 0; f < fileDataArray.length; f++) {
-			var fileData = fileDataArray[f];
-			// Use file_ref format — resolveFileRefs will convert to adapter-specific blocks
-			parts.push({
-				type: "file_ref",
-				title: fileData.title,
-				mediaType: fileData.mediaType,
-				category: fileData.category,
-				filename: fileData.filename
-			});
-		}
-		return parts.length > 0 ? parts : null;
-	});
+	return Promise.resolve(parts.length > 0 ? parts : null);
 }
 
 })();
