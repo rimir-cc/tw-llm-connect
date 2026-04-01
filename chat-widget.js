@@ -578,6 +578,26 @@ LlmChatWidget.prototype.execute = function() {
 	this.attachmentsInjected = false;
 };
 
+LlmChatWidget.prototype.initDefaultHelpContext = function() {
+	if (!this.chatTiddler) return;
+	var chatTid = this.wiki.getTiddler(this.chatTiddler);
+	if (chatTid && chatTid.fields["llm-help-context-init"] === "yes") return;
+	var allCtxKeys = this.wiki.filterTiddlers("[all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]get[llm-help-context]enlist-input[]] +[unique[]sort[]]");
+	var defaultPrefixes = this.defaultContextAttr ? $tw.utils.parseStringArray(this.defaultContextAttr) : [];
+	var defaultKeys = allCtxKeys.filter(function(k) {
+		return defaultPrefixes.some(function(p) { return k === p || k.indexOf(p + "/") === 0; });
+	});
+	var fields = { title: this.chatTiddler, "llm-help-context-init": "yes", "llm-help-context": defaultKeys.join(" ") };
+	var existing = this.wiki.getTiddler(this.chatTiddler);
+	if (existing) {
+		if (existing.fields["llm-help-context"]) {
+			fields["llm-help-context"] = existing.fields["llm-help-context"];
+		}
+		fields = $tw.utils.extend({}, existing.fields, fields);
+	}
+	this.wiki.addTiddler(new $tw.Tiddler(fields));
+};
+
 LlmChatWidget.prototype.getMessages = function() {
 	if (!this.chatTiddler) return [];
 	var tiddler = this.wiki.getTiddler(this.chatTiddler);
@@ -826,27 +846,9 @@ LlmChatWidget.prototype.sendMessage = function() {
 	var protection = this.resolveProtectionForChat(helpers);
 	var protectionFilterBefore = protection.filter;
 
-	// Initialize default help context on first message if not yet initialized
+	// Ensure default help context is initialized
+	this.initDefaultHelpContext();
 	var chatTid = this.chatTiddler ? this.wiki.getTiddler(this.chatTiddler) : null;
-	if (this.chatTiddler && (!chatTid || chatTid.fields["llm-help-context-init"] !== "yes")) {
-		var allCtxKeys = this.wiki.filterTiddlers("[function[_llm-help-all-context-keys]]");
-		// Match keys whose prefix appears in the defaultContext attribute
-		var defaultPrefixes = this.defaultContextAttr ? $tw.utils.parseStringArray(this.defaultContextAttr) : [];
-		var defaultKeys = allCtxKeys.filter(function(k) {
-			return defaultPrefixes.some(function(p) { return k === p || k.indexOf(p + "/") === 0; });
-		});
-		var fields = { title: this.chatTiddler, "llm-help-context-init": "yes", "llm-help-context": defaultKeys.join(" ") };
-		var existing = this.wiki.getTiddler(this.chatTiddler);
-		if (existing) {
-			// Preserve existing context if already set (e.g. by environment)
-			if (existing.fields["llm-help-context"]) {
-				fields["llm-help-context"] = existing.fields["llm-help-context"];
-			}
-			fields = $tw.utils.extend({}, existing.fields, fields);
-		}
-		this.wiki.addTiddler(new $tw.Tiddler(fields));
-		chatTid = this.wiki.getTiddler(this.chatTiddler);
-	}
 
 	// Pass help context directly to tool execution via protection object
 	var helpCtx = chatTid && chatTid.fields["llm-help-context"] || "";
