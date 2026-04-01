@@ -432,7 +432,9 @@ function resolvePendingAttachments(protection, adapter) {
 	var chatTid = $tw.wiki.getTiddler(chatTiddler);
 	if (!chatTid) return Promise.resolve(null);
 
-	var pending = $tw.utils.parseStringArray(chatTid.fields["llm-pending-attachments"] || "");
+	var rawField = chatTid.fields["llm-pending-attachments"];
+	console.log("llm-connect: raw llm-pending-attachments field:", JSON.stringify(rawField), "type:", typeof rawField);
+	var pending = $tw.utils.parseStringArray(rawField || "");
 	if (pending.length === 0) return Promise.resolve(null);
 
 	// Clear pending list immediately
