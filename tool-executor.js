@@ -241,10 +241,10 @@ function createRestrictedWiki(protection) {
 		});
 	};
 
-	// Guard write methods: silently block writes to protected titles
+	// Guard write methods: block overwriting existing protected titles, allow new tiddlers
 	wiki.addTiddler = function(tiddler) {
 		var title = typeof tiddler === "string" ? tiddler : (tiddler.fields ? tiddler.fields.title : tiddler.title);
-		if (isBlocked(title)) return;
+		if (isBlocked(title) && $tw.wiki.tiddlerExists(title)) return;
 		return $tw.wiki.addTiddler(tiddler);
 	};
 
