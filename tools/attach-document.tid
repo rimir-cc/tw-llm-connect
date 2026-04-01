@@ -1,0 +1,10 @@
+title: $:/plugins/rimir/llm-connect/tools/attach-document
+tags: $:/tags/rimir/llm-connect/tool
+tool-name: attach_document
+tool-description: Attach a document (PDF, image, or text tiddler) to the conversation so you can read its content. Use this for binary files like PDFs that cannot be read with other tools.
+tool-schema: {"type":"object","properties":{"title":{"type":"string","description":"The exact tiddler title to attach, e.g. 'tender/#512/documents/tender-documents/Part A_Tender requirements.pdf'"}},"required":["title"]}
+tool-mode: action
+tool-category: core
+type: text/vnd.tiddlywiki
+
+<%if [<title>match[]] %>Error: Missing 'title' parameter<%elseif [<title>!is[tiddler]!is[shadow]] %>Error: Tiddler not found: <<title>><%else%><$let chat=<<__chatTiddler__>>><$action-listops $tiddler=<<chat>> $field="llm-pending-attachments" $subfilter="[<title>]"/>Attached: <<title>> — content will be available in the next message.</$let><%endif%>

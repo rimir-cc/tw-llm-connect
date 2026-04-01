@@ -853,6 +853,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 	// Pass help context directly to tool execution via protection object
 	var helpCtx = chatTid && chatTid.fields["llm-help-context"] || "";
 	protection.helpContext = helpCtx;
+	protection.chatTiddler = this.chatTiddler || "";
 
 	orchestrator.runConversation({
 		messages: messages,
