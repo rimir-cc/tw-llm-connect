@@ -25,6 +25,8 @@ llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI, Azure OpenAI) dire
 * ''Provider adapters'' — Claude, OpenAI, and Azure OpenAI out of the box, extensible adapter interface
 * ''Tool system'' — search, read, navigate, create, modify, delete tiddlers; user-defined tools via wikitext
 * ''Multimodal context'' — attach PDFs, images, and text tiddlers via a context filter (📎 icon); binaries are base64-encoded and sent inline
+* ''Document extraction'' — PDF/DOCX/XLSX files are auto-converted to markdown text (via pdftotext/pandoc/openpyxl) before sending to the LLM — massive token savings vs base64. Extracted text cached per document. Requires runner plugin + server-side tools
+* ''Model tier routing'' — assign cost tiers (cheap/default/expensive) to tools; the orchestrator automatically switches models per tool round. Toggle via layers icon in chat header
 * ''Context templates'' — wikitext templates that render input from source tiddlers before sending to the LLM
 * ''Output targets'' — display only, write to field, create new tiddler, or filter-resolved target
 * ''Template precedence'' — tiddler field → prompt template → widget attribute → global default
@@ -39,6 +41,7 @@ llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI, Azure OpenAI) dire
 
 * API key for a supported provider (Claude, OpenAI, or Azure OpenAI)
 * Modern browser (async/await, XMLHttpRequest)
+* ''For document extraction'': runner plugin enabled, plus server-side tools: `pdftotext` (poppler-utils), `pandoc`, `python3-openpyxl`
 
 !! Quick start
 

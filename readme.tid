@@ -17,6 +17,8 @@ In-browser LLM integration with tool use. Connect TiddlyWiki to Claude, OpenAI, 
 * ''Per-chat tool selection'' — wrench icon opens a dropdown to toggle individual tools per chat; tool groups as quick presets
 * ''Help context selector'' — question mark icon (requires llm-help plugin) opens a dropdown to toggle llm-help context keys, with All/None quick buttons and configurable context groups
 * ''Multimodal context'' — attach PDFs, images, and text tiddlers to conversations via a context filter; binary files are fetched, base64-encoded, and sent inline to the LLM
+* ''Document extraction'' — PDF/DOCX/XLSX auto-converted to markdown text via pdftotext/pandoc/openpyxl before sending to the LLM. Cached per document. Falls back to base64 when runner is unavailable
+* ''Model tier routing'' — assign cost tiers (cheap/default/expensive) to tools; orchestrator auto-switches models per tool round. Toggle via layers icon in chat header
 * ''Context templates'' — wikitext templates that render input for the LLM from one or more source tiddlers
 * ''Output targets'' — write LLM responses to fields, new tiddlers, or just display in chat
 * ''Debug panel'' — toggle a live preview of the request payload or inspect the last sent request; base64 data abbreviated for readability

@@ -84,6 +84,8 @@ Tag: `$:/tags/rimir/llm-connect/tool`
 |`tool-schema` |JSON Schema for input parameters |
 |`tool-mode` |`read` — render wikitext, return text output. `action` — render + invoke action widgets, return confirmation text (audit logged) |
 |`tool-enabled` |`yes` (default) / `no` — disabled tools are excluded from LLM tool lists and cannot be invoked. Use this to keep work-in-progress tools inactive |
+|`tool-model-tier` |`cheap` / `default` (default) / `expensive` — cost tier for model tier routing. When tier routing is enabled, the orchestrator switches models based on the highest tier among called tools |
+|`tool-category` |Category name for grouping in the tool selector tree (e.g. `core`, `pdf`) |
 
 !! Per-chat tool selection
 
@@ -120,6 +122,8 @@ A tool is considered ''complete'' when `tool-name`, `tool-schema`, and `text` (b
 |`delete_tiddler` |`action` |Delete a tiddler |
 |`navigate_to_tiddler` |`action` |Open a tiddler in the story river so the user can see it |
 |`wikitext_render` |`read` |Render wikitext and return the text output |
+|`attach_document` |`action` |Attach a binary file (PDF, DOCX, XLSX, image) to the conversation. Queues the document for injection; if extraction is enabled, PDF/DOCX/XLSX are sent as markdown text instead of base64 |
+|`pdf_store_summary` |`action` |Store a structured summary linked to a parent document. Creates a summary tiddler with metadata |
 
 Action-mode tools (`set_field`, `create_tiddler`, `delete_tiddler`, `navigate_to_tiddler`) execute immediately and append an entry to the audit log at `$:/temp/rimir/llm-connect/write-log`.
 
@@ -217,7 +221,7 @@ Creates a summary tiddler linked to a parent PDF. Called by the LLM during PDF s
 
 Summary tiddler conventions:
 
-* Title: `<parent>/summaries/<model>-<timestamp>` (model and timestamp read from config at creation time)
+* Title: `<parent>.summaries/<model>-<timestamp>` (dot-separated to avoid filesystem conflicts when parent ends in a file extension)
 * Tag: `llm-summary`
 * Fields: `parent`, `summary-model`, `summary-timestamp`, `additional-requirements`
 
@@ -241,6 +245,13 @@ Summary tiddler conventions:
 |`$:/config/rimir/llm-connect/max-tool-result-length` |`4000` |Truncation limit |
 |`$:/config/rimir/llm-connect/default-context-template` | |Global default template |
 |`$:/config/rimir/llm-connect/max-file-size` |`20971520` |Maximum file size in bytes for multimodal attachments (default 20 MB) |
+|`$:/config/rimir/llm-connect/extraction-enabled` |`yes` |Enable document extraction — PDF/DOCX/XLSX auto-converted to text via runner |
+|`$:/config/rimir/llm-connect/max-extraction-size` |`500000` |Max characters for extracted document text (truncated beyond this) |
+|`$:/config/rimir/llm-connect/tier-routing-enabled` |`no` |Enable model tier routing — switch models per tool round based on tool tiers |
+|`$:/config/rimir/llm-connect/tiers/cheap/provider` |(empty) |Provider for cheap tier (must match active provider for switching to work) |
+|`$:/config/rimir/llm-connect/tiers/cheap/model` |(empty) |Model ID for cheap tier |
+|`$:/config/rimir/llm-connect/tiers/expensive/provider` |(empty) |Provider for expensive tier |
+|`$:/config/rimir/llm-connect/tiers/expensive/model` |(empty) |Model ID for expensive tier |
 
 !! Accessible tiddlers panel
 
@@ -289,7 +300,8 @@ The selector writes to the chat tiddler's `llm-help-context` field — each chat
 The chat header toolbar (pin, export/import, tool selector, context selector) is defined once in `$:/plugins/rimir/llm-connect/ui/chat-toolbar` and imported by all chat panel templates. Two procedures are available:
 
 * `<<llm-chat-toolbar-left "Label">>` — renders the pin button and label
-* `<<llm-chat-toolbar-actions "chatTiddler">>` — renders export/import buttons, tool selector, and context selector
+* `<<llm-chat-toolbar-actions "chatTiddler">>` — renders export/import buttons, tier routing toggle, tool selector, and context selector
+* `<<llm-tier-toggle>>` — layers icon: hover shows tier config (cheap/default/expensive models), click toggles `$:/config/rimir/llm-connect/tier-routing-enabled`. Icon highlights in primary color when active
 
 External plugins (e.g. appify) can import `chat-toolbar` to get the full toolbar without duplicating markup.
 

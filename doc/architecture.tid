@@ -156,7 +156,49 @@ adapter.buildFileBlock() converts to provider format:
   OpenAI/Azure: { type: "image_url"|"file", ... }
 ```
 
-Supported formats: JPEG, PNG, GIF, WEBP (image), PDF (document). Max file size configurable via `$:/config/rimir/llm-connect/max-file-size` (default 20 MB).
+Supported formats: JPEG, PNG, GIF, WEBP (image), PDF, DOCX, XLSX (document). Max file size configurable via `$:/config/rimir/llm-connect/max-file-size` (default 20 MB).
+
+!! Document extraction — text instead of base64
+
+When extraction is enabled (default), PDF/DOCX/XLSX files are converted to markdown text before sending to the LLM. This replaces the base64-encoded binary with plain text — dramatically reducing token usage.
+
+```
+file_ref block for .pdf/.docx/.xlsx detected in resolveFileRefs()
+    ↓
+Check cache: does "<title>.extracted" tiddler exist?
+    ↓ yes → use cached text
+    ↓ no  → call /api/extract?uri=<canonical_uri> (runner plugin)
+              ↓
+           extract-route.js resolves URI → filesystem path
+              ↓
+           Runs pdftotext (PDF), pandoc (DOCX), or python3 xlsx-to-md.py (XLSX)
+              ↓
+           Returns markdown text → cached as "<title>.extracted" tiddler
+    ↓
+Extracted text injected as { type: "text" } block instead of base64
+    ↓
+Falls back to base64 if extraction fails (runner unavailable, unsupported format)
+```
+
+The extraction route resolves `_canonical_uri` paths to filesystem paths — supports both `files/` (TiddlyWiki built-in) and scattered-binaries profiles. Cache tiddlers persist across restarts via the filesystem adapter.
+
+!! Model tier routing
+
+Tools can be assigned a cost tier via the `tool-model-tier` field: `cheap`, `default`, or `expensive`. When tier routing is enabled, the orchestrator switches the model after each tool round based on the highest tier among the called tools.
+
+```
+Tool round completes → determine max tier among called tools
+    ↓
+cheap → switch to cheap tier model (e.g. haiku)
+default → use chat's selected model (no switch)
+expensive → switch to expensive tier model (e.g. sonnet)
+    ↓
+Next API call uses the switched model
+    ↓
+After next tool round, re-evaluate and switch again if needed
+```
+
+Tier routing is same-provider only — cross-provider switching is blocked because message formats differ between adapters. The layers icon (⚡) in the chat header shows the current config on hover and toggles tier routing on click.
 
 !! Accessible tiddlers panel
 

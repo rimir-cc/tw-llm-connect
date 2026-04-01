@@ -166,9 +166,35 @@ None
 <%endif%>
 \end
 
+\procedure llm-tier-toggle()
+\whitespace trim
+<$let
+  tierEnabled={{{ [[$:/config/rimir/llm-connect/tier-routing-enabled]get[text]else[no]] }}}
+  cheapProvider={{{ [[$:/config/rimir/llm-connect/tiers/cheap/provider]get[text]] }}}
+  cheapModel={{{ [[$:/config/rimir/llm-connect/tiers/cheap/model]get[text]] }}}
+  expProvider={{{ [[$:/config/rimir/llm-connect/tiers/expensive/provider]get[text]] }}}
+  expModel={{{ [[$:/config/rimir/llm-connect/tiers/expensive/model]get[text]] }}}
+  curProvider={{{ [[$:/config/rimir/llm-connect/provider]get[text]else[claude]] }}}
+  curModel={{{ [[$:/config/rimir/llm-connect/providers/]addsuffix<curProvider>addsuffix[/model]get[text]else<curProvider>] }}}
+  tipText={{{ [<tierEnabled>match[yes]then[Tier routing ON]] ~[[Tier routing OFF]] }}}
+  cheapTip={{{ [<cheapModel>minlength[1]] :map:flat[[cheap: ]addsuffix<currentTiddler>] ~[[cheap: (not set)]] }}}
+  defaultTip={{{ [[default (chat model): ]addsuffix<curModel>] }}}
+  expTip={{{ [<expModel>minlength[1]] :map:flat[[expensive: ]addsuffix<currentTiddler>] ~[[expensive: (not set)]] }}}
+>
+<$button class={{{ [[tc-btn-invisible llm-tool-selector-btn]addsuffix[ ]] [<tierEnabled>match[yes]then[llm-tier-active]] +[join[]] }}} tooltip={{{ [<tipText>addsuffix[
+]addsuffix<cheapTip>addsuffix[
+]addsuffix<defaultTip>addsuffix[
+]addsuffix<expTip>] }}}>
+<$action-setfield $tiddler="$:/config/rimir/llm-connect/tier-routing-enabled" text={{{ [<tierEnabled>match[yes]then[no]else[yes]] }}}/>
+<$transclude $tiddler="$:/plugins/rimir/llm-connect/icon/tiers"/>
+</$button>
+</$let>
+\end
+
 \procedure llm-chat-toolbar-actions(chatTiddler)
 \whitespace trim
 <span class="llm-chat-io-wrapper"><button class="llm-chat-btn-export tc-btn-invisible" title="Export chat to clipboard">{{$:/plugins/rimir/llm-connect/icon/export}}</button><button class="llm-chat-btn-import tc-btn-invisible" title="Import chat from clipboard">{{$:/plugins/rimir/llm-connect/icon/import}}</button></span>
+<<llm-tier-toggle>>
 <$transclude $variable="llm-tool-selector" chatTiddler=<<chatTiddler>>/>
 <$transclude $variable="llm-context-selector" chatTiddler=<<chatTiddler>>/>
 \end

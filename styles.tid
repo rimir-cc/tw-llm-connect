@@ -539,6 +539,10 @@ type: text/vnd.tiddlywiki
 	vertical-align: middle;
 }
 
+.llm-tier-active {
+	color: <<colour primary>>;
+}
+
 .llm-tool-selector-dropdown {
 	position: absolute;
 	top: 100%;
