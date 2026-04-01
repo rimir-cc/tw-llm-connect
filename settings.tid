@@ -3,6 +3,38 @@ modified: 20260310120000000
 title: $:/plugins/rimir/llm-connect/settings
 type: text/vnd.tiddlywiki
 
+\procedure tier-model-select(tier, label, hint)
+<$let
+  providerTiddler={{{ [[$:/config/rimir/llm-connect/tiers/]addsuffix<tier>addsuffix[/provider]] }}}
+  modelTiddler={{{ [[$:/config/rimir/llm-connect/tiers/]addsuffix<tier>addsuffix[/model]] }}}
+  tierProvider={{{ [<providerTiddler>get[text]] }}}
+  modelCache={{{ [[$:/temp/rimir/llm-connect/models/]addsuffix<tierProvider>] }}}
+>
+<div class="rr-input-row">
+<strong><<label>></strong> <span class="rr-muted rr-small">(<<hint>>)</span><br/>
+<$select tiddler=<<providerTiddler>> default="" class="rr-input">
+<option value="">— select provider —</option>
+<option value="claude">Claude</option>
+<option value="openai">OpenAI</option>
+<option value="azure">Azure</option>
+</$select> /
+<$select tiddler=<<modelTiddler>> default="">
+<option value="">— select model —</option>
+<$list filter="[<modelCache>get[text]jsonindexes[]] :map:flat[<modelCache>get[text]jsonextract<currentTiddler>jsonget[id]]" variable="modelId">
+<option value=<<modelId>>><$text text=<<modelId>>/></option>
+</$list>
+</$select>
+<%if [<tierProvider>minlength[1]] %>
+<$button class="tc-btn-invisible llm-fetch-models-btn" tooltip="Fetch available models from API">
+<$action-sendmessage $message="tm-llm-fetch-models" provider=<<tierProvider>>/>
+&#x21bb; Fetch models
+</$button>
+<span class="rr-muted rr-small"><$text text={{{ [[$:/temp/rimir/llm-connect/fetch-status/]addsuffix<tierProvider>get[text]] }}}/></span>
+<%endif%>
+</div>
+</$let>
+\end
+
 \procedure llm-tool-row()
 <$let
   detailState={{{ [[$:/state/rimir/llm-connect/tool-detail/]addsuffix<tool>] }}}
@@ -107,7 +139,7 @@ type: text/vnd.tiddlywiki
 </$list>
 <$list filter="[<hasModels>match[yes]]" variable="_">
 <$select tiddler={{{ [[$:/config/rimir/llm-connect/providers/]addsuffix<curProvider>addsuffix[/model]] }}} default="">
-<$list filter="[<modelCache>get[text]jsonindexes[]] :map[<modelCache>get[text]jsonget<currentTiddler>jsonget[id]]" variable="modelId">
+<$list filter="[<modelCache>get[text]jsonindexes[]] :map:flat[<modelCache>get[text]jsonextract<currentTiddler>jsonget[id]]" variable="modelId">
 <option value=<<modelId>>><$text text=<<modelId>>/></option>
 </$list>
 </$select>
@@ -125,31 +157,15 @@ type: text/vnd.tiddlywiki
 </div>
 
 <$reveal type="match" state="$:/config/rimir/llm-connect/tier-routing-enabled" text="yes" animate="yes">
-<div class="rr-input-row">
-<strong>Cheap tier</strong> <span class="rr-muted rr-small">(search, get, render, navigate)</span><br/>
-<$select tiddler="$:/config/rimir/llm-connect/tiers/cheap/provider" default="" class="rr-input">
-<option value="">— select provider —</option>
-<option value="claude">Claude</option>
-<option value="openai">OpenAI</option>
-<option value="azure">Azure</option>
-</$select> /
-<$edit-text tiddler="$:/config/rimir/llm-connect/tiers/cheap/model" tag="input" class="rr-input" size="30" placeholder="model id (e.g. gpt-4o-mini)"/>
-</div>
+
+<<tier-model-select "cheap" "Cheap tier" "search, get, render, navigate">>
 
 <div class="rr-input-row">
 <strong>Default tier</strong> <span class="rr-muted rr-small">(create, set, delete, attach)</span> — uses chat model above
 </div>
 
-<div class="rr-input-row">
-<strong>Expensive tier</strong> <span class="rr-muted rr-small">(pdf summary, document analysis)</span><br/>
-<$select tiddler="$:/config/rimir/llm-connect/tiers/expensive/provider" default="" class="rr-input">
-<option value="">— select provider —</option>
-<option value="claude">Claude</option>
-<option value="openai">OpenAI</option>
-<option value="azure">Azure</option>
-</$select> /
-<$edit-text tiddler="$:/config/rimir/llm-connect/tiers/expensive/model" tag="input" class="rr-input" size="30" placeholder="model id (e.g. claude-sonnet-4-20250514)"/>
-</div>
+<<tier-model-select "expensive" "Expensive tier" "pdf summary, document analysis">>
+
 </$reveal>
 
 !! Providers
