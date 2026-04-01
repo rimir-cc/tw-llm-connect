@@ -151,12 +151,14 @@ exports.runConversation = function(options) {
 
 					// Resolve pending attachments queued by attach_document tool
 					resolvePendingAttachments(protection, adapter).then(function(attachParts) {
+						console.log("llm-connect: pending attachments result:", attachParts ? attachParts.length + " parts" : "null", "chatTiddler:", protection.chatTiddler);
 						if (attachParts && attachParts.length > 0) {
 							messages.push({ role: "user", content: attachParts });
 							onUpdate(messages);
 						}
 						doIteration();
-					})["catch"](function() {
+					})["catch"](function(err) {
+						console.warn("llm-connect: resolvePendingAttachments error:", err);
 						doIteration();
 					});
 				}
