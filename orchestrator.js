@@ -223,7 +223,11 @@ exports.runConversation = function(options) {
 					// Model tier routing: switch model for next iteration based on tool tiers
 					if (tierConfig) {
 						var maxTier = getMaxTier(parsed.toolCalls, tools);
+						var prevModel = config.model;
 						config = applyTierConfig(baseConfig, tierConfig, maxTier);
+						if (config.model !== prevModel) {
+							console.log("llm-connect: tier routing — switched from", prevModel, "to", config.model, "(tier:", maxTier + ")");
+						}
 					}
 
 					// Resolve pending attachments queued by attach_document tool
