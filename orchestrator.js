@@ -151,14 +151,12 @@ exports.runConversation = function(options) {
 
 					// Resolve pending attachments queued by attach_document tool
 					resolvePendingAttachments(protection, adapter).then(function(attachParts) {
-						console.log("llm-connect: pending attachments result:", attachParts ? attachParts.length + " parts" : "null", "chatTiddler:", protection.chatTiddler);
 						if (attachParts && attachParts.length > 0) {
 							messages.push({ role: "user", content: attachParts });
 							onUpdate(messages);
 						}
 						doIteration();
-					})["catch"](function(err) {
-						console.warn("llm-connect: resolvePendingAttachments error:", err);
+					})["catch"](function() {
 						doIteration();
 					});
 				}
@@ -432,9 +430,7 @@ function resolvePendingAttachments(protection, adapter) {
 	var chatTid = $tw.wiki.getTiddler(chatTiddler);
 	if (!chatTid) return Promise.resolve(null);
 
-	var rawField = chatTid.fields["llm-pending-attachments"];
-	console.log("llm-connect: raw llm-pending-attachments field:", JSON.stringify(rawField), "type:", typeof rawField);
-	var pending = $tw.utils.parseStringArray(rawField || "");
+	var pending = $tw.utils.parseStringArray(chatTid.fields["llm-pending-attachments"] || "");
 	if (pending.length === 0) return Promise.resolve(null);
 
 	// Clear pending list immediately
