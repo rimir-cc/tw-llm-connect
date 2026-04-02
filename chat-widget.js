@@ -352,6 +352,7 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 		e.stopPropagation();
 		if (debugMenu.style.display === "none") {
 			debugMenu.style.display = "block";
+			self.updateDebugMenuState();
 			// Position fixed menu above the debug button
 			var rect = debugBtn.getBoundingClientRect();
 			debugMenu.style.bottom = (window.innerHeight - rect.top + 4) + "px";
@@ -956,14 +957,14 @@ LlmChatWidget.prototype.populateDebugMenu = function(menu) {
 LlmChatWidget.prototype.updateDebugMenuState = function() {
 	if (!this.debugMenu) return;
 	var TOOL_DISPLAY = {
-		"none":    { label: "No Tool-Calls",       icon: "\u2699\uFE0F", indicator: "\u25CB \u25CB \u25CB" },
-		"brief":   { label: "Brief Tool-Calls",    icon: "\u2699\uFE0F", indicator: "\u25CF \u25CB \u25CB" },
-		"details": { label: "Detailed Tool-Calls", icon: "\u2699\uFE0F", indicator: "\u25CF \u25CF \u25CB" }
+		"none":    { label: "No Tool-Calls",       icon: "\u2699\uFE0F", indicator: "\u25CF \u25CB \u25CB" },
+		"brief":   { label: "Brief Tool-Calls",    icon: "\u2699\uFE0F", indicator: "\u25CF \u25CF \u25CB" },
+		"details": { label: "Detailed Tool-Calls", icon: "\u2699\uFE0F", indicator: "\u25CF \u25CF \u25CF" }
 	};
 	var items = this.debugMenu.querySelectorAll(".llm-chat-debug-menu-item");
 	for (var i = 0; i < items.length; i++) {
 		var id = items[i].getAttribute("data-panel-id");
-		var check = items[i].querySelector(".llm-chat-debug-menu-check");
+		var check = items[i].querySelector(".llm-chat-debug-menu-check, .llm-chat-debug-menu-indicator");
 		var isActive = false;
 		if (id === "tool-display") {
 			isActive = this.toolDisplayMode !== "none";
