@@ -32,10 +32,10 @@ None
 </$button>
 </div>
 <div class="llm-ctx-tree">
-<$let all-cats={{{ [all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]get[tool-category]] +[unique[]sort[]join[ ]] }}}>
+<$let all-cats={{{ [all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]get[tool-category]] +[unique[]] +[sort[]] +[join[ ]] }}}>
 <$list filter="[enlist<all-cats>]" variable="cat">
 <$let
-  cat-tools={{{ [all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]] :filter[get[tool-category]match<cat>] +[format:titlelist[]join[ ]] }}}
+  cat-tools={{{ [all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]] :filter[get[tool-category]match<cat>] +[format:titlelist[]] +[join[ ]] }}}
   cat-count={{{ [enlist<cat-tools>count[]] }}}
   active-count={{{ [enlist<cat-tools>] :filter[<chatTiddler>get[llm-active-tools]enlist-input[]match<currentTiddler>] +[count[]] }}}
   state={{{ [<active-count>match[0]then[unchecked]] ~[<active-count>match<cat-count>then[checked]] ~[[indeterminate]] }}}
@@ -47,7 +47,7 @@ None
 <%if [<state>match[checked]] %>
 <$action-setfield $tiddler=<<chatTiddler>> llm-active-tools={{{ [<chatTiddler>get[llm-active-tools]enlist-input[]] -[enlist<cat-tools>] +[join[ ]] }}}/>
 <%else%>
-<$action-setfield $tiddler=<<chatTiddler>> llm-active-tools={{{ [<chatTiddler>get[llm-active-tools]enlist-input[]] [enlist<cat-tools>] +[unique[]join[ ]] }}}/>
+<$action-setfield $tiddler=<<chatTiddler>> llm-active-tools={{{ [<chatTiddler>get[llm-active-tools]enlist-input[]] [enlist<cat-tools>] +[unique[]] +[join[ ]] }}}/>
 <%endif%>
 </$button>
 <$button class="llm-ctx-toggle tc-btn-invisible" tooltip="Expand/collapse">
@@ -78,14 +78,14 @@ None
 
 \procedure llm-ctx-tree-node(prefix, chatTiddler, all-keys, depth:"0")
 \whitespace trim
-<$let children={{{ [enlist<all-keys>prefix<prefix>removeprefix<prefix>] :map[split[/]first[]] +[!is[blank]unique[]sort[]join[ ]] }}}
+<$let children={{{ [enlist<all-keys>prefix<prefix>removeprefix<prefix>] :map[split[/]first[]] +[!is[blank]] +[unique[]] +[sort[]] +[join[ ]] }}}
   next-depth={{{ [<depth>add[1]] }}}
 >
 <$list filter="[enlist<children>]" variable="segment">
 <$let
   node-key={{{ [<prefix>match[]then<segment>] ~[<prefix>addsuffix<segment>] }}}
   node-prefix={{{ [<node-key>addsuffix[/]] }}}
-  descendants={{{ [enlist<all-keys>prefix<node-prefix>] [enlist<all-keys>match<node-key>] +[unique[]join[ ]] }}}
+  descendants={{{ [enlist<all-keys>prefix<node-prefix>] [enlist<all-keys>match<node-key>] +[unique[]] +[join[ ]] }}}
   desc-count={{{ [enlist<descendants>count[]] }}}
   active-count={{{ [enlist<descendants>] :filter[<chatTiddler>get[llm-help-context]enlist-input[]match<currentTiddler>] +[count[]] }}}
   has-children={{{ [enlist<all-keys>prefix<node-prefix>first[]] }}}
@@ -100,7 +100,7 @@ None
 <%if [<state>match[checked]] %>
 <$action-setfield $tiddler=<<chatTiddler>> llm-help-context={{{ [<chatTiddler>get[llm-help-context]enlist-input[]] -[enlist<descendants>] +[join[ ]] }}}/>
 <%else%>
-<$action-setfield $tiddler=<<chatTiddler>> llm-help-context={{{ [<chatTiddler>get[llm-help-context]enlist-input[]] [enlist<descendants>] +[unique[]sort[]join[ ]] }}}/>
+<$action-setfield $tiddler=<<chatTiddler>> llm-help-context={{{ [<chatTiddler>get[llm-help-context]enlist-input[]] [enlist<descendants>] +[unique[]] +[sort[]] +[join[ ]] }}}/>
 <%endif%>
 </$button>
 <%if [<has-children>minlength[1]] %>
@@ -126,7 +126,7 @@ None
 \procedure llm-context-selector(chatTiddler)
 \whitespace trim
 <%if [[$:/plugins/rimir/llm-help]has[plugin-type]] %>
-<$let all-ctx-keys={{{ [all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]get[llm-help-context]enlist-input[]] +[unique[]sort[]join[ ]] }}}>
+<$let all-ctx-keys={{{ [all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]get[llm-help-context]enlist-input[]] +[unique[]] +[sort[]] +[join[ ]] }}}>
 <%if [<all-ctx-keys>minlength[1]] %>
 <div class="llm-context-selector-wrapper">
 <$let selectorState={{{ [[$:/state/rimir/llm-connect/context-selector/]addsuffix<chatTiddler>] }}}>

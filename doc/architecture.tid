@@ -218,14 +218,15 @@ On restore, `restoreChat()` copies all fields back to the chat tiddler and resto
 
 `resolveProtectionForChat()` automatically adds the `sourceTiddler` (from the `tiddler` attribute) to the effective filter — `[[title]]` in allow mode, `-[[title]]` in deny mode. This ensures pair-edit always has tool access to the tiddler being edited.
 
-!! Debug panel
+!! Debug panel system
 
-The chat widget includes a debug panel (🐛 icon) that is added/removed from the DOM on toggle — no hidden elements consuming layout space. Two tabs:
+The 🐛 button opens a dropdown menu listing inspection panels. The active panel renders inside `inputArea` above the button row (toolbar always stays at bottom). Architecture:
 
-* ''Preview'' — live preview of the request that would be sent (provider, model, system prompt, messages, pending input, context attachments, tools, protection filter). Updates in real-time as the user types or changes inputs.
-* ''Sent'' — the last actual HTTP request body sent to the provider API. Base64 data and data URIs are abbreviated for readability.
-
-The debug panel is a sibling of the chat container in the DOM (not a child), so it participates directly in the panel's flex layout and resizes correctly with the chat window.
+* ''Panel registry'' — built at render time by `buildDebugPanelRegistry()`. Merges built-in JS panels (preview, sent, response, accessible tiddlers, logging) with wikitext panels discovered via tag `$:/tags/rimir/llm-connect/debug-panel`.
+* ''JS panels'' — render into a content div via `panel.render(el)`. Preview/sent/response use `<pre>` elements updated by `refreshDebugPanel()`.
+* ''Wikitext panels'' — parsed via `$tw.wiki.parseTiddler()`, rendered via `makeWidget()` with `chatTiddler` variable. Widget ref stored for `refresh(changedTiddlers)`.
+* ''Toggle panels'' — no debug area; execute a callback (e.g. tristate tool-call display).
+* ''Logging'' — `this.log(category, message)` appends timestamped entries to `this.debugLog[]`. Orchestrator receives `onLog` callback for tool/tier/request events.
 
 </$fill>
 </$transclude>

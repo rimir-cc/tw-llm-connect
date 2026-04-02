@@ -165,17 +165,41 @@ type: text/vnd.tiddlywiki
 </$list>
 ```
 
-!! Debug panel
+!! Debug panel system
 
-The debug panel (toggled via the bug icon in the button row) has three tabs:
+The debug button (🐛) in the bottom toolbar opens a dropdown menu listing all available inspection panels. Click a panel name to open it between the textarea and the toolbar. Click again to close. The panel system is extensible — any plugin can register panels via the tag `$:/tags/rimir/llm-connect/debug-panel`.
 
-* ''Preview'' — live preview of what will be sent on the next message: provider, model, system prompt, current messages, pending input, context that would be injected, active tools, and protection filter. Updates in real time as you type or change settings.
-* ''Sent'' — the raw JSON request body from the last API call. Base64 data (images, PDFs) is abbreviated to keep the display readable.
-* ''Response'' — the raw JSON response from the last API call, also with base64 abbreviation.
+!!! Built-in panels
+
+* ''Request Preview'' — live preview of what will be sent: provider, model, system prompt, messages, pending input, context, tools, protection. Updates as you type.
+* ''Last Request Sent'' — raw JSON request body from the last API call. Base64 abbreviated.
+* ''Last Response'' — raw JSON response from the last API call. Base64 abbreviated.
+* ''Accessible Tiddlers'' — scrollable list of tiddlers the LLM can access based on the active protection filter. Supports drag-and-drop to add/remove tiddlers from the filter.
+* ''Logging'' — timestamped debug log of send/request/response/tool execution/tier routing/errors. In-memory only (cleared on reload). Clear button to reset.
+* ''Active Tools (int. data)'' — shows the resolved active tool set with name, category, and model tier. Reflects the actual tools the LLM receives (default set before first tool selector click, explicit set after).
+
+!!! Tool-call display (tristate)
+
+The ''No Tool-Calls'' / ''Brief Tool-Calls'' / ''Detailed Tool-Calls'' entry cycles through three display modes for tool-call messages in the chat history:
+
+* ''No Tool-Calls'' (default) — tool messages hidden. An animated `...` indicator appears while tools are executing in the background.
+* ''Brief Tool-Calls'' — collapsed one-line summaries visible. Click individual messages to expand.
+* ''Detailed Tool-Calls'' — all tool messages fully expanded.
+
+!!! Wikitext panels (extensibility)
+
+Tag a tiddler with `$:/tags/rimir/llm-connect/debug-panel` and set these fields:
+
+|!Field |!Description |
+|`panel-name` |Display name in the menu |
+|`panel-icon` |Emoji or icon reference |
+|`panel-order` |Numeric sort order (lower = higher in menu) |
+
+The tiddler body is wikitext, rendered with `<<chatTiddler>>` variable available. Example: the ''Help Context (int. data)'' panel is shipped by the llm-help plugin and shows the active help context keys.
 
 !! Token estimate
 
-The button row shows an approximate token count: `~3.2k tok (1.8k in / 1.4k out)`. This is a rough estimate using ~4 characters per token. "In" counts assistant message text, "out" counts user messages, context, and tool results. Base64 image/document data is excluded from the count. The display updates after each message exchange.
+The toolbar header shows an approximate token count: `~3.2k tok (1.8k in / 1.4k out)`. This is a rough estimate using ~4 characters per token. "In" counts assistant message text, "out" counts user messages, context, and tool results. Base64 image/document data is excluded. Updates after each message exchange.
 
 !! Tools panel (ViewTemplate)
 
