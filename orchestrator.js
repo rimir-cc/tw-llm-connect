@@ -120,8 +120,12 @@ exports.runConversation = function(options) {
 	var toolExecutor = options.toolExecutor;
 	var onUpdate = options.onUpdate || function() {};
 	var onError = options.onError || function() {};
+	var onLog = options.onLog || function() {};
 	var protection = options.protectionFilter || { filter: "", mode: "allow" };
 	var tierConfig = getTierConfig();
+	if (tierConfig) {
+		onLog("tier", "tier config loaded — cheap: " + (tierConfig.tiers.cheap.model || "(none)") + ", expensive: " + (tierConfig.tiers.expensive.model || "(none)"));
+	}
 
 	// Build allowed tool names set for execution-time enforcement
 	var allowedToolNames = null;
@@ -145,11 +149,13 @@ exports.runConversation = function(options) {
 
 		function doIteration() {
 			if (iteration >= MAX_ITERATIONS) {
+				onLog("loop", "max iterations reached (" + MAX_ITERATIONS + ")");
 				onUpdate(messages);
 				resolve(messages);
 				return;
 			}
 			iteration++;
+			onLog("loop", "iteration " + iteration + " — model=" + config.model);
 
 			// Resolve file_ref blocks before building the API request
 			exports.resolveFileRefs(messages, adapter).then(function(resolvedMessages) {
@@ -173,6 +179,7 @@ exports.runConversation = function(options) {
 				}
 
 				if (parsed.type === "text") {
+					onLog("response", "text reply, " + (parsed.content ? parsed.content.length : 0) + " chars");
 					messages.push({ role: "assistant", content: parsed.content });
 					onUpdate(messages);
 					resolve(messages);
@@ -182,6 +189,7 @@ exports.runConversation = function(options) {
 				if (parsed.type === "tool_use") {
 					// Add assistant message with tool calls
 					messages.push(adapter.buildAssistantMessage(parsed));
+					onLog("tool", "LLM requested " + parsed.toolCalls.length + " tool call(s): " + parsed.toolCalls.map(function(c) { return c.name; }).join(", "));
 
 					// Execute each tool call (enforce allowed set)
 					for (var i = 0; i < parsed.toolCalls.length; i++) {
@@ -189,8 +197,11 @@ exports.runConversation = function(options) {
 						var result;
 						if (allowedToolNames && !allowedToolNames[tc.name]) {
 							result = "Error: Tool not available in current chat: " + tc.name;
+							onLog("tool", "BLOCKED " + tc.name + " (not in active set)");
 						} else {
 							result = toolExecutor.executeTool(tc, protection);
+							var resultPreview = typeof result === "string" ? result.substring(0, 120) : String(result).substring(0, 120);
+							onLog("tool", "executed " + tc.name + " → " + resultPreview + (result.length > 120 ? "..." : ""));
 							// Auto-add created/modified tiddlers to protection filter for subsequent calls
 							if (tc.input && result.indexOf("Error:") !== 0) {
 								var createdTitle = tc.input.title;
@@ -225,7 +236,9 @@ exports.runConversation = function(options) {
 						var maxTier = getMaxTier(parsed.toolCalls, tools);
 						var prevModel = config.model;
 						config = applyTierConfig(baseConfig, tierConfig, maxTier);
+						onLog("tier", "max tool tier=" + maxTier + " → model=" + config.model);
 						if (config.model !== prevModel) {
+							onLog("tier", "SWITCHED from " + prevModel + " to " + config.model);
 							console.log("llm-connect: tier routing — switched from", prevModel, "to", config.model, "(tier:", maxTier + ")");
 						}
 					}

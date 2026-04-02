@@ -56,6 +56,7 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 		messagesDiv.style.minHeight = "0";
 	}
 	this.messagesDiv = messagesDiv;
+	messagesDiv.classList.add("llm-chat-tools-none");
 	container.appendChild(messagesDiv);
 
 	// Render existing messages
@@ -289,32 +290,7 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 
 	buttonRow.appendChild(modelSelector);
 
-	// Token estimate display
-	var tokenLabel = this.document.createElement("span");
-	tokenLabel.className = "llm-chat-token-label";
-	this.tokenLabel = tokenLabel;
-	this.updateTokenDisplay();
-	buttonRow.appendChild(tokenLabel);
-
-	// Help context button + debug panel
-	var helpCtxBtn = this.document.createElement("button");
-	helpCtxBtn.className = "llm-chat-help-ctx-btn";
-	helpCtxBtn.title = "Show/hide active help context keys for this chat";
-	this.helpCtxBtn = helpCtxBtn;
-	this.updateHelpContextDisplay();
-
-	var helpCtxPanel = this.document.createElement("div");
-	helpCtxPanel.className = "llm-chat-help-ctx-panel";
-	helpCtxPanel.style.display = "none";
-	this.helpCtxPanel = helpCtxPanel;
-
-	helpCtxBtn.addEventListener("click", function() {
-		var visible = helpCtxPanel.style.display !== "none";
-		helpCtxPanel.style.display = visible ? "none" : "block";
-		if (!visible) self.refreshHelpContextPanel();
-	});
-	buttonRow.appendChild(helpCtxBtn);
-	inputArea.appendChild(helpCtxPanel);
+	// Token label is in the toolbar header (wikitext), hooked up after render
 
 	// Paperclip icon to toggle context filter
 	var contextBtn = this.document.createElement("button");
@@ -338,142 +314,63 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	});
 	buttonRow.appendChild(shieldBtn);
 
-	// Eye icon to toggle accessible tiddlers panel
-	var accessPanel = this.document.createElement("div");
-	accessPanel.className = "llm-chat-access-panel";
-	accessPanel.style.display = "none";
-	this.accessPanel = accessPanel;
+	this.toolDisplayMode = "none"; // "none" | "brief" | "details"
 
-	var accessHeader = this.document.createElement("div");
-	accessHeader.className = "llm-chat-access-header";
-	var accessTitle = this.document.createElement("span");
-	accessTitle.className = "llm-chat-access-title";
-	this.accessTitle = accessTitle;
-	accessHeader.appendChild(accessTitle);
-	accessPanel.appendChild(accessHeader);
+	// Debug button + dropdown menu + panel
+	this.lastRequestBody = null;
+	this.lastResponseBody = null;
+	this.activeDebugPanel = null;
+	this.activeWikitextWidget = null;
+	this.debugLog = [];
 
-	var accessList = this.document.createElement("div");
-	accessList.className = "llm-chat-access-list";
-	this.accessList = accessList;
-	accessPanel.appendChild(accessList);
-
-	// Drop zone for adding/removing tiddlers
-	accessPanel.addEventListener("dragover", function(e) {
-		e.preventDefault();
-		accessPanel.classList.add("llm-chat-access-dragover");
-	});
-	accessPanel.addEventListener("dragleave", function(e) {
-		if (!accessPanel.contains(e.relatedTarget)) {
-			accessPanel.classList.remove("llm-chat-access-dragover");
-		}
-	});
-	accessPanel.addEventListener("drop", function(e) {
-		e.preventDefault();
-		accessPanel.classList.remove("llm-chat-access-dragover");
-		var jsonData = e.dataTransfer.getData("text/vnd.tiddler") || e.dataTransfer.getData("text/plain");
-		if (!jsonData) return;
-		var title;
-		try {
-			var parsed = JSON.parse(jsonData);
-			title = Array.isArray(parsed) ? parsed[0].title : parsed.title;
-		} catch(ex) {
-			title = jsonData.trim();
-		}
-		if (!title) return;
-		self.handleAccessDrop(title);
-	});
-
-	var accessBtn = this.document.createElement("button");
-	accessBtn.className = "llm-chat-btn-access";
-	accessBtn.textContent = "\uD83D\uDC41\uFE0F";
-	accessBtn.title = "Show accessible tiddlers (drop tiddlers to add/remove)";
-	accessBtn.addEventListener("click", function() {
-		var visible = accessPanel.style.display !== "none";
-		accessPanel.style.display = visible ? "none" : "block";
-		if (!visible) self.refreshAccessPanel();
-	});
-	buttonRow.appendChild(accessBtn);
-	inputArea.appendChild(accessPanel);
-
-	// Tool output toggle (expand/collapse tool messages in chat)
-	this.toolOutputExpanded = false;
-	var toolToggleBtn = this.document.createElement("button");
-	toolToggleBtn.className = "llm-chat-btn-tool-toggle";
-	toolToggleBtn.textContent = "\u2699\uFE0F";
-	toolToggleBtn.title = "Expand tool call details (currently collapsed)";
-	this.toolToggleBtn = toolToggleBtn;
-	toolToggleBtn.addEventListener("click", function() {
-		self.toolOutputExpanded = !self.toolOutputExpanded;
-		toolToggleBtn.title = self.toolOutputExpanded
-			? "Collapse tool call details (currently expanded)"
-			: "Expand tool call details (currently collapsed)";
-		toolToggleBtn.classList.toggle("llm-chat-btn-active", self.toolOutputExpanded);
-		// Toggle all tool messages in the chat
-		var toolMsgs = self.messagesDiv.querySelectorAll(".llm-chat-message-tool");
-		for (var t = 0; t < toolMsgs.length; t++) {
-			toolMsgs[t].classList.toggle("llm-chat-tool-expanded", self.toolOutputExpanded);
-		}
-	});
-	buttonRow.appendChild(toolToggleBtn);
-
-	// Debug button + panel
 	var debugBtn = this.document.createElement("button");
 	debugBtn.className = "llm-chat-btn-debug";
 	debugBtn.textContent = "\uD83D\uDC1B";
-	debugBtn.title = "Toggle debug panel (preview / last sent request)";
+	debugBtn.title = "Debug & inspection panels";
 
 	var debugPanel = this.document.createElement("div");
 	debugPanel.className = "llm-chat-debug-panel";
 	debugPanel.style.display = "flex";
 	this.debugPanel = debugPanel;
-	this.lastRequestBody = null;
-	this.lastResponseBody = null;
-	this.debugMode = "preview";
-	this.debugTabs = [];
 
-	var debugTabs = this.document.createElement("div");
-	debugTabs.className = "llm-chat-debug-tabs";
-	var previewTab = this.document.createElement("button");
-	previewTab.className = "llm-chat-debug-tab llm-chat-debug-tab-active";
-	previewTab.textContent = "Preview";
-	var sentTab = this.document.createElement("button");
-	sentTab.className = "llm-chat-debug-tab";
-	sentTab.textContent = "Sent";
-	var responseTab = this.document.createElement("button");
-	responseTab.className = "llm-chat-debug-tab";
-	responseTab.textContent = "Response";
-	debugTabs.appendChild(previewTab);
-	debugTabs.appendChild(sentTab);
-	debugTabs.appendChild(responseTab);
-	this.debugTabs = [previewTab, sentTab, responseTab];
-
-	var debugContent = this.document.createElement("pre");
+	var debugContent = this.document.createElement("div");
 	debugContent.className = "llm-chat-debug-content";
 	this.debugContent = debugContent;
-
-	debugPanel.appendChild(debugTabs);
 	debugPanel.appendChild(debugContent);
 
-	previewTab.addEventListener("click", function() {
-		self.setDebugTab("preview");
-	});
-	sentTab.addEventListener("click", function() {
-		self.setDebugTab("sent");
-	});
-	responseTab.addEventListener("click", function() {
-		self.setDebugTab("response");
-	});
+	// Debug menu (dropdown)
+	var debugMenu = this.document.createElement("div");
+	debugMenu.className = "llm-chat-debug-menu";
+	debugMenu.style.display = "none";
+	this.debugMenu = debugMenu;
 
-	debugBtn.addEventListener("click", function() {
-		if (debugPanel.parentNode) {
-			debugPanel.parentNode.removeChild(debugPanel);
-			return;
+	// Build panel registry and populate menu
+	this.buildDebugPanelRegistry();
+	this.populateDebugMenu(debugMenu);
+
+	debugBtn.addEventListener("click", function(e) {
+		e.stopPropagation();
+		if (debugMenu.style.display === "none") {
+			debugMenu.style.display = "block";
+			// Position fixed menu above the debug button
+			var rect = debugBtn.getBoundingClientRect();
+			debugMenu.style.bottom = (window.innerHeight - rect.top + 4) + "px";
+			debugMenu.style.right = (window.innerWidth - rect.right) + "px";
+			var closeHandler = function(ev) {
+				if (!debugMenu.contains(ev.target) && ev.target !== debugBtn) {
+					debugMenu.style.display = "none";
+					self.document.removeEventListener("mousedown", closeHandler, true);
+				}
+			};
+			setTimeout(function() {
+				self.document.addEventListener("mousedown", closeHandler, true);
+			}, 0);
+		} else {
+			debugMenu.style.display = "none";
 		}
-		self.refreshDebugPanel();
-		debugPanel.style.display = "flex";
-		container.parentNode.appendChild(debugPanel);
 	});
 	buttonRow.appendChild(debugBtn);
+	buttonRow.appendChild(debugMenu);
 
 	var stopBtn = this.document.createElement("button");
 	stopBtn.className = "llm-chat-btn llm-chat-btn-stop";
@@ -504,6 +401,8 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	});
 	buttonRow.appendChild(sendBtn);
 
+	this.buttonRow = buttonRow;
+	this.inputArea = inputArea;
 	inputArea.appendChild(buttonRow);
 	container.appendChild(inputArea);
 
@@ -529,6 +428,12 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 				self.handlePinClick();
 			});
 			this.updatePinDisplay();
+		}
+		// Hook into token label in toolbar header
+		var tokenLabel = parentEl.querySelector(".llm-chat-token-label");
+		if (tokenLabel) {
+			this.tokenLabel = tokenLabel;
+			this.updateTokenDisplay();
 		}
 		// Hook into export/import buttons
 		var exportBtn = parentEl.querySelector(".llm-chat-btn-export");
@@ -649,6 +554,8 @@ LlmChatWidget.prototype.renderMessages = function(container) {
 		container._toolClickBound = true;
 	}
 
+	// Re-apply working indicator (innerHTML wipes it)
+	this.updateToolWorkingIndicator();
 	container.scrollTop = container.scrollHeight;
 };
 
@@ -656,7 +563,6 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 	var elements = [];
 	var doc = this.document;
 
-	var toolExpandedClass = this.toolOutputExpanded ? " llm-chat-tool-expanded" : "";
 
 	// User message with tool_result content (Claude format)
 	if (msg.role === "user" && Array.isArray(msg.content)) {
@@ -664,7 +570,7 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 			var block = msg.content[i];
 			if (block.type === "tool_result") {
 				var toolDiv = doc.createElement("div");
-				toolDiv.className = "llm-chat-message llm-chat-message-tool" + toolExpandedClass;
+				toolDiv.className = "llm-chat-message llm-chat-message-tool";
 				var preview = typeof block.content === "string" ? block.content : JSON.stringify(block.content);
 				if (preview.length > 300) preview = preview.substring(0, 300) + "...";
 				toolDiv.textContent = preview;
@@ -752,7 +658,7 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 						textParts = [];
 					}
 					var toolCallDiv = doc.createElement("div");
-					toolCallDiv.className = "llm-chat-message llm-chat-message-tool" + toolExpandedClass;
+					toolCallDiv.className = "llm-chat-message llm-chat-message-tool";
 					var inputPreview = JSON.stringify(aBlock.input);
 					if (inputPreview.length > 100) inputPreview = inputPreview.substring(0, 100) + "...";
 					toolCallDiv.textContent = "\u{1F527} " + aBlock.name + "(" + inputPreview + ")";
@@ -777,7 +683,7 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 	// OpenAI tool result
 	if (msg.role === "tool") {
 		var toolResDiv = doc.createElement("div");
-		toolResDiv.className = "llm-chat-message llm-chat-message-tool" + toolExpandedClass;
+		toolResDiv.className = "llm-chat-message llm-chat-message-tool";
 		var content = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
 		if (content.length > 300) content = content.substring(0, 300) + "...";
 		toolResDiv.textContent = content;
@@ -825,6 +731,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 
 	this.setStatus("Thinking...");
 	this.stopBtn.style.display = "inline-block";
+	this.updateToolWorkingIndicator();
 	if (this.actionMode && this.messagesDiv.style.display === "none") {
 		this.messagesDiv.style.display = "";
 	}
@@ -855,6 +762,15 @@ LlmChatWidget.prototype.sendMessage = function() {
 	protection.helpContext = helpCtx;
 	protection.chatTiddler = this.chatTiddler || "";
 
+	// Log send details
+	this.log("send", "provider=" + this.provider + " model=" + this.model + " msgs=" + messages.length + " tools=" + tools.length);
+	this.log("send", "protection mode=" + protection.mode + " filter=" + (protection.filter || "(none)"));
+	if (helpCtx) this.log("send", "help-context keys=" + $tw.utils.parseStringArray(helpCtx).length);
+	if (tools.length > 0) this.log("send", "active tools: " + tools.map(function(t) { return t.name; }).join(", "));
+	var tierEnabled = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/tier-routing-enabled");
+	this.log("config", "tier-routing=" + (tierEnabled === "yes" ? "ON" : "OFF"));
+	if (this.systemPromptOverride) this.log("config", "system prompt override active");
+
 	orchestrator.runConversation({
 		messages: messages,
 		tools: tools,
@@ -863,31 +779,76 @@ LlmChatWidget.prototype.sendMessage = function() {
 		toolExecutor: this.getToolExecutorModule(),
 		protectionFilter: protection,
 		signal: this.abortController.signal,
+		onLog: function(category, message, data) {
+			self.log(category, message, data);
+		},
 		onRequest: function(request) {
 			self.lastRequestBody = request.body;
+			self.log("request", "sent to " + self.provider);
 		},
 		onResponse: function(responseText) {
 			self.lastResponseBody = responseText;
+			var len = responseText ? responseText.length : 0;
+			self.log("response", "received " + len + " chars");
 		},
 		onUpdate: function(msgs) {
 			self.saveMessages(msgs);
 			self.renderMessages(self.messagesDiv);
 			self.updateTokenDisplay();
+			self.updateToolWorkingIndicator();
 		},
 		onError: function(err) {
 			self.setStatus("Error: " + err.message);
+			self.log("error", err.message);
 		}
 	}).then(function() {
 		self.setStatus("");
 		self.stopBtn.style.display = "none";
+		self.updateToolWorkingIndicator();
+		self.log("done", "conversation complete, msgs=" + messages.length);
 		// Persist protection filter if tools added new tiddlers
 		if (protection.filter !== protectionFilterBefore) {
 			self.persistProtectionUpdate(protection);
+			self.log("protection", "filter updated (tools created tiddlers)");
 		}
 	})["catch"](function(err) {
 		self.setStatus("Error: " + err.message);
 		self.stopBtn.style.display = "none";
+		self.updateToolWorkingIndicator();
+		self.log("error", "conversation failed: " + err.message);
 	});
+};
+
+LlmChatWidget.prototype.cycleToolDisplay = function() {
+	var modes = ["none", "brief", "details"];
+	var idx = modes.indexOf(this.toolDisplayMode);
+	this.toolDisplayMode = modes[(idx + 1) % modes.length];
+	this.applyToolDisplayMode();
+	this.log("ui", "tool display mode → " + this.toolDisplayMode);
+};
+
+LlmChatWidget.prototype.applyToolDisplayMode = function() {
+	if (!this.messagesDiv) { console.log("llm-connect: applyToolDisplayMode — no messagesDiv!"); return; }
+	this.messagesDiv.classList.remove("llm-chat-tools-none", "llm-chat-tools-brief", "llm-chat-tools-details");
+	this.messagesDiv.classList.add("llm-chat-tools-" + this.toolDisplayMode);
+};
+
+LlmChatWidget.prototype.updateToolWorkingIndicator = function() {
+	if (!this.messagesDiv) return;
+	var existing = this.messagesDiv.querySelector(".llm-chat-tool-working");
+	// Always show dots indicator when actively processing (tool loop running)
+	var isWorking = this.stopBtn && this.stopBtn.style.display !== "none";
+	if (isWorking) {
+		if (!existing) {
+			var indicator = this.document.createElement("div");
+			indicator.className = "llm-chat-message llm-chat-tool-working";
+			indicator.innerHTML = '<span class="llm-chat-tool-working-dots"><span>.</span><span>.</span><span>.</span></span>';
+			this.messagesDiv.appendChild(indicator);
+			this.messagesDiv.scrollTop = this.messagesDiv.scrollHeight;
+		}
+	} else if (existing) {
+		existing.parentNode.removeChild(existing);
+	}
 };
 
 LlmChatWidget.prototype.setStatus = function(text) {
@@ -899,6 +860,7 @@ LlmChatWidget.prototype.setStatus = function(text) {
 
 LlmChatWidget.prototype.clearChat = function() {
 	if (!this.chatTiddler) return;
+	this.log("action", "chat cleared");
 	// Unpin before clearing (saved tiddler remains for restore)
 	if (this.isPinned()) {
 		this.unpin();
@@ -925,34 +887,292 @@ LlmChatWidget.prototype.isDebugVisible = function() {
 	return this.debugPanel && this.debugPanel.parentNode;
 };
 
-LlmChatWidget.prototype.setDebugTab = function(mode) {
-	this.debugMode = mode;
-	for (var i = 0; i < this.debugTabs.length; i++) {
-		this.debugTabs[i].className = "llm-chat-debug-tab";
+LlmChatWidget.prototype.buildDebugPanelRegistry = function() {
+	var self = this;
+	this.debugPanelRegistry = [
+		{ id: "preview", name: "Request Preview", icon: "\uD83D\uDD0D", order: 10, mode: "js",
+			render: function(el) { self.renderPreviewPanel(el); } },
+		{ id: "sent", name: "Last Request Sent", icon: "\uD83D\uDCE4", order: 20, mode: "js",
+			render: function(el) { self.renderSentPanel(el); } },
+		{ id: "response", name: "Last Response", icon: "\uD83D\uDCE5", order: 30, mode: "js",
+			render: function(el) { self.renderResponsePanel(el); } },
+		{ id: "access", name: "Accessible Tiddlers", icon: "\uD83D\uDC41\uFE0F", order: 40, mode: "js",
+			render: function(el) { self.renderAccessPanel(el); } },
+		{ id: "tool-display", name: "No Tool-Calls", icon: "\u2699\uFE0F", order: 50, mode: "toggle",
+			onToggle: function() {
+				self.cycleToolDisplay();
+			}
+		},
+		{ id: "log", name: "Logging", icon: "\uD83D\uDCDD", order: 90, mode: "js",
+			render: function(el) { self.renderLogPanel(el); } }
+	];
+	// Discover wikitext panels via tag
+	var tagged = this.wiki.filterTiddlers("[all[tiddlers+shadows]tag[$:/tags/rimir/llm-connect/debug-panel]sort[panel-order]]");
+	for (var i = 0; i < tagged.length; i++) {
+		var title = tagged[i];
+		var tid = this.wiki.getTiddler(title);
+		if (!tid) continue;
+		this.debugPanelRegistry.push({
+			id: "wt:" + title,
+			name: tid.fields["panel-name"] || title,
+			icon: tid.fields["panel-icon"] || "\uD83D\uDCC4",
+			order: parseInt(tid.fields["panel-order"], 10) || 100,
+			mode: "wikitext",
+			tiddler: title
+		});
 	}
-	var idx = mode === "preview" ? 0 : mode === "sent" ? 1 : 2;
-	this.debugTabs[idx].className = "llm-chat-debug-tab llm-chat-debug-tab-active";
-	this.refreshDebugPanel();
+	// Sort by order
+	this.debugPanelRegistry.sort(function(a, b) { return a.order - b.order; });
+};
+
+LlmChatWidget.prototype.populateDebugMenu = function(menu) {
+	var self = this;
+	menu.innerHTML = "";
+	for (var i = 0; i < this.debugPanelRegistry.length; i++) {
+		(function(panel) {
+			var item = self.document.createElement("div");
+			item.className = "llm-chat-debug-menu-item";
+			item.setAttribute("data-panel-id", panel.id);
+			var iconSpan = self.document.createElement("span");
+			iconSpan.className = "llm-chat-debug-menu-icon";
+			iconSpan.textContent = panel.icon;
+			var nameSpan = self.document.createElement("span");
+			nameSpan.className = "llm-chat-debug-menu-label";
+			nameSpan.textContent = panel.name;
+			var checkSpan = self.document.createElement("span");
+			checkSpan.className = "llm-chat-debug-menu-check";
+			item.appendChild(iconSpan);
+			item.appendChild(nameSpan);
+			item.appendChild(checkSpan);
+			item.addEventListener("click", function() {
+				self.activateDebugPanel(panel.id);
+				self.updateDebugMenuState();
+			});
+			menu.appendChild(item);
+		})(this.debugPanelRegistry[i]);
+	}
+};
+
+LlmChatWidget.prototype.updateDebugMenuState = function() {
+	if (!this.debugMenu) return;
+	var TOOL_DISPLAY = {
+		"none":    { label: "No Tool-Calls",       icon: "\u2699\uFE0F", indicator: "\u25CB \u25CB \u25CB" },
+		"brief":   { label: "Brief Tool-Calls",    icon: "\u2699\uFE0F", indicator: "\u25CF \u25CB \u25CB" },
+		"details": { label: "Detailed Tool-Calls", icon: "\u2699\uFE0F", indicator: "\u25CF \u25CF \u25CB" }
+	};
+	var items = this.debugMenu.querySelectorAll(".llm-chat-debug-menu-item");
+	for (var i = 0; i < items.length; i++) {
+		var id = items[i].getAttribute("data-panel-id");
+		var check = items[i].querySelector(".llm-chat-debug-menu-check");
+		var isActive = false;
+		if (id === "tool-display") {
+			isActive = this.toolDisplayMode !== "none";
+			var td = TOOL_DISPLAY[this.toolDisplayMode] || TOOL_DISPLAY["none"];
+			var label = items[i].querySelector(".llm-chat-debug-menu-label");
+			if (label) label.textContent = td.label;
+			var iconEl = items[i].querySelector(".llm-chat-debug-menu-icon");
+			if (iconEl) iconEl.textContent = td.icon;
+			if (check) { check.textContent = td.indicator; check.className = "llm-chat-debug-menu-indicator"; }
+		} else {
+			isActive = this.activeDebugPanel === id;
+			if (check) { check.textContent = isActive ? "\u2713" : ""; check.className = "llm-chat-debug-menu-check"; }
+		}
+		items[i].classList.toggle("llm-chat-debug-menu-item-active", isActive);
+	}
+};
+
+LlmChatWidget.prototype.activateDebugPanel = function(panelId) {
+	var panel = null;
+	for (var i = 0; i < this.debugPanelRegistry.length; i++) {
+		if (this.debugPanelRegistry[i].id === panelId) {
+			panel = this.debugPanelRegistry[i];
+			break;
+		}
+	}
+	if (!panel) return;
+
+	// Toggle-type panels (no debug area)
+	if (panel.mode === "toggle") {
+		panel.onToggle();
+		return;
+	}
+
+	// Same panel clicked again → hide debug area
+	if (this.activeDebugPanel === panelId) {
+		this.activeDebugPanel = null;
+		this.activeWikitextWidget = null;
+		if (this.debugPanel.parentNode) {
+			this.debugPanel.parentNode.removeChild(this.debugPanel);
+		}
+		return;
+	}
+
+	// Activate new panel
+	this.activeDebugPanel = panelId;
+	this.activeWikitextWidget = null;
+	this.debugContent.innerHTML = "";
+
+	if (panel.mode === "js") {
+		panel.render(this.debugContent);
+	} else if (panel.mode === "wikitext") {
+		var parser = this.wiki.parseTiddler(panel.tiddler);
+		if (parser) {
+			var widgetNode = this.wiki.makeWidget(parser, {
+				document: this.document,
+				parentWidget: this,
+				variables: { chatTiddler: this.chatTiddler || "" }
+			});
+			widgetNode.render(this.debugContent, null);
+			this.activeWikitextWidget = widgetNode;
+		}
+	}
+
+	// Show the debug panel (insert before button row so toolbar stays at bottom)
+	if (!this.debugPanel.parentNode) {
+		this.debugPanel.style.display = "flex";
+		if (this.inputArea && this.buttonRow) {
+			this.inputArea.insertBefore(this.debugPanel, this.buttonRow);
+		}
+	}
+};
+
+// JS panel render methods
+LlmChatWidget.prototype.renderPreviewPanel = function(el) {
+	var pre = this.document.createElement("pre");
+	pre.className = "llm-chat-debug-pre";
+	pre.textContent = abbreviateBase64(this.buildPreview());
+	el.appendChild(pre);
+};
+
+LlmChatWidget.prototype.renderSentPanel = function(el) {
+	var pre = this.document.createElement("pre");
+	pre.className = "llm-chat-debug-pre";
+	if (!this.lastRequestBody) {
+		pre.textContent = "(no request sent yet)";
+	} else {
+		pre.textContent = abbreviateBase64(this.lastRequestBody);
+	}
+	el.appendChild(pre);
+};
+
+LlmChatWidget.prototype.renderResponsePanel = function(el) {
+	var pre = this.document.createElement("pre");
+	pre.className = "llm-chat-debug-pre";
+	if (!this.lastResponseBody) {
+		pre.textContent = "(no response received yet)";
+	} else {
+		pre.textContent = abbreviateBase64(this.lastResponseBody);
+	}
+	el.appendChild(pre);
+};
+
+LlmChatWidget.prototype.renderAccessPanel = function(el) {
+	var self = this;
+
+	var accessHeader = this.document.createElement("div");
+	accessHeader.className = "llm-chat-access-header";
+	var accessTitle = this.document.createElement("span");
+	accessTitle.className = "llm-chat-access-title";
+	this.accessTitle = accessTitle;
+	accessHeader.appendChild(accessTitle);
+	el.appendChild(accessHeader);
+
+	var accessList = this.document.createElement("div");
+	accessList.className = "llm-chat-access-list";
+	this.accessList = accessList;
+	el.appendChild(accessList);
+
+	// Drop zone for adding/removing tiddlers
+	el.addEventListener("dragover", function(e) {
+		e.preventDefault();
+		el.classList.add("llm-chat-access-dragover");
+	});
+	el.addEventListener("dragleave", function(e) {
+		if (!el.contains(e.relatedTarget)) {
+			el.classList.remove("llm-chat-access-dragover");
+		}
+	});
+	el.addEventListener("drop", function(e) {
+		e.preventDefault();
+		el.classList.remove("llm-chat-access-dragover");
+		var jsonData = e.dataTransfer.getData("text/vnd.tiddler") || e.dataTransfer.getData("text/plain");
+		if (!jsonData) return;
+		var title;
+		try {
+			var parsed = JSON.parse(jsonData);
+			title = Array.isArray(parsed) ? parsed[0].title : parsed.title;
+		} catch(ex) {
+			title = jsonData.trim();
+		}
+		if (!title) return;
+		self.handleAccessDrop(title);
+	});
+
+	this.refreshAccessPanel();
+};
+
+LlmChatWidget.prototype.log = function(category, message, data) {
+	var ts = new Date();
+	var timeStr = ts.toLocaleTimeString("en-GB", { hour12: false }) + "." + String(ts.getMilliseconds()).padStart(3, "0");
+	var entry = "[" + timeStr + "] [" + category + "] " + message;
+	if (data !== undefined) {
+		entry += " " + (typeof data === "string" ? data : JSON.stringify(data));
+	}
+	this.debugLog.push(entry);
+	// Keep log bounded
+	if (this.debugLog.length > 500) {
+		this.debugLog = this.debugLog.slice(-400);
+	}
+	// Live-update if log panel is visible
+	if (this.activeDebugPanel === "log" && this.debugContent) {
+		var pre = this.debugContent.querySelector(".llm-chat-debug-pre");
+		if (pre) {
+			pre.textContent = this.debugLog.join("\n");
+			pre.scrollTop = pre.scrollHeight;
+		}
+	}
+};
+
+LlmChatWidget.prototype.renderLogPanel = function(el) {
+	var self = this;
+	var toolbar = this.document.createElement("div");
+	toolbar.className = "llm-chat-debug-log-toolbar";
+	var clearBtn = this.document.createElement("button");
+	clearBtn.className = "llm-chat-debug-log-clear";
+	clearBtn.textContent = "Clear";
+	clearBtn.addEventListener("click", function() {
+		self.debugLog = [];
+		var pre = el.querySelector(".llm-chat-debug-pre");
+		if (pre) pre.textContent = "(log cleared)";
+	});
+	toolbar.appendChild(clearBtn);
+	el.appendChild(toolbar);
+
+	var pre = this.document.createElement("pre");
+	pre.className = "llm-chat-debug-pre";
+	pre.textContent = this.debugLog.length > 0 ? this.debugLog.join("\n") : "(no log entries yet)";
+	pre.scrollTop = pre.scrollHeight;
+	el.appendChild(pre);
 };
 
 LlmChatWidget.prototype.refreshDebugPanel = function() {
 	if (!this.debugContent) return;
 	if (!this.isDebugVisible()) return;
-	if (this.debugMode === "sent") {
-		if (!this.lastRequestBody) {
-			this.debugContent.textContent = "(no request sent yet)";
+	if (!this.activeDebugPanel) return;
+
+	if (this.activeDebugPanel === "preview" || this.activeDebugPanel === "sent" || this.activeDebugPanel === "response") {
+		var pre = this.debugContent.querySelector(".llm-chat-debug-pre");
+		if (!pre) return;
+		if (this.activeDebugPanel === "sent") {
+			pre.textContent = this.lastRequestBody ? abbreviateBase64(this.lastRequestBody) : "(no request sent yet)";
+		} else if (this.activeDebugPanel === "response") {
+			pre.textContent = this.lastResponseBody ? abbreviateBase64(this.lastResponseBody) : "(no response received yet)";
 		} else {
-			this.debugContent.textContent = abbreviateBase64(this.lastRequestBody);
+			pre.textContent = abbreviateBase64(this.buildPreview());
 		}
-	} else if (this.debugMode === "response") {
-		if (!this.lastResponseBody) {
-			this.debugContent.textContent = "(no response received yet)";
-		} else {
-			this.debugContent.textContent = abbreviateBase64(this.lastResponseBody);
-		}
-	} else {
-		this.debugContent.textContent = abbreviateBase64(this.buildPreview());
 	}
+	// Access panel refreshes via refreshAccessPanel()
+	// Wikitext panels handle their own refresh
 };
 
 LlmChatWidget.prototype.buildPreview = function() {
@@ -1525,7 +1745,7 @@ LlmChatWidget.prototype.injectLateAttachments = function(messages) {
 };
 
 LlmChatWidget.prototype.refreshAccessPanel = function() {
-	if (!this.accessList || this.accessPanel.style.display === "none") return;
+	if (!this.accessList || this.activeDebugPanel !== "access") return;
 	var helpers = this.getWidgetHelpersModule();
 	var protection = this.resolveProtectionForChat(helpers);
 	var self = this;
@@ -1834,48 +2054,16 @@ LlmChatWidget.prototype.updateTokenDisplay = function() {
 	this.tokenLabel.title = "Estimate (~4 chars/token)\nIn (assistant): " + inChars + " chars / ~" + inTokens + " tokens\nOut (user+context+tools): " + outChars + " chars / ~" + outTokens + " tokens";
 };
 
-LlmChatWidget.prototype.updateHelpContextDisplay = function() {
-	if (!this.helpCtxBtn) return;
-	if (!this.chatTiddler) { this.helpCtxBtn.textContent = "\uD83D\uDCD6"; return; }
-	var tid = this.wiki.getTiddler(this.chatTiddler);
-	var ctx = tid && tid.fields["llm-help-context"] || "";
-	var keys = ctx ? $tw.utils.parseStringArray(ctx) : [];
-	if (keys.length === 0) {
-		this.helpCtxBtn.textContent = "\uD83D\uDCD6 0";
-		this.helpCtxBtn.title = "No help context selected";
-	} else {
-		this.helpCtxBtn.textContent = "\uD83D\uDCD6 " + keys.length;
-		this.helpCtxBtn.title = "Active help context: " + keys.length + " keys\nClick to view";
-	}
-	// Refresh the panel content if visible
-	if (this.helpCtxPanel && this.helpCtxPanel.style.display !== "none") {
-		this.refreshHelpContextPanel();
-	}
-};
-
-LlmChatWidget.prototype.refreshHelpContextPanel = function() {
-	if (!this.helpCtxPanel || !this.chatTiddler) return;
-	this.helpCtxPanel.innerHTML = "";
-	var tid = this.wiki.getTiddler(this.chatTiddler);
-	var ctx = tid && tid.fields["llm-help-context"] || "";
-	var keys = ctx ? $tw.utils.parseStringArray(ctx) : [];
-	if (keys.length === 0) {
-		this.helpCtxPanel.textContent = "(no help context active)";
-		return;
-	}
-	var code = this.document.createElement("code");
-	code.className = "llm-chat-help-ctx-keys";
-	code.textContent = keys.join("\n");
-	this.helpCtxPanel.appendChild(code);
-};
-
 LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 	if (changedTiddlers[this.chatTiddler]) {
 		this.renderMessages(this.messagesDiv);
 		this.updateTokenDisplay();
-		this.updateHelpContextDisplay();
 		this.refreshDebugPanel();
 		this.syncIfPinned();
+	}
+	// Refresh wikitext debug panels
+	if (this.activeWikitextWidget) {
+		this.activeWikitextWidget.refresh(changedTiddlers);
 	}
 	// Update provider/model display if config changed — but only if chat is empty (not locked)
 	var msgs = this.getMessages();

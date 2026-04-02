@@ -7,6 +7,7 @@ type: text/vnd.tiddlywiki
 	flex-direction: column;
 	border: 1px solid <<colour tiddler-border>>;
 	border-radius: 4px;
+	overflow: hidden;
 }
 
 /* Pin button */
@@ -252,6 +253,59 @@ type: text/vnd.tiddlywiki
 	text-overflow: unset;
 }
 
+/* Tool display modes (tristate: none / brief / details) */
+.llm-chat-tools-none .llm-chat-message-tool {
+	display: none;
+}
+
+.llm-chat-tools-brief .llm-chat-message-tool {
+	display: block;
+}
+
+.llm-chat-tools-details .llm-chat-message-tool {
+	display: block;
+	max-height: 300px;
+	overflow-y: auto;
+	white-space: pre-wrap;
+	text-overflow: unset;
+}
+
+/* Working indicator (shown when tool calls are hidden) */
+.llm-chat-tool-working {
+	background: <<colour code-background>>;
+	color: <<colour code-foreground>>;
+	margin-right: auto;
+	font-size: 0.8em;
+	font-family: {{$:/themes/tiddlywiki/vanilla/settings/codefontfamily}};
+	border-left: 3px solid <<colour muted-foreground>>;
+	border-radius: 0 8px 8px 0;
+	padding: 6px 16px;
+}
+
+.llm-chat-tool-working-dots span {
+	font-size: 1.8em;
+	font-weight: bold;
+	letter-spacing: 0.2em;
+	animation: llm-dot-pulse 1.4s infinite both;
+}
+
+.llm-chat-tool-working-dots span:nth-child(2) {
+	animation-delay: 0.2s;
+}
+
+.llm-chat-tool-working-dots span:nth-child(3) {
+	animation-delay: 0.4s;
+}
+
+@keyframes llm-dot-pulse {
+	0%, 80%, 100% {
+		opacity: 0.15;
+	}
+	40% {
+		opacity: 1;
+	}
+}
+
 .llm-chat-status {
 	display: none;
 	padding: 4px 12px;
@@ -265,6 +319,9 @@ type: text/vnd.tiddlywiki
 	border-top: 1px solid <<colour tiddler-border>>;
 	padding: 8px;
 	background: <<colour page-background>>;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
 }
 
 .llm-chat-textarea {
@@ -278,6 +335,7 @@ type: text/vnd.tiddlywiki
 	background: <<colour tiddler-background>>;
 	color: <<colour foreground>>;
 	box-sizing: border-box;
+	flex-shrink: 0;
 }
 
 .llm-chat-textarea:focus {
@@ -291,6 +349,8 @@ type: text/vnd.tiddlywiki
 	justify-content: flex-end;
 	gap: 8px;
 	margin-top: 6px;
+	position: relative;
+	flex-shrink: 0;
 }
 
 .llm-chat-provider-info {
@@ -838,38 +898,6 @@ type: text/vnd.tiddlywiki
 	opacity: 0.7;
 }
 
-.llm-chat-help-ctx-btn {
-	background: none;
-	border: none;
-	cursor: pointer;
-	font-size: 0.75em;
-	color: <<colour muted-foreground>>;
-	white-space: nowrap;
-	padding: 2px 4px;
-	opacity: 0.8;
-}
-
-.llm-chat-help-ctx-btn:hover {
-	opacity: 1;
-	color: <<colour foreground>>;
-}
-
-.llm-chat-help-ctx-panel {
-	margin-top: 4px;
-	background: <<colour code-background>>;
-	border: 1px solid <<colour tiddler-border>>;
-	border-radius: 4px;
-	padding: 6px 8px;
-	max-height: 180px;
-	overflow-y: auto;
-	font-size: 0.75em;
-	color: <<colour muted-foreground>>;
-}
-
-.llm-chat-help-ctx-keys {
-	white-space: pre;
-	font-family: monospace;
-}
 
 /* Fetch models button in settings */
 .llm-fetch-models-btn {
@@ -1051,7 +1079,7 @@ type: text/vnd.tiddlywiki
 	color: <<colour foreground>>;
 }
 
-.llm-chat-access-panel.llm-chat-access-dragover {
+.llm-chat-access-dragover {
 	border-color: <<colour primary>>;
 	background: <<colour notification-background>>;
 }
@@ -1082,35 +1110,6 @@ type: text/vnd.tiddlywiki
 	text-decoration: underline;
 }
 
-.llm-chat-btn-access {
-	background: none;
-	border: none;
-	cursor: pointer;
-	font-size: 1.1em;
-	padding: 2px 4px;
-	opacity: 0.7;
-}
-
-.llm-chat-btn-access:hover {
-	opacity: 1;
-}
-
-.llm-chat-btn-tool-toggle {
-	background: none;
-	border: none;
-	cursor: pointer;
-	font-size: 0.85em;
-	padding: 1px 4px;
-	opacity: 0.5;
-}
-
-.llm-chat-btn-tool-toggle:hover {
-	opacity: 1;
-}
-
-.llm-chat-btn-tool-toggle.llm-chat-btn-active {
-	opacity: 1;
-}
 
 /* Markdown rendering in assistant messages — tighten spacing for chat context */
 
@@ -1171,6 +1170,61 @@ type: text/vnd.tiddlywiki
 	margin: 0.5em 0;
 }
 
+/* Debug menu (dropdown from debug button) */
+
+.llm-chat-debug-menu {
+	position: fixed;
+	z-index: 1000;
+	min-width: 180px;
+	background: <<colour tiddler-background>>;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+	padding: 4px 0;
+}
+
+.llm-chat-debug-menu-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 12px;
+	cursor: pointer;
+	font-size: 0.85em;
+	color: <<colour foreground>>;
+}
+
+.llm-chat-debug-menu-item:hover {
+	background: <<colour notification-background>>;
+}
+
+.llm-chat-debug-menu-item-active {
+	color: <<colour primary>>;
+}
+
+.llm-chat-debug-menu-icon {
+	flex: 0 0 1.2em;
+	text-align: center;
+}
+
+.llm-chat-debug-menu-label {
+	flex: 1;
+}
+
+.llm-chat-debug-menu-check {
+	flex: 0 0 1em;
+	text-align: center;
+	font-size: 0.9em;
+	color: <<colour primary>>;
+}
+
+.llm-chat-debug-menu-indicator {
+	flex: 0 0 auto;
+	text-align: center;
+	font-size: 0.6em;
+	letter-spacing: 0.15em;
+	color: <<colour muted-foreground>>;
+}
+
 /* Debug panel */
 
 .llm-chat-debug-panel {
@@ -1180,40 +1234,75 @@ type: text/vnd.tiddlywiki
 	border-radius: 4px;
 	font-size: 0.75em;
 	color: <<colour foreground>>;
-}
-
-.llm-chat-debug-tabs {
+	flex: 1 1 0%;
+	min-height: 0;
+	overflow: hidden;
 	display: flex;
-	border-bottom: 1px solid <<colour tiddler-border>>;
-}
-
-.llm-chat-debug-tab {
-	padding: 4px 12px;
-	border: none;
-	background: none;
-	cursor: pointer;
-	font-size: 1em;
-	color: <<colour muted-foreground>>;
-	border-bottom: 2px solid transparent;
-}
-
-.llm-chat-debug-tab:hover {
-	color: <<colour foreground>>;
-}
-
-.llm-chat-debug-tab-active {
-	color: <<colour primary>>;
-	border-bottom-color: <<colour primary>>;
+	flex-direction: column;
 }
 
 .llm-chat-debug-content {
 	padding: 8px;
 	margin: 0;
+	flex: 1 1 0%;
+	min-height: 0;
+	overflow: auto;
+}
+
+.llm-chat-debug-content .llm-chat-debug-pre {
+	margin: 0;
 	font-family: {{$:/themes/tiddlywiki/vanilla/settings/codefontfamily}};
-	max-height: 300px;
-	overflow-y: scroll;
-	white-space: pre-wrap;
+	white-space: pre;
+}
+
+/* Log panel toolbar */
+.llm-chat-debug-log-toolbar {
+	display: flex;
+	justify-content: flex-end;
+	padding-bottom: 4px;
+	border-bottom: 1px solid <<colour tiddler-border>>;
+	margin-bottom: 4px;
+	flex-shrink: 0;
+}
+
+.llm-chat-debug-log-clear {
+	background: none;
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 3px;
+	padding: 1px 8px;
+	font-size: 0.9em;
+	color: <<colour muted-foreground>>;
+	cursor: pointer;
+}
+
+.llm-chat-debug-log-clear:hover {
+	color: <<colour foreground>>;
+	border-color: <<colour foreground>>;
+}
+
+/* Active tools debug panel */
+.llm-chat-debug-tool-entry {
+	padding: 1px 0;
+}
+
+.llm-chat-debug-tool-meta {
+	color: <<colour muted-foreground>>;
+	font-size: 0.9em;
+}
+
+.llm-chat-debug-tools-raw {
+	margin-top: 8px;
+	padding-top: 4px;
+	border-top: 1px solid <<colour tiddler-border>>;
 	word-break: break-all;
+}
+
+/* Help context in debug panel */
+.llm-chat-debug-help-ctx-keys {
+	display: block;
+	margin-top: 4px;
+	white-space: pre;
+	font-family: {{$:/themes/tiddlywiki/vanilla/settings/codefontfamily}};
 }
 
 /* Tools panel (ViewTemplate recipes) */

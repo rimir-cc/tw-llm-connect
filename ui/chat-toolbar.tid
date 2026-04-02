@@ -3,7 +3,7 @@ type: text/vnd.tiddlywiki
 
 \procedure llm-chat-toolbar-left(label)
 \whitespace trim
-<span class="llm-chat-panel-header-left"><span class="llm-chat-pin-wrapper"><button class="llm-chat-btn-pin">&#x1F4CC;</button><div class="llm-chat-pin-menu" style="display:none;"></div></span> <<label>></span>
+<span class="llm-chat-panel-header-left"><span class="llm-chat-pin-wrapper"><button class="llm-chat-btn-pin">&#x1F4CC;</button><div class="llm-chat-pin-menu" style="display:none;"></div></span> <<label>> <span class="llm-chat-token-label"></span></span>
 \end
 
 \procedure llm-tool-selector(chatTiddler)

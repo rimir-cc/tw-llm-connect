@@ -1,0 +1,36 @@
+title: $:/plugins/rimir/llm-connect/debug-panel-tools
+tags: $:/tags/rimir/llm-connect/debug-panel
+panel-name: Active Tools (int. data)
+panel-icon: 🔧
+panel-order: 55
+type: text/vnd.tiddlywiki
+
+\whitespace trim
+
+<$let
+  activeRaw={{{ [<chatTiddler>get[llm-active-tools]] }}}
+  activeList={{{ [<chatTiddler>get[llm-active-tools]enlist-input[]] }}}
+  count={{{ [<chatTiddler>get[llm-active-tools]enlist-input[]count[]] }}}
+  init={{{ [<chatTiddler>get[llm-tools-init]else[no]] }}}
+>
+<div class="llm-chat-debug-tools-state">
+<strong><$text text=<<count>>/> active tools</strong> (init: <$text text=<<init>>/>)
+<$list filter="[<chatTiddler>get[llm-active-tools]enlist-input[]sort[]]" variable="toolTid">
+<$let
+  tname={{{ [<toolTid>get[tool-name]else<toolTid>] }}}
+  tcat={{{ [<toolTid>get[tool-category]else[-]] }}}
+  ttier={{{ [<toolTid>get[tier]else[default]] }}}
+  tenabled={{{ [<toolTid>get[tool-enabled]else[yes]] }}}
+>
+<div class="llm-chat-debug-tool-entry"><code><$text text=<<tname>>/></code> <span class="llm-chat-debug-tool-meta">[<$text text=<<tcat>>/>] tier:<$text text=<<ttier>>/></span></div>
+</$let>
+</$list>
+<%if [<count>match[0]] %>
+<em>(no tools active)</em>
+<%endif%>
+<div class="llm-chat-debug-tools-raw">
+<strong>Raw field:</strong>
+<code><$text text=<<activeRaw>>/></code>
+</div>
+</div>
+</$let>
