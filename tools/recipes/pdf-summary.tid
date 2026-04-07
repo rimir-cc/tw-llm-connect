@@ -8,16 +8,15 @@ type: text/vnd.tiddlywiki
 \import [[$:/plugins/rimir/llm-connect/ui/chat-toolbar]]
 \whitespace trim
 
-\define panelState() $:/state/rimir/llm-connect/tools-panel/$(currentTiddler)$/open
-\define chatTiddler() $:/temp/rimir/llm-connect/tools-panel/$(currentTiddler)$/chat
-\define pdfContextFilter() [title[$(currentTiddler)$]]
+\function panelState() [<currentTiddler>addprefix[$:/state/rimir/llm-connect/tools-panel/]addsuffix[/open]]
+\function chatTiddler() [<currentTiddler>addprefix[$:/temp/rimir/llm-connect/tools-panel/]addsuffix[/chat]]
 
-\define pdf-summary-system-prompt()
+\procedure pdf-summary-system-prompt()
 You are a document summarizer. Read the attached PDF and create a structured summary. Store it using the pdf_store_summary tool with parent_title set to the PDF tiddler title. If the user provides additional requirements, follow them.
 \end
 
-\define open-panel-actions()
-<$action-setfield $tiddler=<<chatTiddler>> llm-context-filter=<<pdfContextFilter>>/>
+\procedure open-panel-actions()
+<$action-setfield $tiddler=<<chatTiddler>> llm-context-filter=`[title[$(currentTiddler)$]]`/>
 <$action-setfield $tiddler=<<panelState>> text="yes"/>
 \end
 

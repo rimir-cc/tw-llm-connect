@@ -3,7 +3,6 @@ tags: $:/tags/ViewTemplate
 list-after: $:/core/ui/ViewTemplate/body
 
 \import [[$:/plugins/rimir/llm-connect/ui/chat-toolbar]]
-\define pair-edit-allow-filter() [[$(currentTiddler)$]] [[$(currentTiddler)$]links[]] [prefix[$(currentTiddler)$/]]
 \whitespace trim
 <$reveal state={{{ [[$:/state/rimir/llm-connect/pair-edit/]addsuffix<currentTiddler>] }}} type="match" text="yes" animate="yes">
 <div class="llm-pair-edit-panel">
@@ -21,7 +20,7 @@ list-after: $:/core/ui/ViewTemplate/body
   tools="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]]"
   contextTemplate="$:/plugins/rimir/llm-connect/context-templates/pair-edit"
   protectionMode="allow"
-  allowFilter=<<pair-edit-allow-filter>>
+  allowFilter=`[[$(currentTiddler)$]] [[$(currentTiddler)$]links[]] [prefix[$(currentTiddler)$/]]`
   defaultContext="rimir/typed tw-gotchas shortcuts"
 />
 </div>
