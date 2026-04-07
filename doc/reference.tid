@@ -125,6 +125,17 @@ A tool is considered ''complete'' when `tool-name`, `tool-schema`, and `text` (b
 |`attach_document` |`action` |Attach a binary file (PDF, DOCX, XLSX, image) to the conversation. Queues the document for injection; if extraction is enabled, PDF/DOCX/XLSX are sent as markdown text instead of base64 |
 |`pdf_store_summary` |`action` |Store a structured summary linked to a parent document. Creates a summary tiddler with metadata |
 
+!! Artifact fields
+
+Derived tiddlers created by llm-connect carry lifecycle fields for cascade cleanup (requires file-upload plugin):
+
+|!Tiddler pattern |!`_artifact_type` |!Description |
+|`<title>.extracted` |`extraction` |Cached markdown text extraction from a binary document |
+|`<title>.extracted/<img>` |`extraction-image` |Extracted image from a PDF (has `_canonical_uri` to `files/_derived/`) |
+|`<title>.summaries/<model>-<ts>` |`summary` |LLM-generated summary of a document |
+
+All carry `_artifact_source` pointing to the parent file tiddler. When the parent is deleted/renamed (via file-upload hooks), artifacts are automatically cascaded.
+
 Action-mode tools (`set_field`, `create_tiddler`, `delete_tiddler`, `navigate_to_tiddler`) execute immediately and append an entry to the audit log at `$:/temp/rimir/llm-connect/write-log`.
 
 !! Variables in tool wikitext
@@ -271,6 +282,7 @@ Summary tiddler conventions:
 |`$:/config/rimir/llm-connect/max-file-size` |`20971520` |Maximum file size in bytes for multimodal attachments (default 20 MB) |
 |`$:/config/rimir/llm-connect/extraction-enabled` |`yes` |Enable document extraction — PDF/DOCX/XLSX auto-converted to text via runner |
 |`$:/config/rimir/llm-connect/max-extraction-size` |`500000` |Max characters for extracted document text (truncated beyond this) |
+|`$:/config/rimir/llm-connect/extract-images` |`no` |Extract images from PDFs alongside text (requires `pdfimages` from poppler-utils) |
 |`$:/config/rimir/llm-connect/tier-routing-enabled` |`no` |Enable model tier routing — switch models per tool round based on tool tiers |
 |`$:/config/rimir/llm-connect/tiers/cheap/provider` |(empty) |Provider for cheap tier (must match active provider for switching to work) |
 |`$:/config/rimir/llm-connect/tiers/cheap/model` |(empty) |Model ID for cheap tier |

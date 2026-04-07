@@ -12,7 +12,7 @@ type: text/vnd.tiddlywiki
 <$list filter="[<parent_title>minlength[1]]" variable="_" emptyMessage="Error: Missing 'parent_title' parameter">
 <$list filter="[<summary>minlength[1]]" variable="_" emptyMessage="Error: Missing 'summary' parameter">
 <$set name="summaryTitle" filter="[<parent_title>addsuffix[.summaries/]addsuffix<__model>addsuffix[-]addsuffix<__timestamp>]" select="0">
-<$action-setfield $tiddler=<<summaryTitle>> text=<<summary>> parent=<<parent_title>> tags="llm-summary" summary-model=<<__model>> summary-timestamp=<<__timestamp>> additional-requirements=<<additional_requirements>>/>
+<$action-setfield $tiddler=<<summaryTitle>> text=<<summary>> parent=<<parent_title>> tags="llm-summary" summary-model=<<__model>> summary-timestamp=<<__timestamp>> additional-requirements=<<additional_requirements>> _artifact_source=<<parent_title>> _artifact_type="summary"/>
 Done — created summary '<<summaryTitle>>'
 </$set>
 </$list>

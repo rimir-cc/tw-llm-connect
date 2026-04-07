@@ -178,6 +178,29 @@ exports.extractDocument = function(fileInfo) {
 					if (text.length > maxOutput) {
 						text = text.substring(0, maxOutput) + "\n\n... [extraction truncated at " + maxOutput + " chars]";
 					}
+					// Create extracted image tiddlers if images were returned
+					if (result.images && result.images.length > 0) {
+						for (var imgIdx = 0; imgIdx < result.images.length; imgIdx++) {
+							var img = result.images[imgIdx];
+							var imgTitle = fileInfo.title + ".extracted/" + img.filename;
+							$tw.wiki.addTiddler(new $tw.Tiddler({
+								title: imgTitle,
+								type: "image/png",
+								_canonical_uri: img.uri,
+								text: "",
+								"_artifact_source": fileInfo.title,
+								"_artifact_type": "extraction-image"
+							}));
+						}
+						// Add image references to markdown text
+						var imageRefs = "\n\n---\n*Extracted images:*\n";
+						for (var refIdx = 0; refIdx < result.images.length; refIdx++) {
+							var refImg = result.images[refIdx];
+							var refTitle = fileInfo.title + ".extracted/" + refImg.filename;
+							imageRefs += "\n[img[" + refTitle + "]]";
+						}
+						text += imageRefs;
+					}
 					// Cache the extraction as a tiddler
 					var cacheTitle = fileInfo.title + ".extracted";
 					$tw.wiki.addTiddler(new $tw.Tiddler({
@@ -186,7 +209,9 @@ exports.extractDocument = function(fileInfo) {
 						type: "text/x-markdown",
 						"extraction-source": fileInfo.title,
 						"extraction-date": new Date().toISOString(),
-						"extraction-media-type": fileInfo.mediaType
+						"extraction-media-type": fileInfo.mediaType,
+						"_artifact_source": fileInfo.title,
+						"_artifact_type": "extraction"
 					}));
 					resolve(text);
 				} else {
