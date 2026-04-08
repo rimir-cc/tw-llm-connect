@@ -6,6 +6,7 @@ type: text/vnd.tiddlywiki
 ! Changelog
 
 |!Version |!Date |!Changes |
+|0.1.50 |2026-04-08 |Add 135 Jasmine tests: adapter-openai-base, adapter-claude, adapter-openai, adapter-azure, widget-helpers, file-resolver, orchestrator |
 |0.1.49 |2026-04-07 |Cleanup: replace \define with \function, inline backtick templates for filter strings |
 |v0.1.48 |2026-04-07 |Artifact lifecycle fields — `.extracted` tiddlers and summaries now carry `_artifact_source` and `_artifact_type` for cascade delete/rename (requires file-upload). Multi-file PDF extraction — optional `pdfimages` support extracts embedded images alongside text, stored as `extraction-image` tiddlers in `files/_derived/`. New `extract-images` config toggle. Relink field config for `extraction-source`. Reference docs updated with artifact fields |
 |v0.1.47 |2026-04-02 |Fix `+[unique[]join[ ]]` chaining bug — `join` must be in its own `+` run or `{{{ }}}` returns only the first item. Affects context tree (selecting parent node only wrote first descendant) and tool selector (category toggle). Fix debug menu tristate indicator (querySelector matched wrong class after first update). Active Tools debug panel now shows actual resolved tools before first selector click. Remove debug tooltip from context tree. Update reference + architecture docs for debug panel system |
