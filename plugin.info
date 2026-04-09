@@ -2,7 +2,7 @@
     "title": "$:/plugins/rimir/llm-connect",
     "description": "In-browser LLM integration with tool use — connect TiddlyWiki to Claude, OpenAI, Azure, and other LLM APIs",
     "author": "rimir",
-    "version": "0.1.50",
+    "version": "0.1.51",
     "core-version": ">=5.3.0",
     "source": "https://github.com/rimir-cc/tw-llm-connect",
     "name": "llm connect",

@@ -132,9 +132,15 @@ exports.isSupported = function(mediaType) {
 };
 
 /*
-Check if a media type can be extracted to text via runner.
+Check if a media type can be extracted to text.
+Checks pipeline definitions first, falls back to built-in EXTRACTABLE_TYPES map.
 */
 exports.isExtractable = function(mediaType) {
+	// Check file-pipeline first (if installed)
+	try {
+		var pipelineClient = require("$:/plugins/rimir/file-pipeline/pipeline-client");
+		if(pipelineClient.isExtractable(mediaType)) return true;
+	} catch(e) { /* file-pipeline not installed */ }
 	return !!EXTRACTABLE_TYPES[mediaType];
 };
 
@@ -150,12 +156,40 @@ exports.getExtractedText = function(title) {
 };
 
 /*
-Extract document text via the server-side extraction route and cache the result.
-The route handles download, temp file management, and pandoc/python execution.
+Extract document text and cache the result.
+Uses file-pipeline plugin if installed, falls back to legacy /api/extract route.
 fileInfo: { title, uri, mediaType, filename }
 Returns Promise<string> with extracted markdown text.
 */
 exports.extractDocument = function(fileInfo) {
+	// Try file-pipeline first (preferred path)
+	try {
+		var pipelineClient = require("$:/plugins/rimir/file-pipeline/pipeline-client");
+		return new Promise(function(resolve, reject) {
+			pipelineClient.runPipeline({
+				sourceTitle: fileInfo.title,
+				uri: fileInfo.uri,
+				pipeline: "auto",
+				mimeType: fileInfo.mediaType,
+				filename: fileInfo.filename,
+				onComplete: function(results) {
+					// Check if extraction produced text
+					var text = pipelineClient.getExtractedText(fileInfo.title);
+					if(text) {
+						resolve(text);
+					} else {
+						reject(new Error("Pipeline completed but no extraction text produced"));
+					}
+				},
+				onError: function(err) {
+					reject(err);
+				}
+			});
+		});
+	} catch(e) {
+		// file-pipeline not installed — fall back to legacy /api/extract route
+	}
+
 	if (!EXTRACTABLE_TYPES[fileInfo.mediaType]) {
 		return Promise.reject(new Error("Unsupported type for extraction: " + fileInfo.mediaType));
 	}
@@ -178,7 +212,6 @@ exports.extractDocument = function(fileInfo) {
 					if (text.length > maxOutput) {
 						text = text.substring(0, maxOutput) + "\n\n... [extraction truncated at " + maxOutput + " chars]";
 					}
-					// Create extracted image tiddlers if images were returned
 					if (result.images && result.images.length > 0) {
 						for (var imgIdx = 0; imgIdx < result.images.length; imgIdx++) {
 							var img = result.images[imgIdx];
@@ -192,7 +225,6 @@ exports.extractDocument = function(fileInfo) {
 								"_artifact_type": "extraction-image"
 							}));
 						}
-						// Add image references to markdown text
 						var imageRefs = "\n\n---\n*Extracted images:*\n";
 						for (var refIdx = 0; refIdx < result.images.length; refIdx++) {
 							var refImg = result.images[refIdx];
@@ -201,7 +233,6 @@ exports.extractDocument = function(fileInfo) {
 						}
 						text += imageRefs;
 					}
-					// Cache the extraction as a tiddler
 					var cacheTitle = fileInfo.title + ".extracted";
 					$tw.wiki.addTiddler(new $tw.Tiddler({
 						title: cacheTitle,
