@@ -26,7 +26,7 @@ type: text/vnd.tiddlywiki
 |`protectionMode` |`allow` (whitelist) or `deny` (blacklist) |global config |
 |`allowFilter` |Allow filter (combined with base allow filter) |none |
 |`denyFilter` |Deny filter (combined with base deny filter) |none |
-|`defaultContext` |Space-separated prefixes for default help context keys (e.g. `rimir/typed tw-gotchas`). Matched keys are pre-selected on first message |none |
+|`defaultContext` |Space-separated prefixes for default help context keys (e.g. `rimir/typed tw-gotchas`). Matched keys are pre-selected at widget mount |`tw-gotchas` |
 
 !! Widget: `<$llm-action>`
 
@@ -95,7 +95,7 @@ Each chat instance stores its active tools in the `llm-active-tools` field on it
 * ''Group buttons'' — apply a tool group preset (replaces current selection)
 * ''Checkboxes'' — toggle individual tools; hover for description
 
-When `llm-active-tools` is not set, all built-in (shadow) tools are used by default. On first open, the selector initializes with built-in tools checked. The dropdown closes automatically when clicking outside it.
+When `llm-active-tools` is not set, all built-in (shadow) tools are used by default. On first open, the selector initializes with only `tool-category: core` tools checked. Setups that pre-populate `llm-active-tools` and set `llm-tools-init: yes` on the chat tiddler bypass this default. The dropdown closes automatically when clicking outside it.
 
 The orchestrator enforces tool selection at execution time — even if the LLM attempts to call a tool not in the active set, the call is rejected with an error message.
 

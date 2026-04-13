@@ -738,10 +738,10 @@ type: text/vnd.tiddlywiki
 }
 
 .llm-ctx-toggle {
-	font-size: 8px;
+	font-size: 11px;
 	padding: 0 2px;
 	cursor: pointer;
-	opacity: 0.5;
+	opacity: 0.7;
 	flex-shrink: 0;
 }
 

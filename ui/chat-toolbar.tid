@@ -13,7 +13,7 @@ type: text/vnd.tiddlywiki
 <$button class="tc-btn-invisible llm-tool-selector-btn" tooltip="Select active tools">
 <$list filter="[<chatTiddler>get[llm-tools-init]else[no]!match[yes]]" variable="_">
 <$action-setfield $tiddler=<<chatTiddler>> llm-tools-init="yes"/>
-<$action-listops $tiddler=<<chatTiddler>> $field="llm-active-tools" $filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]]"/>
+<$action-listops $tiddler=<<chatTiddler>> $field="llm-active-tools" $filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]tool-category[core]]"/>
 </$list>
 <$action-setfield $tiddler=<<selectorState>> text={{{ [<selectorState>get[text]match[open]then[closed]else[open]] }}}/>
 <$transclude $tiddler="$:/plugins/rimir/llm-connect/icon/tools"/>
@@ -52,7 +52,7 @@ None
 </$button>
 <$button class="llm-ctx-toggle tc-btn-invisible" tooltip="Expand/collapse">
 <$action-setfield $tiddler=<<collapse-state>> text={{{ [<collapse-state>get[text]match[closed]then[open]else[closed]] }}}/>
-<%if [<is-collapsed>match[closed]] %>&#x25B6;<%else%>&#x25BC;<%endif%>
+<%if [<is-collapsed>match[closed]] %>&#x25B6;&#xFE0E;<%else%>&#x25BC;&#xFE0E;<%endif%>
 </$button>
 <span class="llm-ctx-label"><$text text=<<cat>>/> (<$text text=<<cat-count>>/>)</span>
 </div>
@@ -106,7 +106,7 @@ None
 <%if [<has-children>minlength[1]] %>
 <$button class="llm-ctx-toggle tc-btn-invisible" tooltip="Expand/collapse">
 <$action-setfield $tiddler=<<collapse-state>> text={{{ [<collapse-state>get[text]match[closed]then[open]else[closed]] }}}/>
-<%if [<is-collapsed>match[closed]] %>&#x25B6;<%else%>&#x25BC;<%endif%>
+<%if [<is-collapsed>match[closed]] %>&#x25B6;&#xFE0E;<%else%>&#x25BC;&#xFE0E;<%endif%>
 </$button>
 <%endif%>
 <span class="llm-ctx-label"><$text text=<<display-label>>/></span>

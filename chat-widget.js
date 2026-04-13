@@ -469,6 +469,9 @@ LlmChatWidget.prototype.execute = function() {
 	this.defaultContextAttr = this.getAttribute("defaultContext", "");
 	this.actionMode = this.getAttribute("actionMode", "") === "yes";
 
+	// Initialize default help context on first mount (idempotent via llm-help-context-init flag)
+	this.initDefaultHelpContext();
+
 	// Use chat tiddler's locked provider/model if conversation has started, otherwise global config
 	var chatTid = this.chatTiddler ? this.wiki.getTiddler(this.chatTiddler) : null;
 	var hasMessages = chatTid && chatTid.fields["llm-messages"] && chatTid.fields["llm-messages"] !== "[]";
@@ -489,7 +492,7 @@ LlmChatWidget.prototype.initDefaultHelpContext = function() {
 	var chatTid = this.wiki.getTiddler(this.chatTiddler);
 	if (chatTid && chatTid.fields["llm-help-context-init"] === "yes") return;
 	var allCtxKeys = this.wiki.filterTiddlers("[all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]get[llm-help-context]enlist-input[]] +[unique[]sort[]]");
-	var defaultPrefixes = this.defaultContextAttr ? $tw.utils.parseStringArray(this.defaultContextAttr) : [];
+	var defaultPrefixes = this.defaultContextAttr ? $tw.utils.parseStringArray(this.defaultContextAttr) : ["tw-gotchas"];
 	var defaultKeys = allCtxKeys.filter(function(k) {
 		return defaultPrefixes.some(function(p) { return k === p || k.indexOf(p + "/") === 0; });
 	});
