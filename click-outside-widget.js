@@ -82,10 +82,13 @@ ClickOutsideWidget.prototype._removeHandler = function() {
 	}
 };
 
-ClickOutsideWidget.prototype.removeChildDomNodes = function() {
+// TW 5.4.0+: cleanup hook is `onDestroy` (called from Widget.prototype.destroy).
+// Parents now call destroyChildren -> child.destroy(), which invokes onDestroy()
+// then removeLocalDomNodes. The legacy `removeChildDomNodes` override would no
+// longer fire on this path, so cleanup must live in onDestroy.
+ClickOutsideWidget.prototype.onDestroy = function() {
 	this._removeHandler();
 	this.domWrapper = null;
-	Widget.prototype.removeChildDomNodes.call(this);
 };
 
 exports["click-outside"] = ClickOutsideWidget;
