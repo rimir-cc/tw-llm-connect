@@ -6,6 +6,7 @@ type: text/vnd.tiddlywiki
 ! Changelog
 
 |!Version |!Date |!Changes |
+|0.1.54 |2026-04-27 |Declare soft-dependents `doc-template`, `file-pipeline`, `runner`, `llm-help` in plugin.info; replace cross-plugin references in test fixtures with generic `example/*` placeholders |
 |0.1.53 |2026-04-25 |TW 5.4.0 compat: `$click-outside` widget cleanup hook renamed from `removeChildDomNodes` to `onDestroy` (PR #9097). Parent widgets in 5.4.0 destroy children via `destroyChildren → child.destroy() → onDestroy()` and never call the legacy `removeChildDomNodes` on that path, so the document-level mousedown listener was leaking on chat-panel teardown |
 |0.1.52 |2026-04-13 |Default tool-selector init restricted to `tool-category: core` instead of all tools. Default help context falls back to `tw-gotchas` when widget's `defaultContext` attribute is unset. `initDefaultHelpContext` now runs at widget mount (execute) so the context selector popup reflects defaults immediately. Context-tree toggle icons switched to VS15 text-presentation (monochrome, no emoji squares) and enlarged (font-size 8px → 11px, opacity 0.5 → 0.7) |
 |0.1.51 |2026-04-09 |file-pipeline integration: `extractDocument()` delegates to file-pipeline when installed (falls back to legacy `/api/extract`). `isExtractable()` checks pipeline definitions. Extraction config migrating to file-pipeline namespace |

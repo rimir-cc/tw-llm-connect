@@ -85,19 +85,19 @@ describe("llm-connect: widget-helpers", function() {
 		it("should append excluded plugin filters in allow mode", function() {
 			addTiddler("$:/config/rimir/llm-connect/protection-mode", { text: "allow" });
 			addTiddler("$:/config/rimir/llm-connect/allow-filter", { text: "[all[tiddlers]]" });
-			addTiddler("$:/config/rimir/llm-connect/excluded-plugins", { text: "$:/plugins/rimir/runner $:/plugins/rimir/realms" });
+			addTiddler("$:/config/rimir/llm-connect/excluded-plugins", { text: "$:/plugins/example/alpha $:/plugins/example/beta" });
 			var result = helpers.resolveProtectionFilter({});
-			expect(result.filter).toContain("-[all[shadows+tiddlers]prefix[$:/plugins/rimir/runner]]");
-			expect(result.filter).toContain("-[all[shadows+tiddlers]prefix[$:/plugins/rimir/realms]]");
+			expect(result.filter).toContain("-[all[shadows+tiddlers]prefix[$:/plugins/example/alpha]]");
+			expect(result.filter).toContain("-[all[shadows+tiddlers]prefix[$:/plugins/example/beta]]");
 		});
 
 		it("should append excluded plugin filters as additive in deny mode", function() {
 			addTiddler("$:/config/rimir/llm-connect/protection-mode", { text: "deny" });
 			addTiddler("$:/config/rimir/llm-connect/protection-filter", { text: "" });
-			addTiddler("$:/config/rimir/llm-connect/excluded-plugins", { text: "$:/plugins/rimir/runner" });
+			addTiddler("$:/config/rimir/llm-connect/excluded-plugins", { text: "$:/plugins/example/alpha" });
 			var result = helpers.resolveProtectionFilter({ mode: "deny" });
-			expect(result.filter).toContain("[all[shadows+tiddlers]prefix[$:/plugins/rimir/runner]]");
-			expect(result.filter).not.toContain("-[all[shadows+tiddlers]prefix[$:/plugins/rimir/runner]]");
+			expect(result.filter).toContain("[all[shadows+tiddlers]prefix[$:/plugins/example/alpha]]");
+			expect(result.filter).not.toContain("-[all[shadows+tiddlers]prefix[$:/plugins/example/alpha]]");
 		});
 
 		it("should append hard protection filter in allow mode", function() {
