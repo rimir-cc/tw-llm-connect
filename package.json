@@ -1,0 +1,8 @@
+{
+    "name": "tw-llm-connect",
+    "private": true,
+    "description": "Tests for the rimir/llm-connect TiddlyWiki plugin",
+    "scripts": {
+        "test": "TIDDLYWIKI_CLI_MODE=1 TIDDLYWIKI_PLUGIN_PATH=../.. npx tiddlywiki test-edition --test"
+    }
+}
