@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm install tiddlywiki
+      - run: npm install tiddlywiki@~5.4.0
       - name: Run tests
         run: |
           mkdir -p /tmp/plugins/rimir/llm-connect
