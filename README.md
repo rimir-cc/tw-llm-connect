@@ -8,7 +8,7 @@ Connect TiddlyWiki to Claude, OpenAI, Azure, and other LLM APIs — the wiki act
 
 - **Two modes** — interactive chat (multi-turn, tool use) and one-shot actions (context template → LLM → output target)
 - **Pair editing** — toolbar button opens an embedded chat panel on any tiddler for collaborative editing with the LLM
-- **Provider adapters** — Claude, OpenAI, and Azure OpenAI out of the box, extensible for other providers
+- **Provider adapters** — Claude, OpenAI, Azure OpenAI, and self-hosted OpenAI-compatible servers (llama.cpp, vLLM, Ollama, LM Studio) out of the box, extensible for other providers
 - **Dynamic model selection** — fetch available models from provider APIs; per-chat model selector with provider locking
 - **Tool system** — built-in tools for searching, reading, navigating, and modifying tiddlers; user-defined tools via wikitext
 - **Per-chat tool selection** — wrench icon opens a dropdown to toggle individual tools per chat; tool groups as quick presets
@@ -22,7 +22,7 @@ Connect TiddlyWiki to Claude, OpenAI, Azure, and other LLM APIs — the wiki act
 
 ## Prerequisites
 
-- An API key for at least one supported provider (Claude, OpenAI, or Azure OpenAI)
+- An API key for at least one supported provider (Claude, OpenAI, or Azure OpenAI), or the endpoint of a self-hosted OpenAI-compatible server
 - A modern browser (async/await support)
 
 ## Quick start

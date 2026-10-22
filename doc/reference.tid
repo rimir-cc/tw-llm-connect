@@ -41,7 +41,7 @@ type: text/vnd.tiddlywiki
 |`tools` |Filter for tool tiddlers |none (no tools) |
 |`toolGroup` |Tool group name — restricts active tools to group members |none |
 |`systemPrompt` |Override system prompt |global config |
-|`provider` |Provider name (`claude`, `openai`, `azure`) |global config |
+|`provider` |Provider name (`claude`, `openai`, `azure`, `openai-compatible`) |global config |
 |`model` |Model ID override |provider default |
 |`protectionMode` |`allow` (whitelist) or `deny` (blacklist) |global config |
 |`allowFilter` |Allow filter (combined with base allow filter) |none |
@@ -272,6 +272,7 @@ Summary tiddler conventions:
 |`$:/config/rimir/llm-connect/providers/<name>/api-key` | |API key |
 |`$:/config/rimir/llm-connect/providers/<name>/model` |varies |Model ID |
 |`$:/config/rimir/llm-connect/providers/<name>/max-tokens` |`4096` |Max response tokens |
+|`$:/config/rimir/llm-connect/providers/<name>/endpoint` | |Base URL — `azure` (resource URL) and `openai-compatible` (server URL, e.g. `http://host:8080`; `/v1` optional). For `openai-compatible` the endpoint (not the API key) marks the provider as configured |
 |`$:/config/rimir/llm-connect/system-prompt` |default text |Global system prompt |
 |`$:/config/rimir/llm-connect/protection-mode` |`allow` |Protection mode — `allow` (whitelist, default) or `deny` (blacklist) |
 |`$:/config/rimir/llm-connect/allow-filter` |(empty) |Allow filter — only matched tiddlers are accessible to LLM tools (allow mode) |

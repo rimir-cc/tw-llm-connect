@@ -35,6 +35,7 @@ On Windows, use `taskkill //F //PID <pid> //T` to kill the server before restart
 |`adapter-claude.js` |library |Claude API: request building, response parsing, multimodal blocks |
 |`adapter-openai.js` |library |OpenAI API: same interface, different format |
 |`adapter-azure.js` |library |Azure OpenAI API: deployment/version config |
+|`adapter-openai-compatible.js` |library |Self-hosted OpenAI-compatible API (llama.cpp, vLLM, Ollama): configurable endpoint, optional key, `<think>` stripping |
 |`tool-executor.js` |library |Tool dispatch, restricted wiki proxy, wikitext execution |
 |`context-resolver.js` |library |Template precedence, rendering, context attachment resolution |
 |`file-resolver.js` |library |File detection, classification (image/document), base64 fetching |

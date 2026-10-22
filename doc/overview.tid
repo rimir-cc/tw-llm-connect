@@ -16,13 +16,13 @@ type: text/vnd.tiddlywiki
 
 !! What it does
 
-llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI, Azure OpenAI) directly from the browser. The wiki acts as the orchestrator: sends prompts, receives tool calls, executes them against `$tw.wiki`, and returns results — all without a server.
+llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI, Azure OpenAI, self-hosted OpenAI-compatible servers) directly from the browser. The wiki acts as the orchestrator: sends prompts, receives tool calls, executes them against `$tw.wiki`, and returns results — all without a server.
 
 !! Features
 
 * ''Two modes'' — interactive chat (multi-turn with tools) and one-shot actions (context template → LLM → output target)
 * ''Pair editing'' — toolbar button opens an embedded chat panel on any tiddler for collaborative editing with the LLM
-* ''Provider adapters'' — Claude, OpenAI, and Azure OpenAI out of the box, extensible adapter interface
+* ''Provider adapters'' — Claude, OpenAI, Azure OpenAI, and self-hosted OpenAI-compatible servers (llama.cpp, vLLM, Ollama, LM Studio) out of the box, extensible adapter interface
 * ''Tool system'' — search, read, navigate, create, modify, delete tiddlers; user-defined tools via wikitext
 * ''Multimodal context'' — attach PDFs, images, and text tiddlers via a context filter (📎 icon); binaries are base64-encoded and sent inline
 * ''Document extraction'' — PDF/DOCX/XLSX files are auto-converted to markdown text (via pdftotext/pandoc/openpyxl) before sending to the LLM — massive token savings vs base64. Extracted text cached per document. Requires runner plugin + server-side tools
@@ -39,7 +39,7 @@ llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI, Azure OpenAI) dire
 
 !! Prerequisites
 
-* API key for a supported provider (Claude, OpenAI, or Azure OpenAI)
+* API key for a supported provider (Claude, OpenAI, or Azure OpenAI), or the endpoint of a self-hosted OpenAI-compatible server
 * Modern browser (async/await, XMLHttpRequest)
 * ''For document extraction'': runner plugin enabled, plus server-side tools: `pdftotext` (poppler-utils), `pandoc`, `python3-openpyxl`
 

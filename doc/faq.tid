@@ -23,5 +23,15 @@ Yes. llm-connect is entirely browser-side — it makes direct XHR calls to the L
 
 Use the context filter (paperclip icon in the chat panel). Enter a filter that matches tiddlers with `_canonical_uri` pointing to PDFs, e.g., `[title[My Document.pdf]]`. The file resolver detects the `_canonical_uri`, fetches the file via XHR, base64-encodes it, and sends it to the LLM as a document attachment. Maximum file size is configurable (default 20 MB).
 
+!! Q: How do I connect a self-hosted model (llama.cpp, vLLM, Ollama, LM Studio)?
+
+Select ''OpenAI-compatible (self-hosted)'' as provider and set its endpoint to the server's base URL (e.g. `http://gpu-host:8080`; a trailing `/v1` is optional). Set the API key only if the server requires one (llama.cpp `--api-key` / `--api-key-file`). Then click ''Fetch models''. Things to check on the server side:
+
+* ''Tool use'' — llama.cpp needs `--jinja`, otherwise tool calls are not returned as structured `tool_calls`.
+* ''CORS'' — requests come straight from the browser, so the server (or a reverse proxy in front of it) must accept the wiki's origin, including the `OPTIONS` preflight.
+* ''Mixed content'' — a wiki served over `https` cannot call an `http` endpoint.
+* ''Reasoning models'' — inline `<think>…</think>` blocks (Qwen3, DeepSeek-R1) are stripped from replies. Reasoning still consumes output tokens, so raise ''Max tokens'' if replies get cut off.
+* ''Documents'' — local servers generally can't read raw PDF/DOCX attachments; keep document extraction enabled so they are sent as text.
+
 </$fill>
 </$transclude>

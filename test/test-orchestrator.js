@@ -3,7 +3,7 @@ title: $:/plugins/rimir/llm-connect/test/test-orchestrator.js
 type: application/javascript
 tags: [[$:/tags/test-spec]]
 
-Tests for llm-connect orchestrator: getProviderConfig, getConfiguredProviders, getCachedModels, getAdapter.
+Tests for llm-connect orchestrator: getProviderConfig, getConfiguredProviders, isProviderConfigured, getCachedModels, getAdapter.
 
 \*/
 "use strict";
@@ -102,8 +102,22 @@ describe("llm-connect: orchestrator", function() {
 			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/providers/claude/api-key");
 			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/providers/openai/api-key");
 			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/providers/azure/api-key");
+			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/providers/openai-compatible/endpoint");
 			var providers = orchestrator.getConfiguredProviders();
 			expect(providers.length).toBe(0);
+		});
+
+		it("should treat openai-compatible as configured by endpoint, without an API key", function() {
+			addTiddler("$:/config/rimir/llm-connect/providers/openai-compatible/endpoint", { text: "http://gpu:34434" });
+			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/providers/openai-compatible/api-key");
+			expect(orchestrator.getConfiguredProviders()).toContain("openai-compatible");
+			expect(orchestrator.isProviderConfigured("openai-compatible")).toBe(true);
+		});
+
+		it("should not treat openai-compatible as configured by API key alone", function() {
+			addTiddler("$:/config/rimir/llm-connect/providers/openai-compatible/api-key", { text: "secret" });
+			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/providers/openai-compatible/endpoint");
+			expect(orchestrator.isProviderConfigured("openai-compatible")).toBe(false);
 		});
 	});
 
@@ -147,6 +161,11 @@ describe("llm-connect: orchestrator", function() {
 		it("should load azure adapter", function() {
 			var adapter = orchestrator.getAdapter("azure");
 			expect(adapter.name).toBe("azure");
+		});
+
+		it("should load openai-compatible adapter", function() {
+			var adapter = orchestrator.getAdapter("openai-compatible");
+			expect(adapter.name).toBe("openai-compatible");
 		});
 
 		it("should throw for unknown provider", function() {

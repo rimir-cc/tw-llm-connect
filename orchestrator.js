@@ -356,8 +356,9 @@ Returns a promise that resolves with [{id, label}] or rejects on error.
 */
 exports.fetchModels = function(providerName) {
 	var config = exports.getProviderConfig(providerName);
-	if (!config.apiKey) {
-		return Promise.reject(new Error("No API key configured for " + providerName));
+	if (!exports.isProviderConfigured(providerName)) {
+		var setting = PROVIDER_REQUIRED_SETTING[providerName] === "endpoint" ? "endpoint" : "API key";
+		return Promise.reject(new Error("No " + setting + " configured for " + providerName));
 	}
 	var adapter = exports.getAdapter(providerName);
 	if (!adapter.buildModelListRequest) {
@@ -386,15 +387,29 @@ exports.getCachedModels = function(providerName) {
 };
 
 /*
-Get all configured providers (those with an API key set).
+Setting each provider needs before it counts as configured. Self-hosted
+OpenAI-compatible servers may run without an API key, so they need an endpoint instead.
+*/
+var PROVIDER_REQUIRED_SETTING = {
+	"claude": "api-key",
+	"openai": "api-key",
+	"azure": "api-key",
+	"openai-compatible": "endpoint"
+};
+
+exports.isProviderConfigured = function(providerName) {
+	var setting = PROVIDER_REQUIRED_SETTING[providerName] || "api-key";
+	return !!$tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/providers/" + providerName + "/" + setting);
+};
+
+/*
+Get all configured providers (those with their required setting present).
 */
 exports.getConfiguredProviders = function() {
-	var providers = ["claude", "openai", "azure"];
 	var result = [];
-	for (var i = 0; i < providers.length; i++) {
-		var key = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/providers/" + providers[i] + "/api-key");
-		if (key) {
-			result.push(providers[i]);
+	for (var name in PROVIDER_REQUIRED_SETTING) {
+		if (exports.isProviderConfigured(name)) {
+			result.push(name);
 		}
 	}
 	return result;

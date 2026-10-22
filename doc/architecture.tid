@@ -58,6 +58,7 @@ Write response to output target (field / new tiddler / display / filter)
 |`adapter-claude.js` |library |Claude API: request building, response parsing, tool results, multimodal blocks |
 |`adapter-openai.js` |library |OpenAI API: same interface, different format, multimodal blocks |
 |`adapter-azure.js` |library |Azure OpenAI API: same as OpenAI with deployment/version config |
+|`adapter-openai-compatible.js` |library |Self-hosted OpenAI-compatible API: configurable endpoint (`/v1` appended if missing), optional bearer key, `max_tokens`, unfiltered model list, strips inline `<think>` reasoning |
 |`tool-executor.js` |library |Tool dispatch, restricted wiki proxy creation, wikitext execution |
 |`context-resolver.js` |library |Template precedence, rendering (text/markup), context attachment resolution |
 |`file-resolver.js` |library |File detection (`_canonical_uri`), classification (image/document), base64 fetching |
@@ -153,7 +154,7 @@ XHR fetches each file → arraybuffer → base64
     ↓
 adapter.buildFileBlock() converts to provider format:
   Claude: { type: "image"|"document", source: { type: "base64", ... } }
-  OpenAI/Azure: { type: "image_url"|"file", ... }
+  OpenAI/Azure/OpenAI-compatible: { type: "image_url"|"file", ... }
 ```
 
 Supported formats: JPEG, PNG, GIF, WEBP (image), PDF, DOCX, XLSX (document). Max file size configurable via `$:/config/rimir/llm-connect/max-file-size` (default 20 MB).

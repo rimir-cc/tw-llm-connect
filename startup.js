@@ -19,7 +19,7 @@ exports.startup = function() {
 	var modules = [
 		"orchestrator", "tool-executor", "context-resolver",
 		"adapter-claude", "adapter-openai-base", "adapter-openai",
-		"adapter-azure", "widget-helpers"
+		"adapter-azure", "adapter-openai-compatible", "widget-helpers"
 	];
 	for (var i = 0; i < modules.length; i++) {
 		try {

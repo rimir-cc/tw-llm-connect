@@ -3,6 +3,21 @@ modified: 20260310120000000
 title: $:/plugins/rimir/llm-connect/settings
 type: text/vnd.tiddlywiki
 
+\procedure provider-options()
+<option value="claude">Claude (Anthropic)</option>
+<option value="openai">OpenAI</option>
+<option value="azure">Azure OpenAI</option>
+<option value="openai-compatible">OpenAI-compatible (self-hosted)</option>
+\end
+
+\procedure fetch-models(provider)
+<$button class="tc-btn-invisible llm-fetch-models-btn" tooltip="Fetch available models from API">
+<$action-sendmessage $message="tm-llm-fetch-models" provider=<<provider>>/>
+&#x21bb; Fetch models
+</$button>
+<span class="rr-muted rr-small"><$text text={{{ [[$:/temp/rimir/llm-connect/fetch-status/]addsuffix<provider>get[text]] }}}/></span>
+\end
+
 \procedure tier-model-select(tier, label, hint)
 <$let
   providerTiddler={{{ [[$:/config/rimir/llm-connect/tiers/]addsuffix<tier>addsuffix[/provider]] }}}
@@ -14,9 +29,7 @@ type: text/vnd.tiddlywiki
 <strong><<label>></strong> <span class="rr-muted rr-small">(<<hint>>)</span><br/>
 <$select tiddler=<<providerTiddler>> default="" class="rr-input">
 <option value="">— select provider —</option>
-<option value="claude">Claude</option>
-<option value="openai">OpenAI</option>
-<option value="azure">Azure</option>
+<<provider-options>>
 </$select> /
 <$select tiddler=<<modelTiddler>> default="">
 <option value="">— select model —</option>
@@ -25,11 +38,7 @@ type: text/vnd.tiddlywiki
 </$list>
 </$select>
 <%if [<tierProvider>minlength[1]] %>
-<$button class="tc-btn-invisible llm-fetch-models-btn" tooltip="Fetch available models from API">
-<$action-sendmessage $message="tm-llm-fetch-models" provider=<<tierProvider>>/>
-&#x21bb; Fetch models
-</$button>
-<span class="rr-muted rr-small"><$text text={{{ [[$:/temp/rimir/llm-connect/fetch-status/]addsuffix<tierProvider>get[text]] }}}/></span>
+<$transclude $variable="fetch-models" provider=<<tierProvider>>/>
 <%endif%>
 </div>
 </$let>
@@ -128,9 +137,7 @@ type: text/vnd.tiddlywiki
 
 <div class="rr-input-row">
 <$select tiddler="$:/config/rimir/llm-connect/provider" field="text" default="claude" class="llm-default-model-provider-select">
-<option value="claude">Claude (Anthropic)</option>
-<option value="openai">OpenAI</option>
-<option value="azure">Azure OpenAI</option>
+<<provider-options>>
 </$select>
 /
 <$let curProvider={{{ [[$:/config/rimir/llm-connect/provider]get[text]else[claude]] }}} modelCache={{{ [[$:/temp/rimir/llm-connect/models/]addsuffix<curProvider>] }}} hasModels={{{ [<modelCache>get[text]minlength[3]then[yes]else[no]] }}}>
@@ -178,11 +185,7 @@ API key: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/claude/api-k
 
 <div class="rr-input-row">
 Max tokens: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/claude/max-tokens" tag="input" default="4096" class="rr-input" size="10"/>
-<$button class="tc-btn-invisible llm-fetch-models-btn" tooltip="Fetch available models from API">
-<$action-sendmessage $message="tm-llm-fetch-models" provider="claude"/>
-&#x21bb; Fetch models
-</$button>
-<span class="rr-muted rr-small"><$text text={{{ [[$:/temp/rimir/llm-connect/fetch-status/claude]get[text]] }}}/></span>
+<<fetch-models "claude">>
 </div>
 
 !!! OpenAI
@@ -193,11 +196,7 @@ API key: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/openai/api-k
 
 <div class="rr-input-row">
 Max tokens: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/openai/max-tokens" tag="input" default="4096" class="rr-input" size="10"/>
-<$button class="tc-btn-invisible llm-fetch-models-btn" tooltip="Fetch available models from API">
-<$action-sendmessage $message="tm-llm-fetch-models" provider="openai"/>
-&#x21bb; Fetch models
-</$button>
-<span class="rr-muted rr-small"><$text text={{{ [[$:/temp/rimir/llm-connect/fetch-status/openai]get[text]] }}}/></span>
+<<fetch-models "openai">>
 </div>
 
 !!! Azure OpenAI
@@ -220,11 +219,24 @@ API version: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/azure/ap
 
 <div class="rr-input-row">
 Max tokens: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/azure/max-tokens" tag="input" default="4096" class="rr-input" size="10"/>
-<$button class="tc-btn-invisible llm-fetch-models-btn" tooltip="Fetch available models from API">
-<$action-sendmessage $message="tm-llm-fetch-models" provider="azure"/>
-&#x21bb; Fetch models
-</$button>
-<span class="rr-muted rr-small"><$text text={{{ [[$:/temp/rimir/llm-connect/fetch-status/azure]get[text]] }}}/></span>
+<<fetch-models "azure">>
+</div>
+
+!!! OpenAI-compatible (self-hosted)
+
+<span class="rr-muted rr-small">Any server exposing the OpenAI Chat Completions API — llama.cpp (`llama-server`), vLLM, Ollama, LM Studio. Tool use with llama.cpp requires the `--jinja` flag. The server must allow browser requests from this wiki's origin (CORS). Inline `<think>` reasoning blocks are stripped from replies.</span>
+
+<div class="rr-input-row">
+Endpoint: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/openai-compatible/endpoint" tag="input" default="" class="rr-input" size="50" placeholder="http://gpu-host:8080 (with or without /v1)"/>
+</div>
+
+<div class="rr-input-row">
+API key: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/openai-compatible/api-key" tag="input" default="" class="rr-input" size="40" type="password"/> <span class="rr-muted">optional — only if the server sets `--api-key`; stored in wiki</span>
+</div>
+
+<div class="rr-input-row">
+Max tokens: <$edit-text tiddler="$:/config/rimir/llm-connect/providers/openai-compatible/max-tokens" tag="input" default="4096" class="rr-input" size="10"/>
+<<fetch-models "openai-compatible">>
 </div>
 
 !! Safety

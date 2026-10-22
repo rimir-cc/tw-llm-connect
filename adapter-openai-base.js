@@ -3,7 +3,7 @@ title: $:/plugins/rimir/llm-connect/adapter-openai-base
 type: application/javascript
 module-type: library
 
-Shared base for OpenAI-compatible adapters (OpenAI, Azure)
+Shared base for OpenAI-compatible adapters (OpenAI, Azure, self-hosted)
 
 \*/
 (function() {
