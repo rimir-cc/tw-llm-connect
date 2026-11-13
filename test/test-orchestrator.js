@@ -172,4 +172,93 @@ describe("llm-connect: orchestrator", function() {
 			expect(function() { orchestrator.getAdapter("nonexistent"); }).toThrow();
 		});
 	});
+	describe("runAction signal", function() {
+		// Modules run in TW's shared vm context; free identifiers resolve against it
+		var sandboxGlobal = $tw.utils.sandbox;
+		var origXHR, xhrs, stubAdapter;
+		beforeEach(function() {
+			origXHR = sandboxGlobal.XMLHttpRequest;
+			xhrs = [];
+			sandboxGlobal.XMLHttpRequest = function() {
+				this.aborted = false;
+				this.calls = [];
+				xhrs.push(this);
+			};
+			sandboxGlobal.XMLHttpRequest.prototype.open = function() { this.calls.push("open"); };
+			sandboxGlobal.XMLHttpRequest.prototype.setRequestHeader = function() { this.calls.push("setRequestHeader"); };
+			sandboxGlobal.XMLHttpRequest.prototype.send = function() { this.calls.push("send"); };
+			sandboxGlobal.XMLHttpRequest.prototype.abort = function() { this.aborted = true; };
+			stubAdapter = {
+				buildRequest: function() { return { url: "http://x", headers: {}, body: "{}" }; },
+				parseResponse: function() { return { type: "text", content: "ok" }; }
+			};
+		});
+		afterEach(function() {
+			sandboxGlobal.XMLHttpRequest = origXHR;
+		});
+
+		// The TW module sandbox has no AbortController; minimal stand-in
+		function fakeController() {
+			var listeners = [];
+			var signal = {
+				aborted: false,
+				addEventListener: function(type, fn) { listeners.push(fn); }
+			};
+			return {
+				signal: signal,
+				abort: function() {
+					signal.aborted = true;
+					listeners.slice().forEach(function(fn) { fn(); });
+				}
+			};
+		}
+
+		function tick(n) {
+			var p = Promise.resolve();
+			for (var i = 0; i < n; i++) p = p.then(function() {});
+			return p;
+		}
+
+		it("aborts the single-turn request", function(done) {
+			var ac = fakeController();
+			var p = orchestrator.runAction({ prompt: "x", config: {}, adapter: stubAdapter, signal: ac.signal });
+			tick(20).then(function() {
+				ac.abort();
+				return p;
+			}).then(function() {
+				done.fail("expected rejection");
+			}, function(err) {
+				expect(err.message).toBe("Request aborted");
+				expect(xhrs[xhrs.length - 1].aborted).toBe(true);
+				done();
+			});
+		});
+
+		it("aborts the tool-loop request", function(done) {
+			var ac = fakeController();
+			var p = orchestrator.runAction({ prompt: "x", config: {}, adapter: stubAdapter, signal: ac.signal,
+				tools: [{ name: "t", description: "", schema: {} }], toolExecutor: {} });
+			tick(20).then(function() {
+				ac.abort();
+				return p;
+			}).then(function() {
+				done.fail("expected rejection");
+			}, function(err) {
+				expect(err.message).toBe("Request aborted");
+				expect(xhrs[xhrs.length - 1].aborted).toBe(true);
+				done();
+			});
+		});
+
+		it("already-aborted signal rejects", function(done) {
+			var ac = fakeController();
+			ac.abort();
+			orchestrator.runAction({ prompt: "x", config: {}, adapter: stubAdapter, signal: ac.signal }).then(function() {
+				done.fail("expected rejection");
+			}, function(err) {
+				expect(err.message).toBe("Request aborted");
+				done();
+			});
+		});
+	});
 });

@@ -273,7 +273,8 @@ options: {
   tools: array of tool definitions (optional, usually empty for action mode),
   config: provider config,
   adapter: provider adapter,
-  toolExecutor: tool-executor module
+  toolExecutor: tool-executor module,
+  signal: AbortSignal (optional) — aborting rejects with Error("Request aborted")
 }
 Returns a promise that resolves with the response text.
 */
@@ -322,6 +323,7 @@ exports.runAction = function(options) {
 			adapter: options.adapter,
 			toolExecutor: options.toolExecutor,
 			protectionFilter: options.protectionFilter || { filter: "", mode: "allow" },
+			signal: options.signal,
 			onUpdate: function() {},
 			onError: function() {}
 		}).then(function(msgs) {
@@ -343,7 +345,7 @@ exports.runAction = function(options) {
 		if (options.onRequest) {
 			try { options.onRequest(request); } catch(e) { console.warn("llm-connect: hook error:", e); }
 		}
-		return httpRequest(request);
+		return httpRequest(request, options.signal);
 	}).then(function(responseText) {
 		var parsed = adapter.parseResponse(responseText);
 		return parsed.content || "";
@@ -529,6 +531,10 @@ function httpGetRequest(requestConfig) {
 
 function httpRequest(requestConfig, signal) {
 	return new Promise(function(resolve, reject) {
+		if (signal && signal.aborted) {
+			reject(new Error("Request aborted"));
+			return;
+		}
 		var xhr = new XMLHttpRequest();
 		xhr.open("POST", requestConfig.url, true);
 
