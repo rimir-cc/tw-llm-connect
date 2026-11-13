@@ -17,9 +17,9 @@ llm connect executes LLM-requested operations against the wiki store. This secti
 
 !! API key storage
 
-API keys are stored in wiki config tiddlers, one per connection (`$:/config/rimir/llm-connect/keys/<id>`, tagged `sensitive`). They are visible to anyone with file access to the wiki. This is suitable for personal wikis or server wikis with authentication.
+API keys are stored in wiki config tiddlers, one per connection (`$:/config/rimir/llm-connect/keys/<id>`). They are visible to anyone with file access to the wiki. This is suitable for personal wikis or server wikis with authentication.
 
-Keys are always hidden from the LLM, in every protection mode: the key tiddlers are excluded by the protection filter, and tools cannot create tiddlers under the key prefix. Keys are only sent to the connection's own API endpoint. The key inputs in Settings are password fields.
+Keys are always hidden from the LLM by llm-connect itself, in every protection mode and without any tag: the protection filter excludes the key prefix as its very last run, so no user filter and no llm-help grant can re-allow a key; no tool may name a title under the key prefix (read or write, e.g. `get_tiddler`, `set_field`, `create_tiddler`); and key tiddlers are never sent as context (they are dropped from `llm-context` and chat context attachments and ignored as pair-edit source). Keys are only sent to the connection's own API endpoint. The key inputs in Settings are password fields.
 
 !! Protection modes — allow & deny
 
@@ -65,6 +65,7 @@ Protection filters are combined in this order:
 # ''Excluded plugins'' — plugins ticked in settings are blocked.
 # ''Hard protection filter'' — absolute final gate. Applied after everything else. Cannot be overridden.
 # ''Help page access'' — when the llm-help plugin is installed, all help pages, the functions tiddler, and help temp tiddlers are always accessible. Added after hard protection (hard protection still wins for `[tag[sensitive]]` help pages).
+# ''Connection keys'' — `$:/config/rimir/llm-connect/keys/` is excluded as the very last run, after the help page access, so nothing can re-allow a key (not even a key tiddler tagged as a help page).
 
 All layers are concatenated into a single filter expression. Per-chat mode can be overridden via the mode dropdown in the shield panel.
 

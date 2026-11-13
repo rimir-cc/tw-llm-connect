@@ -41,8 +41,8 @@ type: text/vnd.tiddlywiki
 |`tools` |Filter for tool tiddlers |none (no tools) |
 |`toolGroup` |Tool group name — restricts active tools to group members |none |
 |`systemPrompt` |Override system prompt |global config |
-|`connection` |Connection id, name or type (`claude`, `openai`, `azure`, `openai-compatible`); empty uses the default connection |default connection |
-|`provider` |Alias of `connection` (older name) |default connection |
+|`connection` |Connection id or name; empty uses the default connection |default connection |
+|`provider` |Provider type (`claude`, `openai`, `azure`, `openai-compatible`, older attribute): the default connection if it has that type, else the first of that type by name. `connection` wins when both are set |default connection |
 |`model` |Model ID override |connection's model |
 |`protectionMode` |`allow` (whitelist) or `deny` (blacklist) |global config |
 |`allowFilter` |Allow filter (combined with base allow filter) |none |
@@ -270,10 +270,10 @@ Summary tiddler conventions:
 
 |!Tiddler |!Description |
 |`$:/config/rimir/llm-connect/connections/<id>` |One connection, tagged `$:/tags/rimir/llm-connect/connection`. Ids are `c` + UTC timestamp digits (`c20261113090000001`) |
-|`$:/config/rimir/llm-connect/keys/<id>` |API key of that connection (tag `sensitive`); always hidden from the LLM |
+|`$:/config/rimir/llm-connect/keys/<id>` |API key of that connection; always hidden from the LLM by llm-connect itself (no tag needed) |
 
 |!Field |!Description |
-|`connection-id` / `connection-name` / `connection-description` |Id, display name (used by the `connection` attribute) and optional note |
+|`connection-name` / `connection-description` |Display name (used by the `connection` attribute) and optional note. The id is the title suffix only |
 |`connection-type` |`claude`, `openai`, `azure` or `openai-compatible` |
 |`endpoint` |Base URL — `azure` (resource URL) and `openai-compatible` (server URL, e.g. `http://host:8080`; `/v1` optional). For `openai-compatible` the endpoint (not the key) marks the connection as configured |
 |`deployment` / `api-version` |`azure` only |
@@ -283,12 +283,12 @@ Summary tiddler conventions:
 
 Connection types are registered by tiddlers tagged `$:/tags/rimir/llm-connect/connection-type` (fields `connection-type`, `caption`, `connection-fields`, `required-field`); field editors live in `connection-fields/`.
 
-JS API (library `$:/plugins/rimir/llm-connect/connections` and orchestrator): `listConnections()`, `getConnection(id)`, `getDefaultConnectionId()`, `resolveConnectionId(ref)` (id, name, type or empty), `isConfigured(id)`, `connectionConfig(id)`, `resolveChatConnection(fields)`; `orchestrator.getProviderConfig(ref)` returns `connectionConfig` for a resolved `ref`.
+JS API (library `$:/plugins/rimir/llm-connect/connections` and orchestrator): `listConnections()`, `getConnection(id)`, `getDefaultConnectionId()`, `resolveConnectionId(ref)`, `resolveTypeConnectionId(type)`, `unresolvedMessage(ref)`, `isConfigured(id)`, `connectionConfig(id)`, `resolveChatConnection(fields)`; `orchestrator.getProviderConfig(ref)` returns `connectionConfig` for a resolved `ref` and throws `Unknown connection "<ref>"` (or `No connection of type "<type>"`) when a non-empty `ref` resolves to nothing. A `ref` is `""` (default connection), `{connection: "<id or name>"}`, `{type: "<type>"}`, or a plain string (a registered type name resolves by type, anything else by id or name). Type resolution: the default connection if it has that type, else the first of that type by name.
 
 !! Settings tabs
 
 |!Tab |!Content |
-|Connections |Add, edit, delete and test connections; fetch models; choose the default |
+|Connections |Add, edit and delete connections; fetch models; choose the default (the first connection added becomes the default) |
 |Routing |Tier routing switch (cheap/expensive models are set on each connection) |
 |Safety |Protection mode, allow/deny filters, excluded plugins |
 |Files |Size limits, document extraction, image extraction |
@@ -400,11 +400,11 @@ When the `tiddler` attribute is set (e.g. pair-edit mode), the source tiddler is
 |!Before (0.1.56) |!Now (0.1.57) |
 |`$:/config/rimir/llm-connect/provider` (active provider name) |`$:/config/rimir/llm-connect/default-connection` (text = connection id) |
 |`$:/config/rimir/llm-connect/providers/<type>/<field>` |field `<field>` on `$:/config/rimir/llm-connect/connections/<id>` with `connection-type: <type>` |
-|`$:/config/rimir/llm-connect/providers/<type>/api-key` |`$:/config/rimir/llm-connect/keys/<id>` (keep tag `sensitive`) |
+|`$:/config/rimir/llm-connect/providers/<type>/api-key` |`$:/config/rimir/llm-connect/keys/<id>` (no tag needed: llm-connect hides keys itself) |
 |`$:/config/rimir/llm-connect/tiers/<tier>/provider` + `.../tiers/<tier>/model` |field `<tier>-model` (`cheap-model` / `expensive-model`) on the connection of that provider |
 |`$:/config/rimir/llm-connect/tier-routing-enabled` |unchanged |
 
-Saved chats need no change: a chat that only stores a provider type resolves to the first connection of that type. The `provider` attribute of `<$llm-action>` still works as an alias of `connection`.
+Saved chats need no change: a chat that only stores a provider type resolves to the default connection if it has that type, else the first of that type by name. The `provider` attribute of `<$llm-action>` still works and maps by type the same way.
 
 </$fill>
 </$transclude>

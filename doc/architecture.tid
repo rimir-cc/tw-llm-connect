@@ -187,9 +187,9 @@ The extraction route resolves `_canonical_uri` paths to filesystem paths — sup
 
 !! Connections
 
-A connection is a tiddler `$:/config/rimir/llm-connect/connections/<id>` tagged `$:/tags/rimir/llm-connect/connection` with fields `connection-id`, `connection-name`, `connection-description`, `connection-type` (`claude`, `openai`, `azure`, `openai-compatible`) and the type's fields (`endpoint`, `deployment`, `api-version`, `model`, `max-tokens`, `cheap-model`, `expensive-model`). The id is `c` plus a UTC timestamp. The API key is stored apart in `$:/config/rimir/llm-connect/keys/<id>` (tag `sensitive`). `$:/config/rimir/llm-connect/default-connection` holds the default id.
+A connection is a tiddler `$:/config/rimir/llm-connect/connections/<id>` tagged `$:/tags/rimir/llm-connect/connection` with fields `connection-name`, `connection-description`, `connection-type` (`claude`, `openai`, `azure`, `openai-compatible`) and the type's fields (`endpoint`, `deployment`, `api-version`, `model`, `max-tokens`, `cheap-model`, `expensive-model`). The id is the title suffix (`c` plus a UTC timestamp). The API key is stored apart in `$:/config/rimir/llm-connect/keys/<id>`, which llm-connect always hides from the LLM. `$:/config/rimir/llm-connect/default-connection` holds the default id.
 
-A chat stores `llm-connection` (id), `llm-connection-name` and `llm-connection-type`. On load the connection is resolved by id; if it is gone the chat falls back to a connection of the same type (or the default) and shows a notice. Chats that only carry a provider type (older versions) resolve to the first connection of that type. The connection is locked once the conversation has started.
+A chat stores `llm-connection` (id), `llm-connection-name` and `llm-connection-type`. On load the connection is resolved by id; if it is gone the chat falls back to a connection of the same type (or the default) and shows a notice. Chats that only carry a provider type (older versions) resolve to the default connection if it has that type, else the first of that type by name. A started chat without a stored model uses its connection's model. The connection is locked once the conversation has started.
 
 !! Model tier routing
 

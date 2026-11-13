@@ -41,6 +41,7 @@ llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI, Azure OpenAI, self
 
 * A connection to a supported provider: an API key (Claude, OpenAI, Azure OpenAI), or the endpoint of a self-hosted OpenAI-compatible server
 * Modern browser (async/await, XMLHttpRequest)
+* rimir/theme 0.1.10+ (settings page layout)
 * ''For document extraction'': runner plugin enabled, plus server-side tools: `pdftotext` (poppler-utils), `pandoc`, `python3-openpyxl`
 
 !! Quick start

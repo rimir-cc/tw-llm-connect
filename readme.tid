@@ -36,6 +36,7 @@ In-browser LLM integration with tool use. Connect TiddlyWiki to Claude, OpenAI, 
 
 * A connection to at least one supported provider: an API key (Claude, OpenAI, Azure OpenAI), or the endpoint of a self-hosted OpenAI-compatible server
 * A modern browser (async/await support)
+* rimir/theme 0.1.10+ (settings page layout)
 
 !! Quick start
 
@@ -57,15 +58,15 @@ For one-shot actions, add a button to any tiddler:
 </$button>
 ```
 
-The optional `connection` attribute names a connection (id, name or type); without it the default connection is used.
+The optional `connection` attribute names a connection (id or name); without it the default connection is used. The older `provider` attribute takes a provider type and maps to a connection of that type: the default connection if it has that type, else the first of that type by name.
 
 !! Settings
 
-Six tabs: ''Connections'' (add, edit, test connections; pick the default), ''Routing'' (tier routing switch), ''Safety'' (protection modes and filters), ''Files'' (attachments and document extraction), ''Prompt'' (system prompt, context template), ''Tools'' (tool list and groups).
+Six tabs: ''Connections'' (add, edit and delete connections, fetch models; pick the default), ''Routing'' (tier routing switch), ''Safety'' (protection modes and filters), ''Files'' (attachments and document extraction), ''Prompt'' (system prompt, context template), ''Tools'' (tool list and groups).
 
 !! Security
 
-API keys are stored per connection in `$:/config/rimir/llm-connect/keys/<id>` (tagged `sensitive`). They are always hidden from the LLM: the protection filter excludes them in every mode and the tools cannot create tiddlers under the key prefix.
+API keys are stored per connection in `$:/config/rimir/llm-connect/keys/<id>`. llm-connect hides them itself, without any tag: the protection filter excludes them in every mode as its very last run (no user filter or llm-help grant can re-allow them), no tool may name a title under the key prefix (read or write), and key tiddlers are never sent as context (not as `llm-context` / chat context attachments, not as pair-edit source).
 
 !! Upgrading from 0.1.56
 
@@ -74,9 +75,9 @@ API keys are stored per connection in `$:/config/rimir/llm-connect/keys/<id>` (t
 |!Before (0.1.56) |!Now (0.1.57) |
 |`$:/config/rimir/llm-connect/provider` (active provider name) |`$:/config/rimir/llm-connect/default-connection` (text = connection id) |
 |`$:/config/rimir/llm-connect/providers/<type>/<field>` |field `<field>` on `$:/config/rimir/llm-connect/connections/<id>` with `connection-type: <type>` |
-|`$:/config/rimir/llm-connect/providers/<type>/api-key` |`$:/config/rimir/llm-connect/keys/<id>` (keep tag `sensitive`) |
+|`$:/config/rimir/llm-connect/providers/<type>/api-key` |`$:/config/rimir/llm-connect/keys/<id>` (no tag needed: llm-connect hides keys itself) |
 |`$:/config/rimir/llm-connect/tiers/<tier>/provider` + `.../tiers/<tier>/model` |field `<tier>-model` (`cheap-model` / `expensive-model`) on the connection of that provider |
 |`$:/config/rimir/llm-connect/tier-routing-enabled` |unchanged |
 
-Saved chats need no change: a chat that only stores a provider type resolves to the first connection of that type. The `provider` attribute of `<$llm-action>` still works as an alias of `connection`.
+Saved chats need no change: a chat that only stores a provider type resolves to the default connection if it has that type, else the first of that type by name. The `provider` attribute of `<$llm-action>` still works and maps by type the same way.
 
