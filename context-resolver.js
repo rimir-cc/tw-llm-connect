@@ -11,6 +11,13 @@ Context template resolution — precedence chain, rendering (text/markup), outpu
 "use strict";
 
 /*
+Connection key tiddlers never reach the provider: not as source, not as attachment.
+*/
+function isKeyTitle(title) {
+	return !!title && title.indexOf(require("$:/plugins/rimir/llm-connect/connections").KEY_PREFIX) === 0;
+}
+
+/*
 Resolve which context template to use.
 Precedence: tiddler field > prompt template > widget attribute > global default > built-in
 */
@@ -59,6 +66,12 @@ exports.renderContext = function(options) {
 	var sourceTiddler = options.sourceTiddler;
 	var outputModeOverride = options.outputMode;
 	var outputTargetOverride = options.outputTarget;
+
+	// A key tiddler as source renders nothing (same as no template and no source)
+	if (isKeyTitle(sourceTiddler)) {
+		templateTitle = null;
+		sourceTiddler = null;
+	}
 
 	// Built-in default: render source tiddler text
 	if (!templateTitle) {
@@ -229,7 +242,7 @@ exports.resolveContextAttachments = function(options) {
 	for (var i = 0; i < titles.length; i++) {
 		if (/^Filter error:/.test(titles[i])) {
 			filterErrors.push(titles[i]);
-		} else {
+		} else if (!isKeyTitle(titles[i])) {
 			validTitles.push(titles[i]);
 		}
 	}

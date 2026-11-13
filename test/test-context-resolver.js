@@ -212,4 +212,36 @@ describe("llm-connect: context-resolver", function() {
 			expect(result.outputMode).toBe("text");
 		});
 	});
+	describe("connection keys never reach the context", function() {
+		var KEY = "$:/config/rimir/llm-connect/keys/zz-ctx";
+		beforeEach(function() {
+			addTiddler(KEY, { text: "sk-ctx-secret" });
+		});
+
+		it("drops key titles from llm-context attachments", function() {
+			addTiddler("$:/test/ctx-source", { text: "src", "llm-context": "[[" + KEY + "]] [[$:/test/ctx-other]]" });
+			addTiddler("$:/test/ctx-other", { text: "other" });
+			var result = contextResolver.resolveContextAttachments({ sourceTiddler: "$:/test/ctx-source" });
+			expect(result.textTitles).toEqual(["$:/test/ctx-other"]);
+		});
+
+		it("drops key titles from the chat context filter", function() {
+			var result = contextResolver.resolveContextAttachments({ chatFilter: "[prefix[$:/config/rimir/llm-connect/keys/]]" });
+			expect(result.textTitles).toEqual([]);
+			expect(result.fileParts).toEqual([]);
+		});
+
+		it("skips a key tiddler as pair-edit source", function() {
+			var result = contextResolver.renderContext({
+				templateTitle: "$:/plugins/rimir/llm-connect/context-templates/pair-edit",
+				sourceTiddler: KEY
+			});
+			expect(result.text || "").not.toContain("sk-ctx-secret");
+		});
+
+		it("skips a key tiddler as source of the built-in default", function() {
+			var result = contextResolver.renderContext({ templateTitle: null, sourceTiddler: KEY });
+			expect(result.text || "").not.toContain("sk-ctx-secret");
+		});
+	});
 });

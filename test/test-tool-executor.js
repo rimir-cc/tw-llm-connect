@@ -201,6 +201,49 @@ describe("llm-connect: tool-executor", function() {
 		});
 	});
 
+	describe("executeTool key protection", function() {
+		var KEY = "$:/config/rimir/llm-connect/keys/zz-test";
+		var helpers = require("$:/plugins/rimir/llm-connect/widget-helpers");
+		afterEach(function() {
+			$tw.wiki.deleteTiddler(KEY);
+		});
+
+		it("set_field cannot create a key tiddler in deny mode", function() {
+			var deny = helpers.resolveProtectionFilter({ mode: "deny", denyFilter: "" });
+			var result = toolExecutor.executeTool({ name: "set_field", input: { title: KEY, field: "text", value: "stolen" } }, deny);
+			expect(result).toContain("Access denied");
+			expect($tw.wiki.tiddlerExists(KEY)).toBe(false);
+		});
+
+		it("set_field cannot overwrite a key tiddler in deny mode", function() {
+			$tw.wiki.addTiddler(new $tw.Tiddler({ title: KEY, text: "orig" }));
+			var deny = helpers.resolveProtectionFilter({ mode: "deny", denyFilter: "" });
+			var result = toolExecutor.executeTool({ name: "set_field", input: { title: KEY, field: "text", value: "stolen" } }, deny);
+			expect(result).toContain("Access denied");
+			expect($tw.wiki.getTiddlerText(KEY)).toBe("orig");
+		});
+
+		describe("reads return no key text", function() {
+			var protections = {
+				"allow [all[tiddlers]]": function() { return helpers.resolveProtectionFilter({ mode: "allow", allowFilter: "[all[tiddlers]]" }); },
+				"deny with empty deny filter": function() { return helpers.resolveProtectionFilter({ mode: "deny", denyFilter: "" }); }
+			};
+			beforeEach(function() {
+				$tw.wiki.addTiddler(new $tw.Tiddler({ title: KEY, text: "sk-zz-secret" }));
+			});
+			Object.keys(protections).forEach(function(label) {
+				it("get_tiddler, " + label, function() {
+					var result = toolExecutor.executeTool({ name: "get_tiddler", input: { title: KEY } }, protections[label]());
+					expect(result).not.toContain("sk-zz-secret");
+				});
+				it("wikitext_render, " + label, function() {
+					var result = toolExecutor.executeTool({ name: "wikitext_render", input: { wikitext: "{{" + KEY + "}}|<$text text={{{ [[" + KEY + "]get[text]] }}}/>" } }, protections[label]());
+					expect(result).not.toContain("sk-zz-secret");
+				});
+			});
+		});
+	});
+
 	describe("executeTool built-in variables __provider / __model", function() {
 		var CONN = "$:/config/rimir/llm-connect/connections/";
 		var DEFAULT = "$:/config/rimir/llm-connect/default-connection";
@@ -233,6 +276,15 @@ describe("llm-connect: tool-executor", function() {
 			$tw.wiki.addTiddler(new $tw.Tiddler({ title: "$:/test/vars-chat", "llm-connection": "ctest2" }));
 			addedTitles.push("$:/test/vars-chat");
 			expect(run("$:/test/vars-chat")).toBe("azure|model-two");
+		});
+
+		it("reports the chat's own model when it has one", function() {
+			addConn("ctest1", "Test One", "claude", "model-one");
+			addConn("ctest2", "Test Two", "azure", "model-two");
+			$tw.wiki.addTiddler(new $tw.Tiddler({ title: DEFAULT, text: "ctest1" }));
+			$tw.wiki.addTiddler(new $tw.Tiddler({ title: "$:/test/vars-chat", "llm-connection": "ctest2", "llm-model": "chat-model" }));
+			addedTitles.push("$:/test/vars-chat");
+			expect(run("$:/test/vars-chat")).toBe("azure|chat-model");
 		});
 
 		it("falls back to the default connection without a chat tiddler", function() {

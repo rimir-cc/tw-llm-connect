@@ -146,6 +146,29 @@ describe("llm-connect: widget-helpers", function() {
 			expect(result.filter).toContain(" [prefix[$:/config/rimir/llm-connect/keys/]]");
 			expect($tw.wiki.filterTiddlers(result.filter)).toContain("$:/config/rimir/llm-connect/keys/A1");
 		});
+		describe("keys stay excluded after the llm-help grant", function() {
+			var KEY = "$:/config/rimir/llm-connect/keys/A1";
+			beforeEach(function() {
+				var orig = $tw.wiki.isShadowTiddler;
+				spyOn($tw.wiki, "isShadowTiddler").and.callFake(function(title) {
+					return title === "$:/plugins/rimir/llm-help/functions" || orig.call($tw.wiki, title);
+				});
+				addTiddler(KEY, { text: "secret", tags: "$:/tags/rimir/llm-help/page" });
+			});
+
+			it("allow mode: a key tagged as llm-help page is not allowed", function() {
+				var result = helpers.resolveProtectionFilter({ mode: "allow" });
+				expect(result.filter).toContain("$:/tags/rimir/llm-help/page");
+				expect($tw.wiki.filterTiddlers(result.filter)).not.toContain(KEY);
+			});
+
+			it("deny mode: a key tagged as llm-help page stays denied", function() {
+				addTiddler("$:/config/rimir/llm-connect/protection-filter", { text: "" });
+				var result = helpers.resolveProtectionFilter({ mode: "deny" });
+				expect(result.filter).toContain("$:/tags/rimir/llm-help/page");
+				expect($tw.wiki.filterTiddlers(result.filter)).toContain(KEY);
+			});
+		});
 	});
 
 	describe("resolveProviderConfig", function() {
@@ -182,6 +205,18 @@ describe("llm-connect: widget-helpers", function() {
 			expect(config.provider).toBe("openai");
 			expect(config.connection).toBe("B2");
 			expect(config.apiKey).toBe("sk-oai");
+		});
+
+		it("a type ref never picks a connection merely named like the type", function() {
+			conn("N1", "openai", "claude", {model: "named"});
+			expect(helpers.resolveProviderConfig("openai").connection).toBe("B2");
+			expect(helpers.resolveProviderConfig({type: "openai"}).connection).toBe("B2");
+			expect(helpers.resolveProviderConfig({connection: "openai"}).connection).toBe("N1");
+		});
+
+		it("an unresolvable type or connection throws a readable error", function() {
+			expect(function() { helpers.resolveProviderConfig({type: "azure"}); }).toThrowError('No connection of type "azure"');
+			expect(function() { helpers.resolveProviderConfig("nope"); }).toThrowError('Unknown connection "nope"');
 		});
 
 		it("should override model when specified", function() {

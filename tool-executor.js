@@ -83,6 +83,12 @@ exports.executeTool = function(toolCall, protection) {
 	}
 	protection = protection || { filter: "", mode: "deny" };
 
+	// Connection keys: no tool may name a title under the key prefix, in any mode
+	var keyTitle = namesKeyTitle(toolCall.input);
+	if (keyTitle) {
+		return "Error: Access denied \u2014 tiddler '" + keyTitle + "' is protected by filter rules";
+	}
+
 	// Check title-based protection
 	// For create_tiddler with basetitle: skip pre-check (resolved title unknown, wikitext handles it)
 	// For create_tiddler with title on new tiddler: skip (tiddler doesn't exist yet)
@@ -118,9 +124,6 @@ exports.executeTool = function(toolCall, protection) {
 	var effectiveProtection = protection;
 	if (toolCall.name === "create_tiddler" && toolCall.input) {
 		var createTitle = toolCall.input.title || toolCall.input.basetitle;
-		if (createTitle && String(createTitle).indexOf(require("$:/plugins/rimir/llm-connect/connections").KEY_PREFIX) === 0) {
-			return "Error: Access denied \u2014 tiddler '" + createTitle + "' is protected by filter rules";
-		}
 		if (createTitle && effectiveProtection.mode === "allow") {
 			effectiveProtection = { filter: protection.filter, mode: protection.mode };
 			// Only add titles that don't already exist (prevents overwriting protected tiddlers)
@@ -160,6 +163,19 @@ exports.executeTool = function(toolCall, protection) {
 	}
 	return result;
 };
+
+/*
+Returns the first string parameter that names a title under the connection key prefix, or "".
+*/
+function namesKeyTitle(input) {
+	var prefix = require("$:/plugins/rimir/llm-connect/connections").KEY_PREFIX;
+	for (var key in input) {
+		if (input.hasOwnProperty(key) && typeof input[key] === "string" && input[key].trim().indexOf(prefix) === 0) {
+			return input[key].trim();
+		}
+	}
+	return "";
+}
 
 function createRestrictedWiki(protection) {
 	// Normalize: accept string (legacy) or { filter, mode } object
@@ -276,7 +292,7 @@ function executeWikitext(wikitext, input, mode, protection) {
 	var connConfig = connections.connectionConfig(connections.resolveChatConnection(chatTid ? chatTid.fields : {}).id);
 	variables.__timestamp = $tw.utils.stringifyDate(new Date());
 	variables.__provider = connConfig.provider || "unknown";
-	variables.__model = connConfig.model || variables.__provider;
+	variables.__model = (chatTid && chatTid.fields["llm-model"]) || connConfig.model || variables.__provider;
 	variables.__helpContext = (protection && protection.helpContext) || "";
 	variables.__chatTiddler = (protection && protection.chatTiddler) || "";
 

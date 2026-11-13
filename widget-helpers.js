@@ -14,7 +14,7 @@ tool resolution, and provider config patterns.
 /*
 Filter fragment that excludes connection API-key tiddlers for the given protection mode:
 removed from the allow set in allow mode, added to the deny set in deny mode.
-Append it last so nothing later in a filter can re-allow a key.
+resolveProtectionFilter appends it as the very last run (after the llm-help grant), so nothing can re-allow a key.
 */
 var KEYS_FILTER = "[prefix[" + require("$:/plugins/rimir/llm-connect/connections").KEY_PREFIX + "]]";
 exports.keysExclusion = function(mode) {
@@ -64,8 +64,6 @@ exports.resolveProtectionFilter = function(options) {
 			? " -[subfilter{$:/config/rimir/llm-connect/hard-protection-filter}]"
 			: " [subfilter{$:/config/rimir/llm-connect/hard-protection-filter}]";
 	}
-	// Connection keys — never readable by tools, regardless of mode or user filters
-	var keysSuffix = exports.keysExclusion(mode);
 	// Always grant access to llm-help pages so tools can read documentation
 	var helpSuffix = "";
 	if ($tw.wiki.isShadowTiddler("$:/plugins/rimir/llm-help/functions")) {
@@ -73,8 +71,11 @@ exports.resolveProtectionFilter = function(options) {
 			? " [all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]] [[$:/plugins/rimir/llm-help/functions]] [prefix[$:/temp/rimir/llm-help/]]"
 			: " -[all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]] -[[$:/plugins/rimir/llm-help/functions]] -[prefix[$:/temp/rimir/llm-help/]]";
 	}
+	// Connection keys — never readable by tools, regardless of mode, user filters or the llm-help grant.
+	// Must stay the last run.
+	var keysSuffix = exports.keysExclusion(mode);
 	return {
-		filter: (base + " " + extra + baseProtectionSuffix + pluginFilter + hardSuffix + keysSuffix + helpSuffix).trim(),
+		filter: (base + " " + extra + baseProtectionSuffix + pluginFilter + hardSuffix + helpSuffix + keysSuffix).trim(),
 		mode: mode
 	};
 };
@@ -115,8 +116,10 @@ exports.resolveTools = function(toolsFilter, toolGroupName, chatTiddler) {
 
 /*
 Get provider config with optional overrides for provider, model, and systemPrompt.
-providerAttr: connection id, name, type, or empty (default connection).
+providerAttr: "" (default connection), {connection: id or name}, {type: provider type}, or a string
+(a registered type name resolves by type, else by id or name; llm-inline passes a type here).
 Returns the connection config from orchestrator.getProviderConfig() with overrides applied.
+Throws when a non-empty providerAttr resolves to no connection.
 */
 exports.resolveProviderConfig = function(providerAttr, modelAttr, systemPromptAttr) {
 	var orchestrator = require("$:/plugins/rimir/llm-connect/orchestrator");
