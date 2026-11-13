@@ -200,4 +200,55 @@ describe("llm-connect: tool-executor", function() {
 			expect($tw.wiki.tiddlerExists(KEY + " 1")).toBe(false);
 		});
 	});
+
+	describe("executeTool built-in variables __provider / __model", function() {
+		var CONN = "$:/config/rimir/llm-connect/connections/";
+		var DEFAULT = "$:/config/rimir/llm-connect/default-connection";
+		var protection = function(chat) { return { filter: "", mode: "deny", chatTiddler: chat || "" }; };
+
+		function addConn(id, name, type, model) {
+			$tw.wiki.addTiddler(new $tw.Tiddler({
+				title: CONN + id, tags: "$:/tags/rimir/llm-connect/connection",
+				"connection-id": id, "connection-name": name, "connection-type": type, model: model
+			}));
+			addedTitles.push(CONN + id);
+		}
+		function run(chat) {
+			return toolExecutor.executeTool({ name: "vars_probe", input: {} }, protection(chat)).trim();
+		}
+
+		beforeEach(function() {
+			addTool("$:/test/tool-vars-probe", {
+				"tool-name": "vars_probe",
+				"tool-mode": "read",
+				text: "<<__provider>>|<<__model>>"
+			});
+			addedTitles.push(DEFAULT);
+		});
+
+		it("uses the connection stored on the chat tiddler", function() {
+			addConn("ctest1", "Test One", "claude", "model-one");
+			addConn("ctest2", "Test Two", "azure", "model-two");
+			$tw.wiki.addTiddler(new $tw.Tiddler({ title: DEFAULT, text: "ctest1" }));
+			$tw.wiki.addTiddler(new $tw.Tiddler({ title: "$:/test/vars-chat", "llm-connection": "ctest2" }));
+			addedTitles.push("$:/test/vars-chat");
+			expect(run("$:/test/vars-chat")).toBe("azure|model-two");
+		});
+
+		it("falls back to the default connection without a chat tiddler", function() {
+			addConn("ctest1", "Test One", "claude", "model-one");
+			addConn("ctest2", "Test Two", "azure", "model-two");
+			$tw.wiki.addTiddler(new $tw.Tiddler({ title: DEFAULT, text: "ctest2" }));
+			expect(run("")).toBe("azure|model-two");
+			expect(run("$:/test/does-not-exist")).toBe("azure|model-two");
+		});
+
+		it("falls back to unknown when no connection exists, without throwing", function() {
+			if (require("$:/plugins/rimir/llm-connect/connections").listConnections().length) {
+				pending("shipped connections present");
+				return;
+			}
+			expect(run("")).toBe("unknown|unknown");
+		});
+	});
 });
