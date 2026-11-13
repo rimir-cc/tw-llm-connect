@@ -26,7 +26,7 @@ type: text/vnd.tiddlywiki
 |`protectionMode` |`allow` (whitelist) or `deny` (blacklist) |global config |
 |`allowFilter` |Allow filter (combined with base allow filter) |none |
 |`denyFilter` |Deny filter (combined with base deny filter) |none |
-|`defaultContext` |Space-separated prefixes for default help context keys (e.g. `rimir/typed tw-gotchas`). Matched keys are pre-selected at widget mount |`tw-gotchas` |
+|`defaultContext` |Space-separated prefixes for default help context keys (e.g. `rimir/typed tw-gotchas`). Matched keys are pre-selected at widget mount. The built-in panels pass `<<llm-default-help-context "rimir/typed shortcuts">>` (from `ui/chat-toolbar`): llm-help's default context plus those keys |llm-help's `$:/config/rimir/llm-help/default-context` (default `tw-gotchas`); none if unset |
 
 !! Widget: `<$llm-action>`
 

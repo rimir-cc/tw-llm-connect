@@ -123,3 +123,71 @@ describe("llm-connect: chat-widget connection", function() {
 		expect(w.model).toBe("model-a");
 	});
 });
+
+describe("llm-connect: chat-widget default help context", function() {
+
+	var ChatWidget = require("$:/plugins/rimir/llm-connect/chat-widget")["llm-chat"];
+	var CFG = "$:/config/rimir/llm-help/default-context";
+	var CHAT = "$:/temp/test/llm-chat-help";
+	var PAGE_TAG = "$:/tags/rimir/llm-help/page";
+	var PAGES = ["$:/temp/test/help-a", "$:/temp/test/help-b", "$:/temp/test/help-c"];
+	var savedCfg;
+
+	beforeEach(function() {
+		savedCfg = $tw.wiki.getTiddler(CFG);
+		$tw.wiki.addTiddler(new $tw.Tiddler({ title: PAGES[0], tags: PAGE_TAG, "llm-help-context": "zz-alpha" }));
+		$tw.wiki.addTiddler(new $tw.Tiddler({ title: PAGES[1], tags: PAGE_TAG, "llm-help-context": "zz-alpha/sub" }));
+		$tw.wiki.addTiddler(new $tw.Tiddler({ title: PAGES[2], tags: PAGE_TAG, "llm-help-context": "zz-beta" }));
+	});
+	afterEach(function() {
+		PAGES.concat([CHAT]).forEach(function(t) { $tw.wiki.deleteTiddler(t); });
+		$tw.wiki.deleteTiddler(CFG);
+		if (savedCfg) $tw.wiki.addTiddler(savedCfg);
+	});
+
+	function initWith(attrs) {
+		var w = new ChatWidget({ type: "llm-chat" }, { wiki: $tw.wiki, document: $tw.fakeDocument });
+		w.attributes = $tw.utils.extend({ chatTiddler: CHAT }, attrs);
+		w.execute();
+		w.initDefaultHelpContext();
+		return ($tw.wiki.getTiddler(CHAT).fields["llm-help-context"] || "").split(" ").filter(function(k) { return k.indexOf("zz-") === 0; });
+	}
+
+	it("falls back to llm-help's default-context config when defaultContext is unset", function() {
+		$tw.wiki.addTiddler(new $tw.Tiddler({ title: CFG, text: "zz-alpha\n" }));
+		expect(initWith({})).toEqual(["zz-alpha", "zz-alpha/sub"]);
+	});
+
+	it("selects nothing when neither the attribute nor the config is set", function() {
+		$tw.wiki.deleteTiddler(CFG);
+		expect(initWith({})).toEqual([]);
+	});
+
+	it("the defaultContext attribute replaces the config", function() {
+		$tw.wiki.addTiddler(new $tw.Tiddler({ title: CFG, text: "zz-alpha" }));
+		expect(initWith({ defaultContext: "zz-beta" })).toEqual(["zz-beta"]);
+	});
+});
+
+describe("llm-connect: llm-default-help-context function", function() {
+
+	var CFG = "$:/config/rimir/llm-help/default-context";
+	var savedCfg;
+	beforeEach(function() { savedCfg = $tw.wiki.getTiddler(CFG); });
+	afterEach(function() { $tw.wiki.deleteTiddler(CFG); if (savedCfg) $tw.wiki.addTiddler(savedCfg); });
+
+	function render(extra) {
+		var text = "\\import [[$:/plugins/rimir/llm-connect/ui/chat-toolbar]]\n<$text text=<<llm-default-help-context \"" + extra + "\">>/>";
+		return $tw.wiki.renderText("text/plain", "text/vnd.tiddlywiki", text);
+	}
+
+	it("prepends the config to the panel's extra keys", function() {
+		$tw.wiki.addTiddler(new $tw.Tiddler({ title: CFG, text: "my-ctx\n" }));
+		expect(render("rimir/typed shortcuts")).toBe("my-ctx rimir/typed shortcuts");
+	});
+
+	it("yields only the extra keys when the config is blank", function() {
+		$tw.wiki.addTiddler(new $tw.Tiddler({ title: CFG, text: "  " }));
+		expect(render("rimir/typed shortcuts")).toBe("rimir/typed shortcuts");
+	});
+});

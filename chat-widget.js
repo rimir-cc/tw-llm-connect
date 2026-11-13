@@ -545,7 +545,7 @@ LlmChatWidget.prototype.initDefaultHelpContext = function() {
 	var chatTid = this.wiki.getTiddler(this.chatTiddler);
 	if (chatTid && chatTid.fields["llm-help-context-init"] === "yes") return;
 	var allCtxKeys = this.wiki.filterTiddlers("[all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]get[llm-help-context]enlist-input[]] +[unique[]sort[]]");
-	var defaultPrefixes = this.defaultContextAttr ? $tw.utils.parseStringArray(this.defaultContextAttr) : ["tw-gotchas"];
+	var defaultPrefixes = $tw.utils.parseStringArray(this.defaultContextAttr || this.wiki.getTiddlerText("$:/config/rimir/llm-help/default-context", "")) || [];
 	var defaultKeys = allCtxKeys.filter(function(k) {
 		return defaultPrefixes.some(function(p) { return k === p || k.indexOf(p + "/") === 0; });
 	});

@@ -21,7 +21,7 @@ list-after: $:/core/ui/ViewTemplate/body
   contextTemplate="$:/plugins/rimir/llm-connect/context-templates/pair-edit"
   protectionMode="allow"
   allowFilter=`[[$(currentTiddler)$]] [[$(currentTiddler)$]links[]] [prefix[$(currentTiddler)$/]]`
-  defaultContext="rimir/typed tw-gotchas shortcuts"
+  defaultContext=<<llm-default-help-context "rimir/typed shortcuts">>
 />
 </div>
 </$reveal>
