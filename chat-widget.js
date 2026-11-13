@@ -272,9 +272,10 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 
 	modelBtn.addEventListener("click", function(e) {
 		e.stopPropagation();
-		// Don't allow switching if chat has messages (model is locked)
+		// Don't allow switching if chat has messages (model is locked) —
+		// unless its connection is gone, then the user must pick one
 		var msgs = self.getMessages();
-		if (msgs.length > 0) {
+		if (msgs.length > 0 && self.connection) {
 			return;
 		}
 		if (modelDropdown.style.display === "none") {
@@ -511,18 +512,23 @@ LlmChatWidget.prototype.adoptChatConnection = function(source) {
 	var resolved = this.getModule("connections").resolveChatConnection(source);
 	this.connection = resolved.id;
 	this.connectionNotice = resolved.notice;
-	return this.getConnectionFields();
+	if (resolved.id) return this.getConnectionFields();
+	// Unresolved: write nothing that would wipe stored values; a legacy chat keeps its type
+	var legacyType = source["llm-connection-type"] || source["llm-provider"];
+	return legacyType ? {"llm-connection-type": legacyType} : {};
 };
 
 /*
 The fields that lock a chat to the widget's connection (id, name snapshot, type).
+Empty when the connection is unresolved, so stored values are never overwritten.
 */
 LlmChatWidget.prototype.getConnectionFields = function() {
 	var conn = this.connection ? this.getModule("connections").getConnection(this.connection) : null;
+	if (!conn) return {};
 	return {
-		"llm-connection": conn ? conn.id : "",
-		"llm-connection-name": conn ? conn.name : "",
-		"llm-connection-type": conn ? conn.type : ""
+		"llm-connection": conn.id,
+		"llm-connection-name": conn.name,
+		"llm-connection-type": conn.type
 	};
 };
 
@@ -740,6 +746,10 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 LlmChatWidget.prototype.sendMessage = function() {
 	var text = this.textarea.value.trim();
 	if (!text && !this.actionMode) return;
+	if (!this.connection) {
+		this.setStatus(this.connectionNotice || "No connection configured. Pick a connection.");
+		return;
+	}
 	if (!text) text = "Go.";
 	this.textarea.value = "";
 
@@ -782,10 +792,6 @@ LlmChatWidget.prototype.sendMessage = function() {
 
 	var orchestrator = this.getOrchestratorModule();
 	var helpers = this.getWidgetHelpersModule();
-	if (!this.connection) {
-		this.setStatus(this.connectionNotice || "No connection exists. Pick a connection.");
-		return;
-	}
 	var config = helpers.resolveProviderConfig(this.connection, this.model, null);
 
 	if (this.systemPromptOverride) {
@@ -1227,8 +1233,7 @@ LlmChatWidget.prototype.buildPreview = function() {
 	var preview = {};
 
 	// Provider + model
-	var previewConn = this.getConnectionFields();
-	preview.provider = previewConn["llm-connection-name"] || this.connection;
+	preview.provider = this.getConnectionFields()["llm-connection-name"] || this.connection;
 	preview.model = this.model;
 
 	// System prompt

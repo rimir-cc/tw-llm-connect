@@ -90,6 +90,21 @@ exports.resolveConnectionId = function(ref) {
 	return "";
 };
 
+/*
+Type-only resolution: the default connection if it has that type, else the first of that type
+by name, else "". Never matches ids or names (a connection named "claude" is not type claude).
+*/
+exports.resolveTypeConnectionId = function(type) {
+	if(!type) return "";
+	var def = exports.getConnection(exports.getDefaultConnectionId());
+	if(def && def.type === type) return def.id;
+	var all = exports.listConnections();
+	for(var i = 0; i < all.length; i++) {
+		if(all[i].type === type) return all[i].id;
+	}
+	return "";
+};
+
 exports.isConfigured = function(id) {
 	var c = exports.getConnection(id);
 	if(!c) return false;
@@ -129,7 +144,7 @@ exports.resolveChatConnection = function(fields) {
 	var stored = fields["llm-connection"];
 	if(stored && exports.getConnection(stored)) return {id: stored, notice: ""};
 	var type = fields["llm-connection-type"] || fields["llm-provider"] || "";
-	var id = exports.resolveConnectionId(type);
+	var id = type ? exports.resolveTypeConnectionId(type) : exports.getDefaultConnectionId();
 	if(!id) {
 		return {id: "", notice: type ? "No connection of type " + type + " exists. Pick a connection." : "No connection exists. Pick a connection."};
 	}

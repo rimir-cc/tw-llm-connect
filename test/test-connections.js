@@ -146,6 +146,19 @@ describe("llm-connect: connections", function() {
 			expect(cx.resolveChatConnection({"llm-connection": "GONE"}).notice)
 				.toBe('Connection "GONE" no longer exists, using "Zeta".');
 		});
+		it("legacy type never matches a connection id or name of another type", function() {
+			setup();
+			conn("claude", "claude", "openai-compatible", {endpoint: "http://z/v1"});
+			conn("C9", "Real", "claude");
+			expect(cx.resolveChatConnection({"llm-provider": "claude"})).toEqual({id: "C9", notice: ""});
+			expect(cx.resolveTypeConnectionId("claude")).toBe("C9");
+		});
+		it("resolveTypeConnectionId prefers the default connection when it has the type", function() {
+			setup();
+			conn("A0", "Aaa", "openai-compatible");
+			expect(cx.resolveTypeConnectionId("openai-compatible")).toBe("A1");
+			expect(cx.resolveTypeConnectionId("claude")).toBe("");
+		});
 		it("no type and no connections at all gives the generic pick notice", function() {
 			expect(cx.resolveChatConnection({})).toEqual({id: "", notice: "No connection exists. Pick a connection."});
 		});
