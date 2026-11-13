@@ -34,12 +34,14 @@ exports.startup = function() {
 
 	// Handle tm-llm-fetch-models message
 	$tw.rootWidget.addEventListener("tm-llm-fetch-models", function(event) {
-		var provider = event.paramObject && event.paramObject.provider;
-		if (!provider) return;
+		var p = event.paramObject || {};
+		var connections = require("$:/plugins/rimir/llm-connect/connections");
+		var id = p.connection || (p.provider && connections.resolveConnectionId(p.provider));
+		if (!id) return;
 		var orchestrator = require("$:/plugins/rimir/llm-connect/orchestrator");
-		var statusTiddler = "$:/temp/rimir/llm-connect/fetch-status/" + provider;
+		var statusTiddler = "$:/temp/rimir/llm-connect/fetch-status/" + id;
 		$tw.wiki.setText(statusTiddler, "text", null, "Fetching...");
-		orchestrator.fetchModels(provider).then(function(models) {
+		orchestrator.fetchModels(id).then(function(models) {
 			$tw.wiki.setText(statusTiddler, "text", null, models.length + " models loaded");
 		})["catch"](function(err) {
 			$tw.wiki.setText(statusTiddler, "text", null, "Error: " + err.message);

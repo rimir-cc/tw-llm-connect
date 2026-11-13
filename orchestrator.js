@@ -10,29 +10,20 @@ Tool-use loop orchestrator — manages LLM conversation with tool calls
 
 "use strict";
 
+var connections = require("$:/plugins/rimir/llm-connect/connections");
+var connectionTypes = require("$:/plugins/rimir/llm-connect/connection-types");
+
 var MAX_ITERATIONS = 10;
 
 var TIER_PRIORITY = { "cheap": 0, "default": 1, "expensive": 2 };
 
 /*
-Read model-tier routing config from individual config tiddlers.
-Returns config object or null if disabled.
+Tier routing switch. Returns {enabled: true} or null when disabled.
+The tier models themselves live on the connection (config.tiers).
 */
 function getTierConfig() {
 	var enabled = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/tier-routing-enabled");
-	if (enabled !== "yes") return null;
-	return {
-		tiers: {
-			cheap: {
-				provider: $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/tiers/cheap/provider") || "",
-				model: $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/tiers/cheap/model") || ""
-			},
-			expensive: {
-				provider: $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/tiers/expensive/provider") || "",
-				model: $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/tiers/expensive/model") || ""
-			}
-		}
-	};
+	return enabled === "yes" ? {enabled: true} : null;
 }
 
 /*
@@ -60,20 +51,21 @@ function getMaxTier(toolCalls, tools) {
 }
 
 /*
-Build a config override for a given tier.
-Returns a new config object with the tier's provider/model, or the original config if tier is "default".
+Build a config override for a given tier: same connection, only the model changes.
+Returns baseConfig when the tier is "default" or has no model on the connection.
 */
-function applyTierConfig(baseConfig, tierConfig, tier) {
-	if (tier === "default" || !tierConfig || !tierConfig.tiers) return baseConfig;
-	var tierDef = tierConfig.tiers[tier];
-	if (!tierDef || !tierDef.provider || !tierDef.model) return baseConfig;
-	// Cross-provider switching within a conversation is unsafe (message formats differ).
-	// Only switch model if provider matches, otherwise skip.
-	if (tierDef.provider !== baseConfig.provider) return baseConfig;
-	return $tw.utils.extend({}, baseConfig, { model: tierDef.model });
+function applyTierConfig(baseConfig, tier) {
+	if (tier === "default" || !baseConfig.tiers) return baseConfig;
+	var model = baseConfig.tiers[tier];
+	if (!model) return baseConfig;
+	return $tw.utils.extend({}, baseConfig, { model: model });
 }
 
+exports.getTierConfig = getTierConfig;
+exports.applyTierConfig = applyTierConfig;
+
 exports.getAdapter = function(providerName) {
+	if(!providerName) throw new Error("No connection configured");
 	var moduleName = "$:/plugins/rimir/llm-connect/adapter-" + providerName;
 	try {
 		return require(moduleName);
@@ -82,19 +74,11 @@ exports.getAdapter = function(providerName) {
 	}
 };
 
-exports.getProviderConfig = function(providerName) {
-	providerName = providerName || $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/provider") || "claude";
-	var prefix = "$:/config/rimir/llm-connect/providers/" + providerName + "/";
-	return {
-		provider: providerName,
-		apiKey: $tw.wiki.getTiddlerText(prefix + "api-key") || "",
-		model: $tw.wiki.getTiddlerText(prefix + "model") || "",
-		maxTokens: $tw.wiki.getTiddlerText(prefix + "max-tokens") || "4096",
-		systemPrompt: $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/system-prompt") || "",
-		endpoint: $tw.wiki.getTiddlerText(prefix + "endpoint") || "",
-		deployment: $tw.wiki.getTiddlerText(prefix + "deployment") || "",
-		apiVersion: $tw.wiki.getTiddlerText(prefix + "api-version") || ""
-	};
+/*
+ref: connection id, name, type, or empty (default connection).
+*/
+exports.getProviderConfig = function(ref) {
+	return connections.connectionConfig(connections.resolveConnectionId(ref));
 };
 
 /*
@@ -124,7 +108,8 @@ exports.runConversation = function(options) {
 	var protection = options.protectionFilter || { filter: "", mode: "allow" };
 	var tierConfig = getTierConfig();
 	if (tierConfig) {
-		onLog("tier", "tier config loaded — cheap: " + (tierConfig.tiers.cheap.model || "(none)") + ", expensive: " + (tierConfig.tiers.expensive.model || "(none)"));
+		var tiers = baseConfig.tiers || {};
+		onLog("tier", "tier routing on — cheap: " + (tiers.cheap || "(none)") + ", expensive: " + (tiers.expensive || "(none)"));
 	}
 
 	// Build allowed tool names set for execution-time enforcement
@@ -235,7 +220,7 @@ exports.runConversation = function(options) {
 					if (tierConfig) {
 						var maxTier = getMaxTier(parsed.toolCalls, tools);
 						var prevModel = config.model;
-						config = applyTierConfig(baseConfig, tierConfig, maxTier);
+						config = applyTierConfig(baseConfig, maxTier);
 						onLog("tier", "max tool tier=" + maxTier + " → model=" + config.model);
 						if (config.model !== prevModel) {
 							onLog("tier", "SWITCHED from " + prevModel + " to " + config.model);
@@ -353,25 +338,32 @@ exports.runAction = function(options) {
 };
 
 /*
-Fetch available models for a provider and cache in $:/temp tiddler.
+Fetch available models for a connection and cache in a $:/temp tiddler.
 Returns a promise that resolves with [{id, label}] or rejects on error.
 */
-exports.fetchModels = function(providerName) {
-	var config = exports.getProviderConfig(providerName);
-	if (!exports.isProviderConfigured(providerName)) {
-		var setting = PROVIDER_REQUIRED_SETTING[providerName] === "endpoint" ? "endpoint" : "API key";
-		return Promise.reject(new Error("No " + setting + " configured for " + providerName));
+exports.fetchModels = function(connectionId) {
+	var conn = connections.getConnection(connectionId);
+	if (!conn) return Promise.reject(new Error("Unknown connection " + connectionId));
+	if (!connections.isConfigured(connectionId)) {
+		var type = connectionTypes.getType(conn.type);
+		var field = type && type.required;
+		var label = !field || field === "api-key" ? "API key" : field;
+		if (field && field !== "api-key") {
+			var ft = $tw.wiki.getTiddler("$:/plugins/rimir/llm-connect/connection-fields/" + field);
+			if (ft && ft.fields.caption) label = ft.fields.caption;
+		}
+		return Promise.reject(new Error("No " + label + " configured for " + conn.name));
 	}
-	var adapter = exports.getAdapter(providerName);
+	var config = connections.connectionConfig(connectionId);
+	var adapter = exports.getAdapter(config.provider);
 	if (!adapter.buildModelListRequest) {
-		return Promise.reject(new Error("Provider " + providerName + " does not support model listing"));
+		return Promise.reject(new Error("Connection " + conn.name + " does not support model listing"));
 	}
 	var request = adapter.buildModelListRequest(config);
 	return httpGetRequest(request).then(function(responseText) {
 		var models = adapter.parseModelListResponse(responseText);
-		var cacheTiddler = "$:/temp/rimir/llm-connect/models/" + providerName;
 		$tw.wiki.addTiddler(new $tw.Tiddler({
-			title: cacheTiddler,
+			title: "$:/temp/rimir/llm-connect/models/" + connectionId,
 			text: JSON.stringify(models),
 			type: "application/json"
 		}));
@@ -380,41 +372,21 @@ exports.fetchModels = function(providerName) {
 };
 
 /*
-Get cached models for a provider, or empty array.
+Get cached models for a connection, or empty array.
 */
-exports.getCachedModels = function(providerName) {
-	var text = $tw.wiki.getTiddlerText("$:/temp/rimir/llm-connect/models/" + providerName);
+exports.getCachedModels = function(connectionId) {
+	var text = $tw.wiki.getTiddlerText("$:/temp/rimir/llm-connect/models/" + connectionId);
 	if (!text) return [];
-	try { return JSON.parse(text); } catch(e) { console.warn("llm-connect: Failed to parse model cache for " + providerName + ":", e); return []; }
+	try { return JSON.parse(text); } catch(e) { console.warn("llm-connect: Failed to parse model cache for " + connectionId + ":", e); return []; }
 };
 
 /*
-Setting each provider needs before it counts as configured. Self-hosted
-OpenAI-compatible servers may run without an API key, so they need an endpoint instead.
+Ids of all configured connections.
 */
-var PROVIDER_REQUIRED_SETTING = {
-	"claude": "api-key",
-	"openai": "api-key",
-	"azure": "api-key",
-	"openai-compatible": "endpoint"
-};
-
-exports.isProviderConfigured = function(providerName) {
-	var setting = PROVIDER_REQUIRED_SETTING[providerName] || "api-key";
-	return !!$tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/providers/" + providerName + "/" + setting);
-};
-
-/*
-Get all configured providers (those with their required setting present).
-*/
-exports.getConfiguredProviders = function() {
-	var result = [];
-	for (var name in PROVIDER_REQUIRED_SETTING) {
-		if (exports.isProviderConfigured(name)) {
-			result.push(name);
-		}
-	}
-	return result;
+exports.getConfiguredConnections = function() {
+	return connections.listConnections().map(function(c) { return c.id; }).filter(function(id) {
+		return connections.isConfigured(id);
+	});
 };
 
 /*

@@ -135,34 +135,45 @@ describe("llm-connect: widget-helpers", function() {
 	});
 
 	describe("resolveProviderConfig", function() {
-		it("should read config from wiki tiddlers", function() {
-			addTiddler("$:/config/rimir/llm-connect/provider", { text: "claude" });
-			addTiddler("$:/config/rimir/llm-connect/providers/claude/api-key", { text: "sk-test" });
-			addTiddler("$:/config/rimir/llm-connect/providers/claude/model", { text: "claude-sonnet-4-20250514" });
-			addTiddler("$:/config/rimir/llm-connect/providers/claude/max-tokens", { text: "8192" });
-			addTiddler("$:/config/rimir/llm-connect/system-prompt", { text: "Be helpful" });
+		var P = "$:/config/rimir/llm-connect/connections/";
+		function conn(id, name, type, extra) {
+			addTiddler(P + id, $tw.utils.extend({
+				tags: "$:/tags/rimir/llm-connect/connection",
+				"connection-id": id, "connection-name": name, "connection-type": type
+			}, extra || {}));
+		}
+		beforeEach(function() {
+			conn("A1", "Main", "claude", {model: "claude-sonnet-4-20250514", "max-tokens": "8192"});
+			conn("B2", "Oai", "openai", {model: "gpt-4o"});
+			addTiddler("$:/config/rimir/llm-connect/keys/A1", { text: "sk-test" });
+			addTiddler("$:/config/rimir/llm-connect/keys/B2", { text: "sk-oai" });
+			addTiddler("$:/config/rimir/llm-connect/default-connection", { text: "A1" });
+		});
 
-			var config = helpers.resolveProviderConfig();
+		it("empty ref uses the default connection (llm-inline contract)", function() {
+			addTiddler("$:/config/rimir/llm-connect/system-prompt", { text: "Be helpful" });
+			var config = helpers.resolveProviderConfig("", "", "");
 			expect(config.provider).toBe("claude");
+			expect(config.connection).toBe("A1");
 			expect(config.apiKey).toBe("sk-test");
 			expect(config.model).toBe("claude-sonnet-4-20250514");
 			expect(config.maxTokens).toBe("8192");
 			expect(config.systemPrompt).toBe("Be helpful");
+			var adapter = require("$:/plugins/rimir/llm-connect/orchestrator").getAdapter(config.provider);
+			expect(typeof adapter.buildRequest).toBe("function");
 		});
 
-		it("should override provider when specified", function() {
-			addTiddler("$:/config/rimir/llm-connect/providers/openai/api-key", { text: "sk-oai" });
-			addTiddler("$:/config/rimir/llm-connect/providers/openai/model", { text: "gpt-4o" });
+		it("type name resolves to a connection of that type", function() {
 			var config = helpers.resolveProviderConfig("openai");
 			expect(config.provider).toBe("openai");
+			expect(config.connection).toBe("B2");
 			expect(config.apiKey).toBe("sk-oai");
 		});
 
 		it("should override model when specified", function() {
-			addTiddler("$:/config/rimir/llm-connect/provider", { text: "claude" });
-			addTiddler("$:/config/rimir/llm-connect/providers/claude/model", { text: "claude-sonnet-4-20250514" });
-			var config = helpers.resolveProviderConfig(null, "claude-opus-4-20250514");
-			expect(config.model).toBe("claude-opus-4-20250514");
+			var config = helpers.resolveProviderConfig("claude", "m-x", "");
+			expect(config.connection).toBe("A1");
+			expect(config.model).toBe("m-x");
 		});
 
 		it("should override systemPrompt when specified", function() {

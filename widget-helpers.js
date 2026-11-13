@@ -106,11 +106,12 @@ exports.resolveTools = function(toolsFilter, toolGroupName, chatTiddler) {
 
 /*
 Get provider config with optional overrides for provider, model, and systemPrompt.
-Returns the config object from orchestrator.getProviderConfig() with overrides applied.
+providerAttr: connection id, name, type, or empty (default connection).
+Returns the connection config from orchestrator.getProviderConfig() with overrides applied.
 */
 exports.resolveProviderConfig = function(providerAttr, modelAttr, systemPromptAttr) {
 	var orchestrator = require("$:/plugins/rimir/llm-connect/orchestrator");
-	var config = orchestrator.getProviderConfig(providerAttr || undefined);
+	var config = orchestrator.getProviderConfig(providerAttr || "");
 	if (modelAttr) {
 		config.model = modelAttr;
 	}

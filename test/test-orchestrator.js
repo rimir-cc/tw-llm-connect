@@ -3,7 +3,7 @@ title: $:/plugins/rimir/llm-connect/test/test-orchestrator.js
 type: application/javascript
 tags: [[$:/tags/test-spec]]
 
-Tests for llm-connect orchestrator: getProviderConfig, getConfiguredProviders, isProviderConfigured, getCachedModels, getAdapter.
+Tests for llm-connect orchestrator: getProviderConfig, getConfiguredConnections, tiers, fetchModels, getCachedModels, getAdapter.
 
 \*/
 "use strict";
@@ -27,101 +27,101 @@ describe("llm-connect: orchestrator", function() {
 		addedTitles.push(title);
 	}
 
+	var P = "$:/config/rimir/llm-connect/connections/";
+	var K = "$:/config/rimir/llm-connect/keys/";
+	var DEF = "$:/config/rimir/llm-connect/default-connection";
+
+	function conn(id, name, type, extra) {
+		addTiddler(P + id, $tw.utils.extend({
+			tags: "$:/tags/rimir/llm-connect/connection",
+			"connection-id": id,
+			"connection-name": name,
+			"connection-type": type
+		}, extra || {}));
+	}
+	function clearConnections() {
+		$tw.wiki.filterTiddlers("[all[tiddlers]tag[$:/tags/rimir/llm-connect/connection]]").forEach(function(t) {
+			addedTitles.push(t);
+		});
+	}
+
 	describe("getProviderConfig", function() {
-		it("should read claude config from wiki tiddlers", function() {
-			addTiddler("$:/config/rimir/llm-connect/provider", { text: "claude" });
-			addTiddler("$:/config/rimir/llm-connect/providers/claude/api-key", { text: "sk-abc" });
-			addTiddler("$:/config/rimir/llm-connect/providers/claude/model", { text: "claude-sonnet-4-20250514" });
-			addTiddler("$:/config/rimir/llm-connect/providers/claude/max-tokens", { text: "4096" });
-			addTiddler("$:/config/rimir/llm-connect/system-prompt", { text: "You are helpful" });
-
-			var config = orchestrator.getProviderConfig("claude");
-			expect(config.provider).toBe("claude");
-			expect(config.apiKey).toBe("sk-abc");
-			expect(config.model).toBe("claude-sonnet-4-20250514");
-			expect(config.maxTokens).toBe("4096");
-			expect(config.systemPrompt).toBe("You are helpful");
+		it("should resolve by type, name, id", function() {
+			conn("A1", "Main", "claude", {model: "m1", "max-tokens": "123"});
+			addTiddler(K + "A1", { text: "sk-abc" });
+			addTiddler(DEF, { text: "A1" });
+			["claude", "Main", "A1", ""].forEach(function(ref) {
+				var c = orchestrator.getProviderConfig(ref);
+				expect(c.provider).toBe("claude");
+				expect(c.connection).toBe("A1");
+				expect(c.apiKey).toBe("sk-abc");
+				expect(c.model).toBe("m1");
+				expect(c.maxTokens).toBe("123");
+			});
 		});
 
-		it("should read openai config", function() {
-			addTiddler("$:/config/rimir/llm-connect/providers/openai/api-key", { text: "sk-oai" });
-			addTiddler("$:/config/rimir/llm-connect/providers/openai/model", { text: "gpt-4o" });
-			var config = orchestrator.getProviderConfig("openai");
-			expect(config.provider).toBe("openai");
-			expect(config.apiKey).toBe("sk-oai");
-			expect(config.model).toBe("gpt-4o");
-		});
-
-		it("should read azure config with endpoint and deployment", function() {
-			addTiddler("$:/config/rimir/llm-connect/providers/azure/api-key", { text: "az-key" });
-			addTiddler("$:/config/rimir/llm-connect/providers/azure/endpoint", { text: "https://myinstance.openai.azure.com" });
-			addTiddler("$:/config/rimir/llm-connect/providers/azure/deployment", { text: "gpt-4o" });
-			addTiddler("$:/config/rimir/llm-connect/providers/azure/api-version", { text: "2025-04-01-preview" });
-			var config = orchestrator.getProviderConfig("azure");
-			expect(config.provider).toBe("azure");
-			expect(config.endpoint).toBe("https://myinstance.openai.azure.com");
-			expect(config.deployment).toBe("gpt-4o");
-			expect(config.apiVersion).toBe("2025-04-01-preview");
-		});
-
-		it("should fall back to default provider when none specified", function() {
-			addTiddler("$:/config/rimir/llm-connect/provider", { text: "openai" });
-			addTiddler("$:/config/rimir/llm-connect/providers/openai/api-key", { text: "sk-default" });
-			var config = orchestrator.getProviderConfig();
-			expect(config.provider).toBe("openai");
-			expect(config.apiKey).toBe("sk-default");
-		});
-
-		it("should default to claude when no provider configured", function() {
-			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/provider");
-			var config = orchestrator.getProviderConfig();
-			expect(config.provider).toBe("claude");
-		});
-
-		it("should return empty strings for missing config", function() {
-			var config = orchestrator.getProviderConfig("nonexistent");
-			expect(config.apiKey).toBe("");
-			expect(config.model).toBe("");
-			expect(config.endpoint).toBe("");
+		it("should have empty provider when no connection exists", function() {
+			var saved = $tw.wiki.filterTiddlers("[all[tiddlers]tag[$:/tags/rimir/llm-connect/connection]]");
+			var tids = saved.map(function(t) { return $tw.wiki.getTiddler(t); });
+			saved.forEach(function(t) { $tw.wiki.deleteTiddler(t); });
+			try {
+				expect(orchestrator.getProviderConfig("").provider).toBe("");
+				expect(function() { orchestrator.getAdapter(""); }).toThrowError("No connection configured");
+				expect(orchestrator.getConfiguredConnections()).toEqual([]);
+			} finally {
+				tids.forEach(function(t) { $tw.wiki.addTiddler(t); });
+			}
 		});
 	});
 
-	describe("getConfiguredProviders", function() {
-		it("should return providers that have API keys set", function() {
-			addTiddler("$:/config/rimir/llm-connect/providers/claude/api-key", { text: "sk-claude" });
-			addTiddler("$:/config/rimir/llm-connect/providers/openai/api-key", { text: "sk-openai" });
-			// Azure has no key
-			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/providers/azure/api-key");
-			var providers = orchestrator.getConfiguredProviders();
-			expect(providers).toContain("claude");
-			expect(providers).toContain("openai");
-			expect(providers).not.toContain("azure");
+	describe("getConfiguredConnections", function() {
+		it("lists configured connections only", function() {
+			conn("A1", "Main", "claude");
+			conn("B2", "Local", "openai-compatible", {endpoint: "http://gpu/v1"});
+			conn("C3", "NoKey", "openai");
+			addTiddler(K + "A1", { text: "k" });
+			var ids = orchestrator.getConfiguredConnections();
+			expect(ids).toContain("A1");
+			expect(ids).toContain("B2");
+			expect(ids).not.toContain("C3");
+		});
+	});
+
+	describe("tier routing", function() {
+		it("getTierConfig follows the enabled flag", function() {
+			addTiddler("$:/config/rimir/llm-connect/tier-routing-enabled", { text: "yes" });
+			expect(orchestrator.getTierConfig()).toEqual({enabled: true});
+			addTiddler("$:/config/rimir/llm-connect/tier-routing-enabled", { text: "no" });
+			expect(orchestrator.getTierConfig()).toBe(null);
 		});
 
-		it("should return empty array when no providers configured", function() {
-			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/providers/claude/api-key");
-			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/providers/openai/api-key");
-			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/providers/azure/api-key");
-			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/providers/openai-compatible/endpoint");
-			var providers = orchestrator.getConfiguredProviders();
-			expect(providers.length).toBe(0);
+		it("applyTierConfig switches model within the connection", function() {
+			var cfg = {provider: "claude", connection: "A1", model: "big", tiers: {cheap: "small", expensive: ""}};
+			var c = orchestrator.applyTierConfig(cfg, "cheap");
+			expect(c.model).toBe("small");
+			expect(c.connection).toBe("A1");
+			expect(c.provider).toBe("claude");
+			expect(orchestrator.applyTierConfig(cfg, "expensive")).toBe(cfg);
+			expect(orchestrator.applyTierConfig(cfg, "default")).toBe(cfg);
 		});
+	});
 
-		it("should treat openai-compatible as configured by endpoint, without an API key", function() {
-			addTiddler("$:/config/rimir/llm-connect/providers/openai-compatible/endpoint", { text: "http://gpu:34434" });
-			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/providers/openai-compatible/api-key");
-			expect(orchestrator.getConfiguredProviders()).toContain("openai-compatible");
-			expect(orchestrator.isProviderConfigured("openai-compatible")).toBe(true);
-		});
-
-		it("should not treat openai-compatible as configured by API key alone", function() {
-			addTiddler("$:/config/rimir/llm-connect/providers/openai-compatible/api-key", { text: "secret" });
-			$tw.wiki.deleteTiddler("$:/config/rimir/llm-connect/providers/openai-compatible/endpoint");
-			expect(orchestrator.isProviderConfigured("openai-compatible")).toBe(false);
+	describe("fetchModels", function() {
+		it("rejects an unconfigured connection with the required field caption", function(done) {
+			conn("A1", "Main", "claude");
+			orchestrator.fetchModels("A1")["catch"](function(e) {
+				expect(e.message).toMatch(/^No .+ configured for Main$/);
+				done();
+			});
 		});
 	});
 
 	describe("getCachedModels", function() {
+		it("reads models/<connection id>", function() {
+			addTiddler("$:/temp/rimir/llm-connect/models/A1", { text: '[{"id":"x","label":"x"}]' });
+			expect(orchestrator.getCachedModels("A1")[0].id).toBe("x");
+		});
+
 		it("should return cached models from temp tiddler", function() {
 			var models = [{ id: "gpt-4o", label: "gpt-4o" }, { id: "gpt-4o-mini", label: "gpt-4o-mini" }];
 			addTiddler("$:/temp/rimir/llm-connect/models/openai", {
@@ -166,6 +166,10 @@ describe("llm-connect: orchestrator", function() {
 		it("should load openai-compatible adapter", function() {
 			var adapter = orchestrator.getAdapter("openai-compatible");
 			expect(adapter.name).toBe("openai-compatible");
+		});
+
+		it("should throw for empty type", function() {
+			expect(function() { orchestrator.getAdapter(""); }).toThrowError("No connection configured");
 		});
 
 		it("should throw for unknown provider", function() {
