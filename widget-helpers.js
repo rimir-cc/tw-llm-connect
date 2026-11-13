@@ -54,6 +54,9 @@ exports.resolveProtectionFilter = function(options) {
 			? " -[subfilter{$:/config/rimir/llm-connect/hard-protection-filter}]"
 			: " [subfilter{$:/config/rimir/llm-connect/hard-protection-filter}]";
 	}
+	// Connection keys — never readable by tools, regardless of mode or user filters
+	var keysFilter = "[prefix[$:/config/rimir/llm-connect/keys/]]";
+	var keysSuffix = mode === "allow" ? " -" + keysFilter : " " + keysFilter;
 	// Always grant access to llm-help pages so tools can read documentation
 	var helpSuffix = "";
 	if ($tw.wiki.isShadowTiddler("$:/plugins/rimir/llm-help/functions")) {
@@ -62,7 +65,7 @@ exports.resolveProtectionFilter = function(options) {
 			: " -[all[shadows+tiddlers]tag[$:/tags/rimir/llm-help/page]] -[[$:/plugins/rimir/llm-help/functions]] -[prefix[$:/temp/rimir/llm-help/]]";
 	}
 	return {
-		filter: (base + " " + extra + baseProtectionSuffix + pluginFilter + hardSuffix + helpSuffix).trim(),
+		filter: (base + " " + extra + baseProtectionSuffix + pluginFilter + hardSuffix + keysSuffix + helpSuffix).trim(),
 		mode: mode
 	};
 };

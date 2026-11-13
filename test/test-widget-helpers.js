@@ -114,6 +114,24 @@ describe("llm-connect: widget-helpers", function() {
 			expect(result.mode === "allow" || result.mode === "deny").toBe(true);
 			expect(typeof result.filter).toBe("string");
 		});
+
+		it("always excludes key tiddlers in allow mode", function() {
+			addTiddler("$:/config/rimir/llm-connect/protection-mode", { text: "allow" });
+			addTiddler("$:/config/rimir/llm-connect/allow-filter", { text: "[all[tiddlers]]" });
+			addTiddler("$:/config/rimir/llm-connect/keys/A1", { text: "secret" });
+			var result = helpers.resolveProtectionFilter({});
+			expect(result.filter).toContain("-[prefix[$:/config/rimir/llm-connect/keys/]]");
+			expect($tw.wiki.filterTiddlers(result.filter)).not.toContain("$:/config/rimir/llm-connect/keys/A1");
+		});
+
+		it("always includes key tiddlers in the deny filter in deny mode", function() {
+			addTiddler("$:/config/rimir/llm-connect/protection-mode", { text: "deny" });
+			addTiddler("$:/config/rimir/llm-connect/protection-filter", { text: "" });
+			addTiddler("$:/config/rimir/llm-connect/keys/A1", { text: "secret" });
+			var result = helpers.resolveProtectionFilter({});
+			expect(result.filter).toContain(" [prefix[$:/config/rimir/llm-connect/keys/]]");
+			expect($tw.wiki.filterTiddlers(result.filter)).toContain("$:/config/rimir/llm-connect/keys/A1");
+		});
 	});
 
 	describe("resolveProviderConfig", function() {
