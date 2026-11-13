@@ -41,8 +41,9 @@ type: text/vnd.tiddlywiki
 |`tools` |Filter for tool tiddlers |none (no tools) |
 |`toolGroup` |Tool group name — restricts active tools to group members |none |
 |`systemPrompt` |Override system prompt |global config |
-|`provider` |Provider name (`claude`, `openai`, `azure`, `openai-compatible`) |global config |
-|`model` |Model ID override |provider default |
+|`connection` |Connection id, name or type (`claude`, `openai`, `azure`, `openai-compatible`); empty uses the default connection |default connection |
+|`provider` |Alias of `connection` (older name) |default connection |
+|`model` |Model ID override |connection's model |
 |`protectionMode` |`allow` (whitelist) or `deny` (blacklist) |global config |
 |`allowFilter` |Allow filter (combined with base allow filter) |none |
 |`denyFilter` |Deny filter (combined with base deny filter) |none |
@@ -153,8 +154,8 @@ Additionally, the tool executor injects these built-in context variables (availa
 
 |!Variable |!Description |
 |`<<__timestamp>>` |Current time in TW format (`YYYYMMDDHHMMSSMMM`) |
-|`<<__provider>>` |Active provider name (e.g. `claude`) |
-|`<<__model>>` |Active model ID (e.g. `claude-opus-4-20250514`) |
+|`<<__provider>>` |Type of the chat's connection (e.g. `claude`) |
+|`<<__model>>` |Model ID of the chat's connection (e.g. `claude-opus-4-20250514`) |
 
 !! Custom tools
 
@@ -265,14 +266,39 @@ Summary tiddler conventions:
 |!Template |!Tiddler |!Description |
 |Pair editing |`$:/plugins/rimir/llm-connect/context-templates/pair-edit` |Sends the tiddler's raw wikitext for collaborative editing; output-mode `markup`, inject-as `user-message` |
 
+!! Connections
+
+|!Tiddler |!Description |
+|`$:/config/rimir/llm-connect/connections/<id>` |One connection, tagged `$:/tags/rimir/llm-connect/connection`. Ids are `c` + UTC timestamp digits (`c20261113090000001`) |
+|`$:/config/rimir/llm-connect/keys/<id>` |API key of that connection (tag `sensitive`); always hidden from the LLM |
+
+|!Field |!Description |
+|`connection-id` / `connection-name` / `connection-description` |Id, display name (used by the `connection` attribute) and optional note |
+|`connection-type` |`claude`, `openai`, `azure` or `openai-compatible` |
+|`endpoint` |Base URL — `azure` (resource URL) and `openai-compatible` (server URL, e.g. `http://host:8080`; `/v1` optional). For `openai-compatible` the endpoint (not the key) marks the connection as configured |
+|`deployment` / `api-version` |`azure` only |
+|`model` |Model ID of the connection |
+|`max-tokens` |Max response tokens (default `4096`) |
+|`cheap-model` / `expensive-model` |Models used by tier routing within this connection |
+
+Connection types are registered by tiddlers tagged `$:/tags/rimir/llm-connect/connection-type` (fields `connection-type`, `caption`, `connection-fields`, `required-field`); field editors live in `connection-fields/`.
+
+JS API (library `$:/plugins/rimir/llm-connect/connections` and orchestrator): `listConnections()`, `getConnection(id)`, `getDefaultConnectionId()`, `resolveConnectionId(ref)` (id, name, type or empty), `isConfigured(id)`, `connectionConfig(id)`, `resolveChatConnection(fields)`; `orchestrator.getProviderConfig(ref)` returns `connectionConfig` for a resolved `ref`.
+
+!! Settings tabs
+
+|!Tab |!Content |
+|Connections |Add, edit, delete and test connections; fetch models; choose the default |
+|Routing |Tier routing switch (cheap/expensive models are set on each connection) |
+|Safety |Protection mode, allow/deny filters, excluded plugins |
+|Files |Size limits, document extraction, image extraction |
+|Prompt |System prompt, default context template |
+|Tools |Tool list, groups, clone tools |
+
 !! Config tiddlers
 
 |!Tiddler |!Default |!Description |
-|`$:/config/rimir/llm-connect/provider` |`claude` |Active provider |
-|`$:/config/rimir/llm-connect/providers/<name>/api-key` | |API key |
-|`$:/config/rimir/llm-connect/providers/<name>/model` |varies |Model ID |
-|`$:/config/rimir/llm-connect/providers/<name>/max-tokens` |`4096` |Max response tokens |
-|`$:/config/rimir/llm-connect/providers/<name>/endpoint` | |Base URL — `azure` (resource URL) and `openai-compatible` (server URL, e.g. `http://host:8080`; `/v1` optional). For `openai-compatible` the endpoint (not the API key) marks the provider as configured |
+|`$:/config/rimir/llm-connect/default-connection` |first connection |Id of the default connection |
 |`$:/config/rimir/llm-connect/system-prompt` |default text |Global system prompt |
 |`$:/config/rimir/llm-connect/protection-mode` |`allow` |Protection mode — `allow` (whitelist, default) or `deny` (blacklist) |
 |`$:/config/rimir/llm-connect/allow-filter` |(empty) |Allow filter — only matched tiddlers are accessible to LLM tools (allow mode) |
@@ -285,10 +311,6 @@ Summary tiddler conventions:
 |`$:/config/rimir/llm-connect/max-extraction-size` |`500000` |Max characters for extracted document text (truncated beyond this) |
 |`$:/config/rimir/llm-connect/extract-images` |`no` |Extract images from PDFs alongside text (requires `pdfimages` from poppler-utils) |
 |`$:/config/rimir/llm-connect/tier-routing-enabled` |`no` |Enable model tier routing — switch models per tool round based on tool tiers |
-|`$:/config/rimir/llm-connect/tiers/cheap/provider` |(empty) |Provider for cheap tier (must match active provider for switching to work) |
-|`$:/config/rimir/llm-connect/tiers/cheap/model` |(empty) |Model ID for cheap tier |
-|`$:/config/rimir/llm-connect/tiers/expensive/provider` |(empty) |Provider for expensive tier |
-|`$:/config/rimir/llm-connect/tiers/expensive/model` |(empty) |Model ID for expensive tier |
 
 !! Accessible tiddlers panel
 
@@ -306,6 +328,7 @@ Titles are clickable links (navigates to tiddler). The list refreshes when prote
 The following fields on each chat tiddler control per-chat behaviour. They are managed by the chat UI — not config tiddlers.
 
 |!Field |!Description |
+|`llm-connection` / `llm-connection-name` / `llm-connection-type` |Connection id, name and type of this chat (managed by the connection selector; locked after the first message) |
 |`llm-active-tools` |TiddlyWiki title list of active tool tiddlers (managed by wrench icon) |
 |`llm-context-filter` |TiddlyWiki filter expression for context attachments (managed by 📎 icon). Results are classified as text or file tiddlers and included in the first message |
 |`llm-protection-mode` |Protection mode override for this chat — `allow` or `deny` (managed by shield icon dropdown). Switching modes auto-negates the per-chat filter |
@@ -338,7 +361,7 @@ The chat header toolbar (pin, export/import, tool selector, context selector) is
 
 * `<<llm-chat-toolbar-left "Label">>` — renders the pin button and label
 * `<<llm-chat-toolbar-actions "chatTiddler">>` — renders export/import buttons, tier routing toggle, tool selector, and context selector
-* `<<llm-tier-toggle>>` — layers icon: hover shows tier config (cheap/default/expensive models), click toggles `$:/config/rimir/llm-connect/tier-routing-enabled`. Icon highlights in primary color when active
+* `<<llm-tier-toggle chatTiddler>>` — layers icon: hover shows tier config (cheap/default/expensive models), click toggles `$:/config/rimir/llm-connect/tier-routing-enabled`. Icon highlights in primary color when active
 
 External plugins (e.g. appify) can import `chat-toolbar` to get the full toolbar without duplicating markup.
 
@@ -346,7 +369,7 @@ External plugins (e.g. appify) can import `chat-toolbar` to get the full toolbar
 
 The ↑ (export) and ↓ (import) arrow buttons in the chat header allow transferring conversations between browser sessions, devices, or users.
 
-''Export'' copies a JSON snapshot of the entire chat to the clipboard — messages, provider, model, tool selection, protection mode/filters, context filter, and injection state. The status bar confirms success with a message count.
+''Export'' copies a JSON snapshot of the entire chat to the clipboard — messages, connection, model, tool selection, protection mode/filters, context filter, and injection state. The status bar confirms success with a message count.
 
 ''Import'' reads JSON from the clipboard and restores the chat. If the browser blocks clipboard read access, a paste dialog appears as fallback. Importing overwrites the current chat state (clear first if you want to preserve it).
 
@@ -369,6 +392,19 @@ Saved tiddler fields include `llm-context-injected`, `llm-attachments-injected`,
 !! Source tiddler auto-access
 
 When the `tiddler` attribute is set (e.g. pair-edit mode), the source tiddler is automatically added to the allow filter (or exempted from the deny filter). This ensures the LLM can always read and modify the tiddler it is pair-editing.
+
+!! Upgrading from 0.1.56
+
+0.1.57 replaces the one-config-per-provider model with named connections. Existing provider config tiddlers are no longer read, so convert them once (create connections in Settings > Connections, or write the tiddlers directly):
+
+|!Before (0.1.56) |!Now (0.1.57) |
+|`$:/config/rimir/llm-connect/provider` (active provider name) |`$:/config/rimir/llm-connect/default-connection` (text = connection id) |
+|`$:/config/rimir/llm-connect/providers/<type>/<field>` |field `<field>` on `$:/config/rimir/llm-connect/connections/<id>` with `connection-type: <type>` |
+|`$:/config/rimir/llm-connect/providers/<type>/api-key` |`$:/config/rimir/llm-connect/keys/<id>` (keep tag `sensitive`) |
+|`$:/config/rimir/llm-connect/tiers/<tier>/provider` + `.../tiers/<tier>/model` |field `<tier>-model` (`cheap-model` / `expensive-model`) on the connection of that provider |
+|`$:/config/rimir/llm-connect/tier-routing-enabled` |unchanged |
+
+Saved chats need no change: a chat that only stores a provider type resolves to the first connection of that type. The `provider` attribute of `<$llm-action>` still works as an alias of `connection`.
 
 </$fill>
 </$transclude>

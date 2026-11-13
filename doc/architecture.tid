@@ -54,7 +54,9 @@ Write response to output target (field / new tiddler / display / filter)
 !! Components
 
 |!Module |!Type |!Description |
-|`orchestrator.js` |library |Tool-use loop, conversation management, HTTP requests, `file_ref` resolution |
+|`connection-types.js` |library |Connection type registry: reads `$:/tags/rimir/llm-connect/connection-type` tiddlers (adapter, field list, required field) and the field definitions under `connection-fields/` |
+|`connections.js` |library |Connection store: lists, resolves (id, name, type or empty = default) and validates connections; reads the key from `keys/<id>`; `connectionConfig(id)` builds the config handed to the orchestrator; `resolveChatConnection(fields)` maps a chat's stored fields to a live connection |
+|`orchestrator.js` |library |Tool-use loop, conversation management, HTTP requests, `file_ref` resolution; `getProviderConfig(ref)` returns a connection's config |
 |`adapter-claude.js` |library |Claude API: request building, response parsing, tool results, multimodal blocks |
 |`adapter-openai.js` |library |OpenAI API: same interface, different format, multimodal blocks |
 |`adapter-azure.js` |library |Azure OpenAI API: same as OpenAI with deployment/version config |
@@ -183,6 +185,12 @@ Falls back to base64 if extraction fails (runner unavailable, unsupported format
 
 The extraction route resolves `_canonical_uri` paths to filesystem paths — supports both `files/` (TiddlyWiki built-in) and scattered-binaries profiles. Cache tiddlers persist across restarts via the filesystem adapter.
 
+!! Connections
+
+A connection is a tiddler `$:/config/rimir/llm-connect/connections/<id>` tagged `$:/tags/rimir/llm-connect/connection` with fields `connection-id`, `connection-name`, `connection-description`, `connection-type` (`claude`, `openai`, `azure`, `openai-compatible`) and the type's fields (`endpoint`, `deployment`, `api-version`, `model`, `max-tokens`, `cheap-model`, `expensive-model`). The id is `c` plus a UTC timestamp. The API key is stored apart in `$:/config/rimir/llm-connect/keys/<id>` (tag `sensitive`). `$:/config/rimir/llm-connect/default-connection` holds the default id.
+
+A chat stores `llm-connection` (id), `llm-connection-name` and `llm-connection-type`. On load the connection is resolved by id; if it is gone the chat falls back to a connection of the same type (or the default) and shows a notice. Chats that only carry a provider type (older versions) resolve to the first connection of that type. The connection is locked once the conversation has started.
+
 !! Model tier routing
 
 Tools can be assigned a cost tier via the `tool-model-tier` field: `cheap`, `default`, or `expensive`. When tier routing is enabled, the orchestrator switches the model after each tool round based on the highest tier among the called tools.
@@ -199,7 +207,7 @@ Next API call uses the switched model
 After next tool round, re-evaluate and switch again if needed
 ```
 
-Tier routing is same-provider only — cross-provider switching is blocked because message formats differ between adapters. The layers icon (⚡) in the chat header shows the current config on hover and toggles tier routing on click.
+The cheap and expensive models are fields (`cheap-model`, `expensive-model`) of the chat's own connection, so tier routing only ever switches the model within that connection — message formats differ between adapters, so switching to another connection is not possible. A tier without a model on the connection leaves the chat's model unchanged. The layers icon (⚡) in the chat header shows the current config on hover and toggles tier routing on click.
 
 !! Accessible tiddlers panel
 

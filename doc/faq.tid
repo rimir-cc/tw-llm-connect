@@ -19,13 +19,25 @@ The tiddler is likely matched by the protection filter. By default, all tiddlers
 
 Yes. llm-connect is entirely browser-side — it makes direct XHR calls to the LLM provider API from the browser. No TiddlyWiki server is required. You only need a valid API key and a modern browser with CORS support (all major LLM APIs support browser-origin requests).
 
+!! Q: Can I use several providers or several accounts at once?
+
+Yes. Add one connection per provider or account in Settings > Connections and give each a name. Pick the connection per chat (the selector in the chat header, until the first message) or per action with `<$llm-action connection="Azure OpenAI" .../>`; the default connection is used otherwise.
+
+!! Q: How does tier routing choose a model?
+
+Each connection has optional ''cheap-model'' and ''expensive-model'' fields. When tier routing is on (Routing tab), tool rounds switch to those models within the chat's own connection. Leave a field empty to keep the chat's model for that tier.
+
+!! Q: I upgraded and my provider settings are gone.
+
+See ''Upgrading from 0.1.56'' in the reference: provider config tiddlers are replaced by connection tiddlers.
+
 !! Q: How do I attach a PDF to a conversation?
 
 Use the context filter (paperclip icon in the chat panel). Enter a filter that matches tiddlers with `_canonical_uri` pointing to PDFs, e.g., `[title[My Document.pdf]]`. The file resolver detects the `_canonical_uri`, fetches the file via XHR, base64-encodes it, and sends it to the LLM as a document attachment. Maximum file size is configurable (default 20 MB).
 
 !! Q: How do I connect a self-hosted model (llama.cpp, vLLM, Ollama, LM Studio)?
 
-Select ''OpenAI-compatible (self-hosted)'' as provider and set its endpoint to the server's base URL (e.g. `http://gpu-host:8080`; a trailing `/v1` is optional). Set the API key only if the server requires one (llama.cpp `--api-key` / `--api-key-file`). Then click ''Fetch models''. Things to check on the server side:
+Add a connection of type ''OpenAI-compatible'' (Settings > Connections) and set its endpoint to the server's base URL (e.g. `http://gpu-host:8080`; a trailing `/v1` is optional). Set the API key only if the server requires one (llama.cpp `--api-key` / `--api-key-file`). Then click ''Fetch models''. Things to check on the server side:
 
 * ''Tool use'' — llama.cpp needs `--jinja`, otherwise tool calls are not returned as structured `tool_calls`.
 * ''CORS'' — requests come straight from the browser, so the server (or a reverse proxy in front of it) must accept the wiki's origin, including the `OPTIONS` preflight.

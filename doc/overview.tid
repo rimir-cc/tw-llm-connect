@@ -22,11 +22,11 @@ llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI, Azure OpenAI, self
 
 * ''Two modes'' — interactive chat (multi-turn with tools) and one-shot actions (context template → LLM → output target)
 * ''Pair editing'' — toolbar button opens an embedded chat panel on any tiddler for collaborative editing with the LLM
-* ''Provider adapters'' — Claude, OpenAI, Azure OpenAI, and self-hosted OpenAI-compatible servers (llama.cpp, vLLM, Ollama, LM Studio) out of the box, extensible adapter interface
+* ''Named connections'' — any number of connections, each with a type (Claude, OpenAI, Azure OpenAI, or a self-hosted OpenAI-compatible server such as llama.cpp, vLLM, Ollama, LM Studio), its own endpoint, model and API key; one is the default. Extensible type registry and adapter interface
 * ''Tool system'' — search, read, navigate, create, modify, delete tiddlers; user-defined tools via wikitext
 * ''Multimodal context'' — attach PDFs, images, and text tiddlers via a context filter (📎 icon); binaries are base64-encoded and sent inline
 * ''Document extraction'' — PDF/DOCX/XLSX files are auto-converted to markdown text (via pdftotext/pandoc/openpyxl) before sending to the LLM — massive token savings vs base64. Extracted text cached per document. Requires runner plugin + server-side tools
-* ''Model tier routing'' — assign cost tiers (cheap/default/expensive) to tools; the orchestrator automatically switches models per tool round. Toggle via layers icon in chat header
+* ''Model tier routing'' — assign cost tiers (cheap/default/expensive) to tools; the orchestrator automatically switches models per tool round (cheap and expensive models are set per connection). Toggle via layers icon in chat header
 * ''Context templates'' — wikitext templates that render input from source tiddlers before sending to the LLM
 * ''Output targets'' — display only, write to field, create new tiddler, or filter-resolved target
 * ''Template precedence'' — tiddler field → prompt template → widget attribute → global default
@@ -39,14 +39,14 @@ llm connect bridges TiddlyWiki with LLM APIs (Claude, OpenAI, Azure OpenAI, self
 
 !! Prerequisites
 
-* API key for a supported provider (Claude, OpenAI, or Azure OpenAI), or the endpoint of a self-hosted OpenAI-compatible server
+* A connection to a supported provider: an API key (Claude, OpenAI, Azure OpenAI), or the endpoint of a self-hosted OpenAI-compatible server
 * Modern browser (async/await, XMLHttpRequest)
 * ''For document extraction'': runner plugin enabled, plus server-side tools: `pdftotext` (poppler-utils), `pandoc`, `python3-openpyxl`
 
 !! Quick start
 
 # Install the plugin
-# Go to Settings and enter your API key
+# Go to Settings > Connections and add a connection (type, endpoint/key, model); mark it as default
 # Open the chat from the page toolbar button
 # Click the pair-edit button ({{$:/plugins/rimir/llm-connect/icon}}) in any tiddler's toolbar for collaborative editing
 # Or add action buttons to tiddlers:
@@ -64,7 +64,7 @@ Click the pair-edit toolbar button on any tiddler to open an embedded chat panel
 
 <$transclude $tiddler="$:/plugins/rimir/doc-template/templates/callout" type="info">
 <$fill $name="body">
-API keys are stored in wiki tiddlers — visible to anyone with file access. Suitable for personal wikis or server wikis with authentication.
+API keys are stored in wiki tiddlers (one per connection) — visible to anyone with file access, but always hidden from the LLM. Suitable for personal wikis or server wikis with authentication.
 </$fill>
 </$transclude>
 

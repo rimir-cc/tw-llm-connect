@@ -166,16 +166,15 @@ None
 <%endif%>
 \end
 
-\procedure llm-tier-toggle()
+\procedure llm-tier-toggle(chatTiddler)
 \whitespace trim
 <$let
   tierEnabled={{{ [[$:/config/rimir/llm-connect/tier-routing-enabled]get[text]else[no]] }}}
-  cheapProvider={{{ [[$:/config/rimir/llm-connect/tiers/cheap/provider]get[text]] }}}
-  cheapModel={{{ [[$:/config/rimir/llm-connect/tiers/cheap/model]get[text]] }}}
-  expProvider={{{ [[$:/config/rimir/llm-connect/tiers/expensive/provider]get[text]] }}}
-  expModel={{{ [[$:/config/rimir/llm-connect/tiers/expensive/model]get[text]] }}}
-  curProvider={{{ [[$:/config/rimir/llm-connect/provider]get[text]else[claude]] }}}
-  curModel={{{ [[$:/config/rimir/llm-connect/providers/]addsuffix<curProvider>addsuffix[/model]get[text]else<curProvider>] }}}
+  connId={{{ [<chatTiddler>get[llm-connection]] ~[[$:/config/rimir/llm-connect/default-connection]get[text]] }}}
+  connTitle={{{ [[$:/config/rimir/llm-connect/connections/]addsuffix<connId>] }}}
+  cheapModel={{{ [<connTitle>get[cheap-model]] }}}
+  expModel={{{ [<connTitle>get[expensive-model]] }}}
+  curModel={{{ [<connTitle>get[model]] ~[<connTitle>get[connection-type]] }}}
   tipText={{{ [<tierEnabled>match[yes]then[Tier routing ON]] ~[[Tier routing OFF]] }}}
   cheapTip={{{ [<cheapModel>minlength[1]] :map:flat[[cheap: ]addsuffix<currentTiddler>] ~[[cheap: (not set)]] }}}
   defaultTip={{{ [[default (chat model): ]addsuffix<curModel>] }}}
@@ -194,7 +193,7 @@ None
 \procedure llm-chat-toolbar-actions(chatTiddler)
 \whitespace trim
 <span class="llm-chat-io-wrapper"><button class="llm-chat-btn-export tc-btn-invisible" title="Export chat to clipboard">{{$:/plugins/rimir/llm-connect/icon/export}}</button><button class="llm-chat-btn-import tc-btn-invisible" title="Import chat from clipboard">{{$:/plugins/rimir/llm-connect/icon/import}}</button></span>
-<<llm-tier-toggle>>
+<$transclude $variable="llm-tier-toggle" chatTiddler=<<chatTiddler>>/>
 <$transclude $variable="llm-tool-selector" chatTiddler=<<chatTiddler>>/>
 <$transclude $variable="llm-context-selector" chatTiddler=<<chatTiddler>>/>
 \end

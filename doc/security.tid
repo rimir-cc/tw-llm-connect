@@ -17,7 +17,9 @@ llm connect executes LLM-requested operations against the wiki store. This secti
 
 !! API key storage
 
-API keys are stored in wiki config tiddlers (`$:/config/rimir/llm-connect/providers/<name>/api-key`). They are visible to anyone with file access to the wiki. This is suitable for personal wikis or server wikis with authentication. API keys are never sent to the LLM — only to the respective provider API endpoint.
+API keys are stored in wiki config tiddlers, one per connection (`$:/config/rimir/llm-connect/keys/<id>`, tagged `sensitive`). They are visible to anyone with file access to the wiki. This is suitable for personal wikis or server wikis with authentication.
+
+Keys are always hidden from the LLM, in every protection mode: the key tiddlers are excluded by the protection filter, and tools cannot create tiddlers under the key prefix. Keys are only sent to the connection's own API endpoint. The key inputs in Settings are password fields.
 
 !! Protection modes — allow & deny
 

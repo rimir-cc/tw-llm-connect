@@ -270,10 +270,13 @@ function executeWikitext(wikitext, input, mode, protection) {
 	variables.protectionFilter = (protection && protection.filter) || "";
 
 	// Inject built-in context variables available to all tools
-	var provider = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/provider") || "unknown";
+	var connections = require("$:/plugins/rimir/llm-connect/connections");
+	var chatTitle = (protection && protection.chatTiddler) || "";
+	var chatTid = chatTitle ? $tw.wiki.getTiddler(chatTitle) : null;
+	var connConfig = connections.connectionConfig(connections.resolveChatConnection(chatTid ? chatTid.fields : {}).id);
 	variables.__timestamp = $tw.utils.stringifyDate(new Date());
-	variables.__provider = provider;
-	variables.__model = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/providers/" + provider + "/model") || provider;
+	variables.__provider = connConfig.provider || "unknown";
+	variables.__model = connConfig.model || variables.__provider;
 	variables.__helpContext = (protection && protection.helpContext) || "";
 	variables.__chatTiddler = (protection && protection.chatTiddler) || "";
 
