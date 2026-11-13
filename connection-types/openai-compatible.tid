@@ -1,0 +1,8 @@
+title: $:/plugins/rimir/llm-connect/connection-types/openai-compatible
+tags: $:/tags/rimir/llm-connect/connection-type
+connection-type: openai-compatible
+caption: OpenAI-compatible
+connection-fields: endpoint api-key model max-tokens
+required-field: endpoint
+description: Self-hosted or third-party servers that speak the OpenAI chat API.
+

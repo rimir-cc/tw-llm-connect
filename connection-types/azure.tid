@@ -1,0 +1,8 @@
+title: $:/plugins/rimir/llm-connect/connection-types/azure
+tags: $:/tags/rimir/llm-connect/connection-type
+connection-type: azure
+caption: Azure OpenAI
+connection-fields: endpoint api-key deployment api-version model max-tokens
+required-field: api-key
+description: OpenAI models hosted on an Azure OpenAI resource.
+

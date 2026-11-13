@@ -1,0 +1,8 @@
+title: $:/plugins/rimir/llm-connect/connection-fields/api-version
+tags: $:/tags/rimir/llm-connect/connection-field
+caption: API version
+size: medium
+input-type: text
+placeholder: 
+default: 2025-04-01-preview
+

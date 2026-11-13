@@ -1,0 +1,8 @@
+title: $:/plugins/rimir/llm-connect/connection-fields/max-tokens
+tags: $:/tags/rimir/llm-connect/connection-field
+caption: Max tokens
+size: short
+input-type: text
+placeholder: 
+default: 4096
+

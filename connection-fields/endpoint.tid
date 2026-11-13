@@ -1,0 +1,8 @@
+title: $:/plugins/rimir/llm-connect/connection-fields/endpoint
+tags: $:/tags/rimir/llm-connect/connection-field
+caption: Endpoint
+size: wide
+input-type: text
+placeholder: https://...
+default: 
+

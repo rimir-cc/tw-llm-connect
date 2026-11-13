@@ -1,0 +1,8 @@
+title: $:/plugins/rimir/llm-connect/connection-fields/deployment
+tags: $:/tags/rimir/llm-connect/connection-field
+caption: Deployment
+size: medium
+input-type: text
+placeholder: deployment name
+default: 
+

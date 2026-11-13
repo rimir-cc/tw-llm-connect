@@ -18,9 +18,12 @@ exports.startup = function() {
 	// Verify modules are loadable
 	var modules = [
 		"orchestrator", "tool-executor", "context-resolver",
-		"adapter-claude", "adapter-openai-base", "adapter-openai",
-		"adapter-azure", "adapter-openai-compatible", "widget-helpers"
+		"adapter-openai-base", "widget-helpers"
 	];
+	var types = require("$:/plugins/rimir/llm-connect/connection-types").listTypes();
+	for (var t = 0; t < types.length; t++) {
+		modules.push("adapter-" + types[t].type);
+	}
 	for (var i = 0; i < modules.length; i++) {
 		try {
 			require("$:/plugins/rimir/llm-connect/" + modules[i]);

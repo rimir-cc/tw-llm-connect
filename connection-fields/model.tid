@@ -1,0 +1,8 @@
+title: $:/plugins/rimir/llm-connect/connection-fields/model
+tags: $:/tags/rimir/llm-connect/connection-field
+caption: Model
+size: medium
+input-type: text
+placeholder: model id
+default: 
+
