@@ -1,0 +1,12 @@
+title: $:/plugins/rimir/llm-connect/settings/connections
+tags: $:/tags/rimir/llm-connect/settings-tab
+caption: Connections
+type: text/vnd.tiddlywiki
+
+\import [[$:/plugins/rimir/theme/procedures-settings]] [[$:/plugins/rimir/llm-connect/settings/procedures]]
+
+<p class="rr-settings-section-hint">A connection is one provider account or server, with its own key and models. Chats pick a connection and a model; new chats start on the default connection. Click a connection to edit it.</p>
+
+<<llm-conn-list>>
+
+<<llm-conn-add>>

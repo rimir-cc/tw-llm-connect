@@ -1,0 +1,32 @@
+title: $:/plugins/rimir/llm-connect/settings/routing
+tags: $:/tags/rimir/llm-connect/settings-tab
+caption: Routing
+type: text/vnd.tiddlywiki
+
+\import [[$:/plugins/rimir/theme/procedures-settings]] [[$:/plugins/rimir/llm-connect/settings/procedures]]
+
+<$transclude $variable="rr-settings-section" title="Model tier routing" hint="Each tool-use round can run on a cheaper or stronger model, chosen by the most expensive tool called in that round. Routing only ever switches between the chat connection's own cheap, default and expensive models — never to another connection. A connection without a cheap or expensive model keeps using the chat's model.">
+<$fill $name="body">
+<$transclude $variable="rr-settings-row" label="Tier routing" hint="Off: every round uses the chat's model."><$fill $name="body"><<rr-config-checkbox tid="$:/config/rimir/llm-connect/tier-routing-enabled" label="Enable model tier routing" default="no">></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Tiers"><$fill $name="body"><span class="rr-small">''cheap'': search, get, render, navigate · ''default'': create, set, delete, attach · ''expensive'': PDF summary, document analysis. Each tool's tier is set on the Tools tab.</span></$fill></$transclude>
+</$fill>
+</$transclude>
+
+<$transclude $variable="rr-settings-section" title="Models per connection" hint="Edit a connection's cheap and expensive models on the Connections tab.">
+<$fill $name="body">
+<table class="rr-table llm-routing-table">
+<tr><th>Connection</th><th>Cheap</th><th>Default</th><th>Expensive</th></tr>
+<$list filter="[llm-conn.all[]]" variable="conn">
+<tr>
+<td><$text text={{{ [<conn>get[connection-name]] ~[llm-conn.id<conn>] }}}/></td>
+<td><$text text={{{ [<conn>get[cheap-model]] ~[[— chat model —]] }}}/></td>
+<td><$text text={{{ [<conn>get[model]] ~[[—]] }}}/></td>
+<td><$text text={{{ [<conn>get[expensive-model]] ~[[— chat model —]] }}}/></td>
+</tr>
+</$list>
+<$list filter="[llm-conn.all[]count[]match[0]]" variable="ignore">
+<tr><td colspan="4" class="rr-muted">No connections yet.</td></tr>
+</$list>
+</table>
+</$fill>
+</$transclude>

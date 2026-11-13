@@ -1,0 +1,3 @@
+title: $:/tags/rimir/llm-connect/settings-tab
+list: $:/plugins/rimir/llm-connect/settings/connections $:/plugins/rimir/llm-connect/settings/routing $:/plugins/rimir/llm-connect/settings/safety $:/plugins/rimir/llm-connect/settings/files $:/plugins/rimir/llm-connect/settings/prompt $:/plugins/rimir/llm-connect/settings/tools
+

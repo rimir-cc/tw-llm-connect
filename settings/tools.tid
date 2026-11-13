@@ -1,0 +1,142 @@
+title: $:/plugins/rimir/llm-connect/settings/tools
+tags: $:/tags/rimir/llm-connect/settings-tab
+caption: Tools
+type: text/vnd.tiddlywiki
+
+\import [[$:/plugins/rimir/theme/procedures-settings]] [[$:/plugins/rimir/llm-connect/settings/procedures]]
+
+<$transclude $variable="rr-settings-section" title="Tools" hint="Tools the LLM can call. Built-in tools first, then your own. Untick Active to hide a tool from all chats.">
+<$fill $name="body">
+<$let newToolState="$:/temp/rimir/llm-connect/new-tool-form">
+<table class="rr-table llm-tool-table">
+<tr><th></th><th>Name</th><th>Mode</th><th>Tier</th><th>Description</th><th>Active</th><th>Actions</th></tr>
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]is[shadow]sort[tool-name]]" variable="tool">
+<<llm-tool-row>>
+</$list>
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!is[shadow]limit[1]]" variable="_">
+<tr class="llm-tool-divider"><td colspan="7"><span class="rr-muted rr-small">Custom tools</span></td></tr>
+</$list>
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!is[shadow]sort[tool-name]]" variable="tool">
+<<llm-tool-row>>
+</$list>
+</table>
+<$reveal type="nomatch" stateTitle=<<newToolState>> stateField="show" text="yes">
+<$button class="tc-btn-big-green llm-settings-create-btn">
+<$action-setfield $tiddler=<<newToolState>> show="yes" tool-name="" tool-description="" tool-mode="read" tool-schema='{&#34;type&#34;:&#34;object&#34;,&#34;properties&#34;:{},&#34;required&#34;:[]}' tool-text="" new-title="" tool-enabled="no"/>
+Create new tool
+</$button>
+</$reveal>
+<$reveal type="match" stateTitle=<<newToolState>> stateField="show" text="yes" animate="yes">
+<div class="llm-tool-form rr-panel">
+<div class="rr-panel-body">
+<$transclude $variable="rr-settings-row" label="Tiddler title"><$fill $name="body"><$edit-text tiddler=<<newToolState>> field="new-title" tag="input" class="rr-input rr-config-input rr-config-input-wide" placeholder="$:/my-tools/tool-name"/></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Tool name" hint="Identifier sent to the LLM (e.g. get_tagged)."><$fill $name="body"><$edit-text tiddler=<<newToolState>> field="tool-name" tag="input" class="rr-input rr-config-input rr-config-input-medium" placeholder="my_tool_name"/></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Description"><$fill $name="body"><$edit-text tiddler=<<newToolState>> field="tool-description" tag="input" class="rr-input rr-config-input rr-config-input-wide" placeholder="What this tool does"/></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Mode"><$fill $name="body"><$select tiddler=<<newToolState>> field="tool-mode" default="read" class="rr-input rr-config-input-wide">
+<option value="read">read — render wikitext, return text output</option>
+<option value="action">action — execute action widgets + return confirmation</option>
+</$select></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Model tier"><$fill $name="body"><$select tiddler=<<newToolState>> field="tool-model-tier" default="default" class="rr-input rr-config-input-short">
+<<llm-tier-options>>
+</$select></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Schema (JSON)"><$fill $name="body"><$edit-text tiddler=<<newToolState>> field="tool-schema" tag="textarea" class="rr-textarea llm-tool-schema-input" placeholder='{"type":"object","properties":{"param":{"type":"string"}},"required":["param"]}'/></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Wikitext body"><$fill $name="body"><$edit-text tiddler=<<newToolState>> field="tool-text" tag="textarea" class="rr-textarea llm-tool-body-input" placeholder="<$list filter=<<param>>>..."/></$fill></$transclude>
+<div class="llm-settings-form-actions">
+<$button class="tc-btn-big-green">
+<$let targetTitle={{{ [<newToolState>get[new-title]] }}}>
+<$action-setfield
+  $tiddler=<<targetTitle>>
+  tool-name={{{ [<newToolState>get[tool-name]] }}}
+  tool-description={{{ [<newToolState>get[tool-description]] }}}
+  tool-mode={{{ [<newToolState>get[tool-mode]] }}}
+  tool-schema={{{ [<newToolState>get[tool-schema]] }}}
+  tool-enabled={{{ [<newToolState>get[tool-enabled]] }}}
+  tool-model-tier={{{ [<newToolState>get[tool-model-tier]] }}}
+  text={{{ [<newToolState>get[tool-text]] }}}
+  type="text/vnd.tiddlywiki"
+/>
+<$action-listops $tiddler=<<targetTitle>> $tags="$:/tags/rimir/llm-connect/tool"/>
+</$let>
+<$action-deletetiddler $tiddler=<<newToolState>>/>
+Create
+</$button>
+<$button>
+<$action-deletetiddler $tiddler=<<newToolState>>/>
+Cancel
+</$button>
+</div>
+</div>
+</div>
+</$reveal>
+</$let>
+</$fill>
+</$transclude>
+
+<$transclude $variable="rr-settings-section" title="Tool groups" hint="Groups are presets that can be applied in the per-chat tool selector to quickly switch between tool sets.">
+<$fill $name="body">
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool-group]sort[group-name]]" variable="group" emptyMessage="">
+<$let groupDetailState={{{ [[$:/state/rimir/llm-connect/group-detail/]addsuffix<group>] }}}>
+<div class="llm-group-entry">
+<div class="llm-group-header">
+<$button class="tc-btn-invisible llm-tool-toggle">
+<$action-setfield $tiddler=<<groupDetailState>> text={{{ [<groupDetailState>get[text]match[open]then[closed]else[open]] }}}/>
+<$reveal type="match" state=<<groupDetailState>> text="open" tag="span">&#x25be;</$reveal><$reveal type="nomatch" state=<<groupDetailState>> text="open" tag="span">&#x25b8;</$reveal>
+</$button>
+<strong><$text text={{{ [<group>get[group-name]] }}}/></strong>
+<span class="rr-muted rr-small">(<$text text={{{ [<group>get[group-tools]enlist-input[]count[]] }}}/> tools)</span>
+<$button class="tc-btn-invisible llm-tool-icon-btn rr-link-btn-danger" tooltip="Delete group">
+<$action-confirm $message="Delete this tool group?">
+<$action-deletetiddler $tiddler=<<group>>/>
+</$action-confirm>
+<$transclude $tiddler="$:/plugins/rimir/llm-connect/icon/delete"/>
+</$button>
+</div>
+<$reveal type="match" state=<<groupDetailState>> text="open" animate="yes">
+<div class="llm-group-detail">
+<$transclude $variable="rr-settings-row" label="Name"><$fill $name="body"><$edit-text tiddler=<<group>> field="group-name" tag="input" class="rr-input rr-config-input rr-config-input-medium"/></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Description"><$fill $name="body"><$edit-text tiddler=<<group>> field="group-description" tag="input" class="rr-input rr-config-input rr-config-input-wide"/></$fill></$transclude>
+<$transclude $variable="llm-group-tools-grid" target=<<group>>/>
+</div>
+</$reveal>
+</div>
+</$let>
+</$list>
+<$let newGroupState="$:/temp/rimir/llm-connect/new-group-form">
+<$reveal type="nomatch" stateTitle=<<newGroupState>> stateField="show" text="yes">
+<$button class="tc-btn-big-green llm-settings-create-btn">
+<$action-setfield $tiddler=<<newGroupState>> show="yes" group-name="" group-description="" new-title="" group-tools=""/>
+Create new group
+</$button>
+</$reveal>
+<$reveal type="match" stateTitle=<<newGroupState>> stateField="show" text="yes" animate="yes">
+<div class="llm-tool-form rr-panel">
+<div class="rr-panel-body">
+<$transclude $variable="rr-settings-row" label="Tiddler title"><$fill $name="body"><$edit-text tiddler=<<newGroupState>> field="new-title" tag="input" class="rr-input rr-config-input rr-config-input-wide" placeholder="$:/config/rimir/llm-connect/groups/my-group"/></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Group name"><$fill $name="body"><$edit-text tiddler=<<newGroupState>> field="group-name" tag="input" class="rr-input rr-config-input rr-config-input-medium" placeholder="My Group"/></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Description"><$fill $name="body"><$edit-text tiddler=<<newGroupState>> field="group-description" tag="input" class="rr-input rr-config-input rr-config-input-wide" placeholder="Optional description"/></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Tools"><$fill $name="body"><$transclude $variable="llm-group-tools-grid" target=<<newGroupState>>/></$fill></$transclude>
+<div class="llm-settings-form-actions">
+<$button class="tc-btn-big-green">
+<$let targetTitle={{{ [<newGroupState>get[new-title]] }}}>
+<$action-setfield
+  $tiddler=<<targetTitle>>
+  group-name={{{ [<newGroupState>get[group-name]] }}}
+  group-description={{{ [<newGroupState>get[group-description]] }}}
+  group-tools={{{ [<newGroupState>get[group-tools]] }}}
+/>
+<$action-listops $tiddler=<<targetTitle>> $tags="$:/tags/rimir/llm-connect/tool-group"/>
+</$let>
+<$action-deletetiddler $tiddler=<<newGroupState>>/>
+Create
+</$button>
+<$button>
+<$action-deletetiddler $tiddler=<<newGroupState>>/>
+Cancel
+</$button>
+</div>
+</div>
+</div>
+</$reveal>
+</$let>
+</$fill>
+</$transclude>

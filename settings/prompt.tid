@@ -1,0 +1,18 @@
+title: $:/plugins/rimir/llm-connect/settings/prompt
+tags: $:/tags/rimir/llm-connect/settings-tab
+caption: Prompt
+type: text/vnd.tiddlywiki
+
+\import [[$:/plugins/rimir/theme/procedures-settings]] [[$:/plugins/rimir/llm-connect/settings/procedures]]
+
+<$transclude $variable="rr-settings-section" title="System prompt" hint="Sent at the start of every chat.">
+<$fill $name="body">
+<<rr-config-textarea tid="$:/config/rimir/llm-connect/system-prompt" default="You are a helpful TiddlyWiki assistant. You can search, read, and modify tiddlers using the available tools." rows="6">>
+</$fill>
+</$transclude>
+
+<$transclude $variable="rr-settings-section" title="Context">
+<$fill $name="body">
+<$transclude $variable="rr-settings-row" label="Default context template" hint="Leave empty for the built-in default (render the source tiddler's text)."><$fill $name="body"><<rr-config-input tid="$:/config/rimir/llm-connect/default-context-template">></$fill></$transclude>
+</$fill>
+</$transclude>

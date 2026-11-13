@@ -907,11 +907,110 @@ type: text/vnd.tiddlywiki
 }
 
 
-/* Fetch models button in settings */
-.llm-fetch-models-btn {
-	margin-left: 8px;
+/* Settings: connection list and editor */
+.llm-conn-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin: 8px 0;
+}
+
+.llm-conn {
+	border: 1px solid <<colour tiddler-border>>;
+	border-radius: 4px;
+	background: <<colour tiddler-background>>;
+}
+
+.llm-conn-open {
+	border-color: <<colour primary>>;
+}
+
+.llm-conn-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px 10px;
+	width: 100%;
+	padding: 6px 10px;
+	text-align: left;
+}
+
+.llm-conn-name {
+	font-weight: 600;
+}
+
+.llm-conn-type,
+.llm-conn-model {
 	font-size: 0.85em;
-	color: <<colour primary>>;
+	color: <<colour muted-foreground>>;
+}
+
+.llm-conn-model {
+	font-family: {{$:/themes/tiddlywiki/vanilla/settings/codefontfamily}};
+	flex: 1;
+}
+
+.llm-conn-badge {
+	font-size: 0.75em;
+	padding: 1px 7px;
+	border-radius: 8px;
+	background: <<colour tiddler-editor-border>>;
+	color: <<colour foreground>>;
+}
+
+.llm-conn-default {
+	background: <<colour notification-background>>;
+	border: 1px solid <<colour notification-border>>;
+}
+
+.llm-conn-incomplete {
+	color: <<colour alert-highlight>>;
+	background: transparent;
+	border: 1px solid <<colour alert-highlight>>;
+}
+
+.llm-conn-editor {
+	padding: 4px 10px 8px;
+	border-top: 1px solid <<colour tiddler-border>>;
+}
+
+.llm-conn-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 6px 12px;
+	padding-top: 8px;
+}
+
+.llm-conn-actions-right {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 6px 12px;
+	margin-left: auto;
+}
+
+.llm-conn-add-form {
+	border: 1px dashed <<colour tiddler-border>>;
+	border-radius: 4px;
+	padding: 4px 10px 8px;
+	margin: 8px 0;
+}
+
+.llm-protected-list {
+	margin-top: 4px;
+}
+
+/* Settings: create buttons and form footers */
+.llm-settings-create-btn,
+.llm-tool-form {
+	margin-top: 8px;
+}
+
+.llm-settings-form-actions {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	padding-top: 8px;
 }
 
 /* Clear chat button */

@@ -1,0 +1,21 @@
+title: $:/plugins/rimir/llm-connect/settings/files
+tags: $:/tags/rimir/llm-connect/settings-tab
+caption: Files
+type: text/vnd.tiddlywiki
+
+\import [[$:/plugins/rimir/theme/procedures-settings]] [[$:/plugins/rimir/llm-connect/settings/procedures]]
+
+<$transclude $variable="rr-settings-section" title="Limits">
+<$fill $name="body">
+<$transclude $variable="rr-settings-row" label="Max file size" hint="Bytes. Larger files are rejected (default 20 MB)."><$fill $name="body"><<rr-config-input tid="$:/config/rimir/llm-connect/max-file-size" default="20971520" size="short">></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Max tool result length" hint="Characters. Longer tool results are truncated to fit the context."><$fill $name="body"><<rr-config-input tid="$:/config/rimir/llm-connect/max-tool-result-length" default="4000" size="short">></$fill></$transclude>
+</$fill>
+</$transclude>
+
+<$transclude $variable="rr-settings-section" title="Document extraction" hint="When enabled, PDF/DOCX/XLSX files are converted to markdown text via pandoc/python before they are sent to the LLM. Extracted text is cached per document. Requires the runner plugin and pandoc on the server.">
+<$fill $name="body">
+<$transclude $variable="rr-settings-row" label="Extraction" hint="Uses extracted text instead of base64 — major token savings."><$fill $name="body"><<rr-config-checkbox tid="$:/config/rimir/llm-connect/extraction-enabled" label="Enable document extraction" default="yes">></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Max extraction size" hint="Characters. Extracted text beyond this limit is truncated."><$fill $name="body"><<rr-config-input tid="$:/config/rimir/llm-connect/max-extraction-size" default="500000" size="short">></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Images" hint="Uses pdfimages from poppler-utils to extract embedded images alongside the text."><$fill $name="body"><<rr-config-checkbox tid="$:/config/rimir/llm-connect/extract-images" label="Extract images from PDFs" default="no">></$fill></$transclude>
+</$fill>
+</$transclude>

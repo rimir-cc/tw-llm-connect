@@ -1,0 +1,267 @@
+title: $:/plugins/rimir/llm-connect/settings/procedures
+type: text/vnd.tiddlywiki
+
+\function llm-conn.all() [all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/connection]prefix[$:/config/rimir/llm-connect/connections/]sort[connection-name]]
+\function llm-conn.id(conn) [<conn>get[connection-id]] ~[<conn>removeprefix[$:/config/rimir/llm-connect/connections/]]
+\function llm-conn.default() [[$:/config/rimir/llm-connect/default-connection]get[text]trim[]addprefix[$:/config/rimir/llm-connect/connections/]tag[$:/tags/rimir/llm-connect/connection]] ~[llm-conn.all[]first[]] :map[llm-conn.id<currentTiddler>]
+\function llm-conn.type-tiddler(type) [all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/connection-type]field:connection-type<type>first[]]
+\function llm-conn.types() [all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/connection-type]has[connection-type]sort[caption]]
+
+\procedure llm-conn-model-input(conn, id, field, cls, placeholder:"model id", empty:"— select model —")
+<$let cache={{{ [<id>addprefix[$:/temp/rimir/llm-connect/models/]] }}}>
+<%if [<cache>get[text]jsonindexes[]first[]] %>
+<$select tiddler=<<conn>> field=<<field>> default="" class=<<cls>>>
+<option value=""><$text text=<<empty>>/></option>
+<$list filter="[<cache>get[text]jsonindexes[]] :map:flat[<cache>get[text]jsonextract<currentTiddler>jsonget[id]] =[<conn>get<field>] +[unique[]]" variable="modelId">
+<option value=<<modelId>>><$text text=<<modelId>>/></option>
+</$list>
+</$select>
+<%else%>
+<$edit-text tiddler=<<conn>> field=<<field>> tag="input" class=<<cls>> placeholder=<<placeholder>>/>
+<%endif%>
+</$let>
+\end
+
+\procedure llm-conn-field(conn, id, field)
+<$let fieldTid={{{ [<field>addprefix[$:/plugins/rimir/llm-connect/connection-fields/]] }}}
+  caption={{{ [<fieldTid>get[caption]] ~[<field>] }}}
+  cls={{{ [<fieldTid>get[size]] ~[[wide]] +[addprefix[rr-input rr-config-input rr-config-input-]] }}}
+  inputType={{{ [<fieldTid>get[input-type]] ~[[text]] }}}
+  placeholder={{{ [<fieldTid>get[placeholder]] }}}
+  default={{{ [<fieldTid>get[default]] }}}>
+<div class="llm-conn-field" data-field=<<field>>>
+<$transclude $variable="rr-settings-row" label=<<caption>> hint={{{ [<field>match[api-key]then[Stored in the wiki. Never readable by the LLM.]] }}}><$fill $name="body">
+<%if [<field>match[api-key]] %>
+<$edit-text tiddler={{{ [<id>addprefix[$:/config/rimir/llm-connect/keys/]] }}} tag="input" type="password" class=<<cls>> placeholder=<<placeholder>>/>
+<%elseif [<field>match[model]] %>
+<$transclude $variable="llm-conn-model-input" conn=<<conn>> id=<<id>> field="model" cls=<<cls>> placeholder=<<placeholder>>/>
+<%else%>
+<$edit-text tiddler=<<conn>> field=<<field>> tag="input" type=<<inputType>> class=<<cls>> default=<<default>> placeholder=<<placeholder>>/>
+<%endif%>
+</$fill></$transclude>
+</div>
+</$let>
+\end
+
+\procedure llm-conn-fetch(id)
+<$button class="tc-btn-invisible rr-link-btn llm-conn-fetch" tooltip="Fetch the available models from the API">
+<$action-sendmessage $message="tm-llm-fetch-models" connection=<<id>>/>
+&#x21bb; Fetch models
+</$button> <span class="rr-muted rr-small llm-conn-fetch-status"><$text text={{{ [<id>addprefix[$:/temp/rimir/llm-connect/fetch-status/]get[text]] }}}/></span>
+\end
+
+\procedure llm-conn-delete(conn, id)
+<$let deleteState={{{ [<id>addprefix[$:/state/rimir/llm-connect/connection-delete/]] }}}>
+<%if [<deleteState>get[text]match[yes]] %>
+<span class="llm-conn-delete-ask">Delete this connection and its API key?</span>
+<$button class="rr-link-btn rr-link-btn-danger llm-conn-delete-confirm">
+<$list filter="[[$:/config/rimir/llm-connect/default-connection]get[text]trim[]match<id>]" variable="ignore"><$action-deletetiddler $tiddler="$:/config/rimir/llm-connect/default-connection"/></$list>
+<$action-deletetiddler $filter="[<conn>] [<id>addprefix[$:/config/rimir/llm-connect/keys/]] [<id>addprefix[$:/temp/rimir/llm-connect/models/]] [<id>addprefix[$:/temp/rimir/llm-connect/fetch-status/]] [<id>addprefix[$:/state/rimir/llm-connect/connection-open/]] [<deleteState>]"/>
+Really delete
+</$button>
+<$button class="rr-link-btn llm-conn-delete-cancel" set=<<deleteState>> setTo="">Cancel</$button>
+<%else%>
+<$button class="rr-link-btn rr-link-btn-danger llm-conn-delete" set=<<deleteState>> setTo="yes">Delete</$button>
+<%endif%>
+</$let>
+\end
+
+\procedure llm-conn-editor(conn, id, typeTid, isDefault)
+<div class="llm-conn-editor">
+<$transclude $variable="rr-settings-row" label="Name"><$fill $name="body"><$edit-text tiddler=<<conn>> field="connection-name" tag="input" class="rr-input rr-config-input rr-config-input-medium llm-conn-name-input"/></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Description"><$fill $name="body"><$edit-text tiddler=<<conn>> field="connection-description" tag="input" class="rr-input rr-config-input rr-config-input-wide" placeholder="optional"/></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Type" hint={{{ [<typeTid>get[description]] }}}><$fill $name="body"><$text text={{{ [<typeTid>get[caption]] ~[<conn>get[connection-type]] }}}/></$fill></$transclude>
+<$list filter="[<typeTid>get[connection-fields]enlist-input[]]" variable="field">
+<$transclude $variable="llm-conn-field" conn=<<conn>> id=<<id>> field=<<field>>/>
+</$list>
+<$transclude $variable="rr-settings-row" label="Cheap model" hint="Used for cheap tool rounds when tier routing is on. Empty: the chat's model."><$fill $name="body"><$transclude $variable="llm-conn-model-input" conn=<<conn>> id=<<id>> field="cheap-model" cls="rr-input rr-config-input rr-config-input-medium llm-conn-cheap-model" empty="— chat model —"/></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Expensive model" hint="Used for expensive tool rounds when tier routing is on. Empty: the chat's model."><$fill $name="body"><$transclude $variable="llm-conn-model-input" conn=<<conn>> id=<<id>> field="expensive-model" cls="rr-input rr-config-input rr-config-input-medium llm-conn-expensive-model" empty="— chat model —"/></$fill></$transclude>
+<div class="llm-conn-actions">
+<$transclude $variable="llm-conn-fetch" id=<<id>>/>
+<span class="llm-conn-actions-right">
+<%if [<isDefault>!match[yes]] %><$button class="rr-link-btn llm-conn-make-default" tooltip="Use this connection for new chats"><$action-setfield $tiddler="$:/config/rimir/llm-connect/default-connection" text=<<id>>/>Make default</$button><%endif%>
+<$transclude $variable="llm-conn-delete" conn=<<conn>> id=<<id>>/>
+</span>
+</div>
+</div>
+\end
+
+\procedure llm-conn-row(conn, defaultId)
+<$let id={{{ [llm-conn.id<conn>] }}}
+  type={{{ [<conn>get[connection-type]] }}}
+  typeTid={{{ [llm-conn.type-tiddler<type>] }}}
+  required={{{ [<typeTid>get[required-field]] }}}
+  configured={{{ [<typeTid>has[connection-type]!has[required-field]then[yes]] ~[<required>match[api-key]then<id>addprefix[$:/config/rimir/llm-connect/keys/]get[text]then[yes]] ~[<required>!match[api-key]then<conn>get<required>then[yes]] ~[[no]] }}}
+  isDefault={{{ [<id>match<defaultId>then[yes]else[no]] }}}
+  openState={{{ [<id>addprefix[$:/state/rimir/llm-connect/connection-open/]] }}}
+  isOpen={{{ [<openState>get[text]match[open]then[yes]else[no]] }}}>
+<div class={{{ [[llm-conn]] [<isOpen>match[yes]then[llm-conn-open]] +[join[ ]] }}} data-connection=<<id>>>
+<$button class="tc-btn-invisible llm-conn-head" set=<<openState>> setTo={{{ [<isOpen>match[yes]then[closed]else[open]] }}}>
+<span class="llm-conn-toggle"><%if [<isOpen>match[yes]] %>&#x25be;<%else%>&#x25b8;<%endif%></span>
+<span class="llm-conn-name"><$text text={{{ [<conn>get[connection-name]] ~[<id>] }}}/></span>
+<span class="llm-conn-type"><$text text={{{ [<typeTid>get[caption]] ~[<type>] }}}/></span>
+<span class="llm-conn-model"><$text text={{{ [<conn>get[model]] }}}/></span>
+<%if [<isDefault>match[yes]] %><span class="llm-conn-badge llm-conn-default">default</span><%endif%>
+<%if [<configured>match[no]] %><span class="llm-conn-badge llm-conn-incomplete" title="A required setting is missing">not configured</span><%endif%>
+</$button>
+<%if [<isOpen>match[yes]] %>
+<$transclude $variable="llm-conn-editor" conn=<<conn>> id=<<id>> typeTid=<<typeTid>> isDefault=<<isDefault>>/>
+<%endif%>
+</div>
+</$let>
+\end
+
+\procedure llm-conn-list()
+<$let defaultId={{{ [llm-conn.default[]] }}}>
+<div class="llm-conn-list">
+<$list filter="[llm-conn.all[]]" variable="conn" emptyMessage="""<div class="rr-muted llm-conn-empty">No connections yet. Add one to start chatting.</div>""">
+<$transclude $variable="llm-conn-row" conn=<<conn>> defaultId=<<defaultId>>/>
+</$list>
+</div>
+</$let>
+\end
+
+\procedure llm-conn-create-actions()
+<$let form="$:/temp/rimir/llm-connect/add-connection"
+  type={{{ [[$:/temp/rimir/llm-connect/add-connection]get[connection-type]] }}}
+  typeTid={{{ [llm-conn.type-tiddler<type>] }}}
+  newId={{{ [<now "[UTC]YYYY0MM0DD0hh0mm0ss0XXX">addprefix[c]] }}}
+  newTitle={{{ [<newId>addprefix[$:/config/rimir/llm-connect/connections/]] }}}
+  name={{{ [<form>get[connection-name]trim[]] ~[<typeTid>get[caption]] ~[<type>] }}}>
+<%if [<typeTid>!is[blank]] %>
+<$action-setfield $tiddler=<<newTitle>> tags="$:/tags/rimir/llm-connect/connection" connection-id=<<newId>> connection-name=<<name>> connection-type=<<type>>/>
+<$list filter="[<typeTid>get[connection-fields]enlist-input[]] -[[api-key]] :filter[addprefix[$:/plugins/rimir/llm-connect/connection-fields/]get[default]!is[blank]]" variable="field">
+<$action-setfield $tiddler=<<newTitle>> $field=<<field>> $value={{{ [<field>addprefix[$:/plugins/rimir/llm-connect/connection-fields/]get[default]] }}}/>
+</$list>
+<$action-setfield $tiddler={{{ [<newId>addprefix[$:/state/rimir/llm-connect/connection-open/]] }}} text="open"/>
+<$action-deletetiddler $tiddler=<<form>>/>
+<%endif%>
+</$let>
+\end
+
+\procedure llm-conn-add()
+<$let form="$:/temp/rimir/llm-connect/add-connection">
+<%if [<form>get[show]match[yes]] %>
+<div class="llm-conn-add-form">
+<$transclude $variable="rr-settings-row" label="Type" hint={{{ [<form>get[connection-type]] :map[llm-conn.type-tiddler<currentTiddler>get[description]] }}}><$fill $name="body"><$select tiddler=<<form>> field="connection-type" class="rr-input rr-config-input-medium llm-conn-add-type">
+<$list filter="[llm-conn.types[]]" variable="typeTid">
+<option value={{{ [<typeTid>get[connection-type]] }}}><$text text={{{ [<typeTid>get[caption]] ~[<typeTid>get[connection-type]] }}}/></option>
+</$list>
+</$select></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Name"><$fill $name="body"><$edit-text tiddler=<<form>> field="connection-name" tag="input" class="rr-input rr-config-input rr-config-input-medium llm-conn-add-name" placeholder="e.g. Local llama"/></$fill></$transclude>
+<div class="llm-conn-actions">
+<$button class="tc-btn-big-green llm-conn-add-create" actions=<<llm-conn-create-actions>>>Add</$button>
+<$button class="llm-conn-add-cancel"><$action-deletetiddler $tiddler=<<form>>/>Cancel</$button>
+</div>
+</div>
+<%else%>
+<$button class="llm-conn-add-btn">
+<$action-setfield $tiddler=<<form>> show="yes" connection-name="" connection-type={{{ [llm-conn.types[]first[]get[connection-type]] }}}/>
++ Add connection
+</$button>
+<%endif%>
+</$let>
+\end
+
+\procedure llm-tool-row()
+<$let
+  detailState={{{ [[$:/state/rimir/llm-connect/tool-detail/]addsuffix<tool>] }}}
+  editState={{{ [[$:/state/rimir/llm-connect/tool-edit/]addsuffix<tool>] }}}
+  isEnabled={{{ [<tool>get[tool-enabled]else[yes]] }}}
+  isComplete={{{ [<tool>get[tool-name]minlength[1]] [<tool>get[tool-schema]minlength[1]] [<tool>get[text]minlength[1]] +[count[]match[3]then[yes]else[no]] }}}
+>
+<tr class={{{ [<isEnabled>match[no]then[llm-tool-row-disabled]] [<isComplete>match[no]then[llm-tool-row-disabled]] +[first[]] }}}>
+<td class="llm-tool-toggle-cell"><$button class="tc-btn-invisible llm-tool-toggle">
+<$action-setfield $tiddler=<<detailState>> text={{{ [<detailState>get[text]match[open]then[closed]else[open]] }}}/>
+<$reveal type="match" state=<<detailState>> text="open" tag="span">&#x25be;</$reveal><$reveal type="nomatch" state=<<detailState>> text="open" tag="span">&#x25b8;</$reveal>
+</$button></td>
+<td><code><$text text={{{ [<tool>get[tool-name]] }}}/></code><%if [<isComplete>match[no]] %> <span class="rr-badge-rect llm-tool-badge-incomplete">incomplete</span><%endif%></td>
+<td><span class={{{ [<tool>get[tool-mode]match[action]then[rr-badge-rect llm-tool-badge-action]else[rr-badge-rect llm-tool-badge-read]] }}}><$text text={{{ [<tool>get[tool-mode]] }}}/></span></td>
+<td><span class="rr-muted rr-small"><$text text={{{ [<tool>get[tool-model-tier]else[default]] }}}/></span></td>
+<td><$text text={{{ [<tool>get[tool-description]] }}}/></td>
+<td class="llm-tool-enabled-cell"><%if [<isComplete>match[yes]] %><$checkbox tiddler=<<tool>> field="tool-enabled" checked="yes" unchecked="no" default="yes"/><%endif%></td>
+<td class="llm-tool-actions-cell">
+<%if [<isComplete>match[yes]] %>
+<$button class="tc-btn-invisible llm-tool-icon-btn" tooltip="Clone tool">
+<$action-setfield $tiddler="$:/temp/rimir/llm-connect/new-tool-form" show="yes" new-title={{{ [<tool>addsuffix[/clone]] }}} tool-name={{{ [<tool>get[tool-name]addsuffix[_clone]] }}} tool-description={{{ [<tool>get[tool-description]addprefix[Clone of: ]] }}} tool-mode={{{ [<tool>get[tool-mode]] }}} tool-schema={{{ [<tool>get[tool-schema]] }}} tool-text={{{ [<tool>get[text]] }}} tool-enabled="no"/>
+<$transclude $tiddler="$:/plugins/rimir/llm-connect/icon/copy"/>
+</$button>
+<%endif%>
+<%if [<tool>!is[shadow]] %>
+<$button class="tc-btn-invisible llm-tool-icon-btn" tooltip="Edit tool inline">
+<$action-setfield $tiddler=<<detailState>> text={{{ [<editState>get[text]match[yes]then[open]else[open]] }}}/>
+<$action-setfield $tiddler=<<editState>> text={{{ [<editState>get[text]match[yes]then[no]else[yes]] }}}/>
+<$transclude $tiddler="$:/plugins/rimir/llm-connect/icon/edit"/>
+</$button>
+<%endif%>
+</td>
+</tr>
+<$reveal type="match" state=<<detailState>> text="open" tag="tr">
+<td colspan="7" class="llm-tool-detail-cell">
+<div class="llm-tool-detail">
+<$reveal type="nomatch" state=<<editState>> text="yes">
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Tiddler</div>
+<div><$link to=<<tool>>><$text text=<<tool>>/></$link></div>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Schema</div>
+<pre class="llm-tool-detail-code"><$text text={{{ [<tool>get[tool-schema]] }}}/></pre>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Wikitext body</div>
+<pre class="llm-tool-detail-code"><$text text={{{ [<tool>get[text]] }}}/></pre>
+</div>
+</$reveal>
+<$reveal type="match" state=<<editState>> text="yes">
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Tool name</div>
+<$edit-text tiddler=<<tool>> field="tool-name" tag="input" class="rr-input" size="30"/>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Description</div>
+<$edit-text tiddler=<<tool>> field="tool-description" tag="input" class="rr-input" size="60"/>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Mode</div>
+<$select tiddler=<<tool>> field="tool-mode">
+<option value="read">read</option>
+<option value="action">action</option>
+</$select>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Model tier</div>
+<$select tiddler=<<tool>> field="tool-model-tier" default="default">
+<<llm-tier-options>>
+</$select>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Schema (JSON)</div>
+<$edit-text tiddler=<<tool>> field="tool-schema" tag="textarea" class="rr-textarea llm-tool-schema-input"/>
+</div>
+<div class="llm-tool-detail-section">
+<div class="llm-tool-detail-label rr-muted rr-small">Wikitext body</div>
+<$edit-text tiddler=<<tool>> field="text" tag="textarea" class="rr-textarea llm-tool-body-input"/>
+</div>
+</$reveal>
+</div>
+</td>
+</$reveal>
+</$let>
+\end
+
+\procedure llm-tier-options()
+<option value="cheap">cheap</option>
+<option value="default">default</option>
+<option value="expensive">expensive</option>
+\end
+
+\procedure llm-group-tools-grid(target)
+<div class="llm-group-tools-grid">
+<$list filter="[all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/tool]!field:tool-enabled[no]sort[tool-name]]" variable="tool">
+<label class="llm-group-tool-item" title={{{ [<tool>get[tool-description]] }}}>
+<$checkbox tiddler=<<target>> listField="group-tools" checked=<<tool>>/> <$text text={{{ [<tool>get[tool-name]] }}}/>
+</label>
+</$list>
+</div>
+\end

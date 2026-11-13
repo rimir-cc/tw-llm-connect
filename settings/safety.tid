@@ -1,0 +1,55 @@
+title: $:/plugins/rimir/llm-connect/settings/safety
+tags: $:/tags/rimir/llm-connect/settings-tab
+caption: Safety
+type: text/vnd.tiddlywiki
+
+\import [[$:/plugins/rimir/theme/procedures-settings]] [[$:/plugins/rimir/llm-connect/settings/procedures]]
+
+\procedure llm-reset-filter(tid, tooltip:"Reset to default")
+<%if [<tid>is[tiddler]] %><$button class="tc-btn-invisible rr-link-btn llm-reset-filter" tooltip=<<tooltip>>><$action-deletetiddler $tiddler=<<tid>>/>reset to default</$button><%endif%>
+\end
+
+<p class="rr-settings-section-hint llm-keys-hidden">API keys (<code>$:/config/rimir/llm-connect/keys/*</code>) are always hidden from the LLM, whatever the filters below say.</p>
+
+<$let
+  modeTiddler="$:/config/rimir/llm-connect/protection-mode"
+  protMode={{{ [[$:/config/rimir/llm-connect/protection-mode]get[text]else[allow]] }}}
+  activeConfigTiddler={{{ [<protMode>match[allow]then[$:/config/rimir/llm-connect/allow-filter]else[$:/config/rimir/llm-connect/protection-filter]] }}}
+  activeFilter={{{ [<activeConfigTiddler>get[text]] }}}
+  isCustom={{{ [<activeConfigTiddler>is[tiddler]then[yes]else[no]] }}}
+  allowPlaceholder="e.g. [tag[public]] [prefix[Project/]]"
+  denyPlaceholder="e.g. [tag[sensitive]] [prefix[Private/]]"
+>
+
+<$transclude $variable="rr-settings-section" title="Protection">
+<$fill $name="body">
+<$transclude $variable="rr-settings-row" label="Base protection filter" hint="Part of the base filter — subtracted in allow mode, added in deny mode."><$fill $name="body"><<rr-config-input tid="$:/config/rimir/llm-connect/base-protection-filter" placeholder="e.g. [tag[sensitive]]">> <<llm-reset-filter tid="$:/config/rimir/llm-connect/base-protection-filter">></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Hard protection filter" hint="Final safety net — applied after all user input (per-chat filters, drag-drop). Cannot be overridden. Tiddlers matching this filter are never accessible to the LLM."><$fill $name="body"><<rr-config-input tid="$:/config/rimir/llm-connect/hard-protection-filter" placeholder="e.g. [tag[sensitive]]">> <<llm-reset-filter tid="$:/config/rimir/llm-connect/hard-protection-filter">></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Protection mode"><$fill $name="body"><$select tiddler=<<modeTiddler>> default="allow" class="rr-input rr-config-input-wide llm-protection-mode-select">
+<option value="allow">Allow (whitelist) — only matching tiddlers are accessible</option>
+<option value="deny">Deny (blacklist) — matching tiddlers are hidden from LLM</option>
+</$select></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label={{{ [<protMode>match[allow]then[Tiddler allow filter]else[Tiddler deny filter]] }}}><$fill $name="body"><$transclude $variable="rr-config-input" tid=<<activeConfigTiddler>> placeholder={{{ [<protMode>match[allow]then<allowPlaceholder>else<denyPlaceholder>] }}}/> <$transclude $variable="llm-reset-filter" tid=<<activeConfigTiddler>> tooltip="Reset to default filter"/></$fill></$transclude>
+<div class="rr-settings-row llm-active-filter"><div class="rr-settings-row-label"></div><div class="rr-settings-row-control rr-small"><%if [<activeFilter>minlength[1]] %><%if [<isCustom>match[no]] %><span class="rr-muted">Active filter (default):</span><%else%><span class="rr-muted">Active filter (custom):</span><%endif%> <code><$text text=<<activeFilter>>/></code> — <%if [<protMode>match[allow]] %><strong><$text text={{{ [subfilter<activeFilter>count[]] }}}/></strong> tiddler(s) accessible (all others hidden)<%else%>protecting <strong><$text text={{{ [subfilter<activeFilter>count[]] }}}/></strong> tiddler(s)<%endif%>. <$button class="tc-btn-invisible rr-link-btn">
+<$action-setfield $tiddler="$:/state/rimir/llm-connect/show-protected" text={{{ [[$:/state/rimir/llm-connect/show-protected]get[text]match[yes]then[no]else[yes]] }}}/>
+toggle list</$button>
+<$reveal type="match" state="$:/state/rimir/llm-connect/show-protected" text="yes" animate="yes">
+<div class="llm-protected-list"><$list filter="[subfilter<activeFilter>sort[]]" variable="pt">
+<$text text=<<pt>>/>, </$list></div>
+</$reveal><%else%><%if [<protMode>match[allow]] %><span class="rr-muted">No allow filter defined — LLM has no access to any tiddlers.</span><%else%><span class="rr-muted">No deny filter active — all tiddlers are accessible to the LLM.</span><%endif%><%endif%></div></div>
+</$fill>
+</$transclude>
+
+<$transclude $variable="rr-settings-section" title="Plugin visibility" hint="Tick plugins to hide their shadow tiddlers from the LLM. Unticked = readable. Applied on top of the protection filter above.">
+<$fill $name="body">
+<div class="llm-excluded-plugins-grid">
+<$list filter="[all[shadows+tiddlers]field:plugin-type[plugin]sort[title]]" variable="plugin">
+<label class="llm-excluded-plugin-item">
+<$checkbox tiddler="$:/config/rimir/llm-connect/excluded-plugins" listField="text" checked=<<plugin>>/> <$text text={{{ [<plugin>get[description]else<plugin>] }}}/> <span class="rr-muted rr-small">(<$text text={{{ [<plugin>removeprefix[$:/plugins/]] }}}/>)</span>
+</label>
+</$list>
+</div>
+</$fill>
+</$transclude>
+
+</$let>
