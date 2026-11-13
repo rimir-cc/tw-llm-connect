@@ -75,9 +75,12 @@ exports.getAdapter = function(providerName) {
 };
 
 /*
-ref: connection id, name, type, or empty (default connection).
+ref: see connections.resolveConnectionId ("" = default connection, {connection}, {type}, or a legacy string).
+Throws a readable error when a non-empty ref resolves to nothing.
 */
 exports.getProviderConfig = function(ref) {
+	var unresolved = connections.unresolvedMessage(ref);
+	if(unresolved) throw new Error(unresolved);
 	return connections.connectionConfig(connections.resolveConnectionId(ref));
 };
 

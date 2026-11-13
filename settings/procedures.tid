@@ -2,7 +2,7 @@ title: $:/plugins/rimir/llm-connect/settings/procedures
 type: text/vnd.tiddlywiki
 
 \function llm-conn.all() [all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/connection]prefix[$:/config/rimir/llm-connect/connections/]sort[connection-name]]
-\function llm-conn.id(conn) [<conn>get[connection-id]] ~[<conn>removeprefix[$:/config/rimir/llm-connect/connections/]]
+\function llm-conn.id(conn) [<conn>removeprefix[$:/config/rimir/llm-connect/connections/]]
 \function llm-conn.default() [[$:/config/rimir/llm-connect/default-connection]get[text]trim[]addprefix[$:/config/rimir/llm-connect/connections/]tag[$:/tags/rimir/llm-connect/connection]] ~[llm-conn.all[]first[]] :map[llm-conn.id<currentTiddler>]
 \function llm-conn.type-tiddler(type) [all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/connection-type]field:connection-type<type>first[]]
 \function llm-conn.types() [all[shadows+tiddlers]tag[$:/tags/rimir/llm-connect/connection-type]has[connection-type]sort[caption]]
@@ -66,7 +66,7 @@ Really delete
 </$let>
 \end
 
-\procedure llm-conn-editor(conn, id, typeTid, isDefault)
+\procedure llm-conn-editor(conn, id, typeTid)
 <div class="llm-conn-editor">
 <$transclude $variable="rr-settings-row" label="Name"><$fill $name="body"><$edit-text tiddler=<<conn>> field="connection-name" tag="input" class="rr-input rr-config-input rr-config-input-medium llm-conn-name-input"/></$fill></$transclude>
 <$transclude $variable="rr-settings-row" label="Description"><$fill $name="body"><$edit-text tiddler=<<conn>> field="connection-description" tag="input" class="rr-input rr-config-input rr-config-input-wide" placeholder="optional"/></$fill></$transclude>
@@ -79,7 +79,7 @@ Really delete
 <div class="llm-conn-actions">
 <$transclude $variable="llm-conn-fetch" id=<<id>>/>
 <span class="llm-conn-actions-right">
-<%if [<isDefault>!match[yes]] %><$button class="rr-link-btn llm-conn-make-default" tooltip="Use this connection for new chats"><$action-setfield $tiddler="$:/config/rimir/llm-connect/default-connection" text=<<id>>/>Make default</$button><%endif%>
+<%if [<id>] -[[$:/config/rimir/llm-connect/default-connection]get[text]trim[]] %><$button class="rr-link-btn llm-conn-make-default" tooltip="Use this connection for new chats"><$action-setfield $tiddler="$:/config/rimir/llm-connect/default-connection" text=<<id>>/>Make default</$button><%endif%>
 <$transclude $variable="llm-conn-delete" conn=<<conn>> id=<<id>>/>
 </span>
 </div>
@@ -105,7 +105,7 @@ Really delete
 <%if [<configured>match[no]] %><span class="llm-conn-badge llm-conn-incomplete" title="A required setting is missing">not configured</span><%endif%>
 </$button>
 <%if [<isOpen>match[yes]] %>
-<$transclude $variable="llm-conn-editor" conn=<<conn>> id=<<id>> typeTid=<<typeTid>> isDefault=<<isDefault>>/>
+<$transclude $variable="llm-conn-editor" conn=<<conn>> id=<<id>> typeTid=<<typeTid>>/>
 <%endif%>
 </div>
 </$let>
@@ -129,7 +129,8 @@ Really delete
   newTitle={{{ [<newId>addprefix[$:/config/rimir/llm-connect/connections/]] }}}
   name={{{ [<form>get[connection-name]trim[]] ~[<typeTid>get[caption]] ~[<type>] }}}>
 <%if [<typeTid>!is[blank]] %>
-<$action-setfield $tiddler=<<newTitle>> tags="$:/tags/rimir/llm-connect/connection" connection-id=<<newId>> connection-name=<<name>> connection-type=<<type>>/>
+<%if [llm-conn.all[]count[]match[0]] %><$action-setfield $tiddler="$:/config/rimir/llm-connect/default-connection" text=<<newId>>/><%endif%>
+<$action-setfield $tiddler=<<newTitle>> tags="$:/tags/rimir/llm-connect/connection" connection-name=<<name>> connection-type=<<type>>/>
 <$list filter="[<typeTid>get[connection-fields]enlist-input[]] -[[api-key]] :filter[addprefix[$:/plugins/rimir/llm-connect/connection-fields/]get[default]!is[blank]]" variable="field">
 <$action-setfield $tiddler=<<newTitle>> $field=<<field>> $value={{{ [<field>addprefix[$:/plugins/rimir/llm-connect/connection-fields/]get[default]] }}}/>
 </$list>

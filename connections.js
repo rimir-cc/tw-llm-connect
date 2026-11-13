@@ -22,7 +22,8 @@ function readConnection(title) {
 	var t = $tw.wiki.getTiddler(title);
 	if(!t) return null;
 	var f = t.fields;
-	var id = f["connection-id"] || title.substr(PREFIX.length);
+	// The id is the title suffix only, so getConnection(id) and listConnections() always agree
+	var id = title.substr(PREFIX.length);
 	return {
 		id: id,
 		name: f["connection-name"] || id,
@@ -73,21 +74,44 @@ exports.getDefaultConnectionId = function() {
 	return all.length ? all[0].id : "";
 };
 
-exports.resolveConnectionId = function(ref) {
+/*
+Connection by id, else by name; never by type. Empty → default connection.
+*/
+function resolveNamedConnectionId(ref) {
 	if(!ref) return exports.getDefaultConnectionId();
 	if(exports.getConnection(ref)) return ref;
-	var all = exports.listConnections(), i;
-	for(i = 0; i < all.length; i++) {
+	var all = exports.listConnections();
+	for(var i = 0; i < all.length; i++) {
 		if(all[i].name === ref) return all[i].id;
 	}
-	if(connectionTypes.getType(ref)) {
-		var def = exports.getConnection(exports.getDefaultConnectionId());
-		if(def && def.type === ref) return def.id;
-		for(i = 0; i < all.length; i++) {
-			if(all[i].type === ref) return all[i].id;
-		}
-	}
 	return "";
+}
+
+/*
+ref forms:
+  ""                 → the default connection
+  {connection: "x"}  → connection id or name, never a type
+  {type: "x"}        → type only (see resolveTypeConnectionId)
+  "x" (legacy)       → a registered type name resolves by type, anything else by id or name
+Returns the connection id, or "" when nothing matches.
+*/
+exports.resolveConnectionId = function(ref) {
+	if(ref && typeof ref === "object") {
+		return ref.type ? exports.resolveTypeConnectionId(ref.type) : resolveNamedConnectionId(ref.connection);
+	}
+	if(ref && connectionTypes.getType(ref)) return exports.resolveTypeConnectionId(ref);
+	return resolveNamedConnectionId(ref);
+};
+
+/*
+Error text for a non-empty ref that resolves to nothing, else "".
+*/
+exports.unresolvedMessage = function(ref) {
+	var isObject = ref && typeof ref === "object";
+	var text = isObject ? (ref.type || ref.connection) : ref;
+	if(!text || exports.resolveConnectionId(ref)) return "";
+	var isType = isObject ? !!ref.type : !!connectionTypes.getType(text);
+	return isType ? 'No connection of type "' + text + '"' : 'Unknown connection "' + text + '"';
 };
 
 /*

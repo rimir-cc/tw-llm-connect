@@ -67,6 +67,45 @@ describe("llm-connect: connections", function() {
 		expect(cx.resolveConnectionId("openai-compatible")).toBe("B2");
 	});
 
+	it("resolveConnectionId: a registered type name resolves by type, never by a same-named connection", function() {
+		setup();
+		conn("C5", "claude", "openai-compatible", {endpoint: "http://z/v1"});
+		expect(cx.resolveConnectionId("claude")).toBe("");
+		conn("C9", "Real", "claude");
+		expect(cx.resolveConnectionId("claude")).toBe("C9");
+	});
+
+	it("resolveConnectionId object forms keep connection and type refs apart", function() {
+		setup();
+		conn("C5", "claude", "openai-compatible", {endpoint: "http://z/v1"});
+		conn("C9", "Real", "claude");
+		expect(cx.resolveConnectionId({connection: "claude"})).toBe("C5");
+		expect(cx.resolveConnectionId({connection: "C9"})).toBe("C9");
+		expect(cx.resolveConnectionId({connection: "openai-compatible"})).toBe("");
+		expect(cx.resolveConnectionId({type: "claude"})).toBe("C9");
+		expect(cx.resolveConnectionId({type: "Real"})).toBe("");
+		expect(cx.resolveConnectionId({connection: ""})).toBe("A1");
+		expect(cx.resolveConnectionId({type: ""})).toBe("A1");
+	});
+
+	it("unresolvedMessage names the ref that resolves to nothing", function() {
+		setup();
+		expect(cx.unresolvedMessage("")).toBe("");
+		expect(cx.unresolvedMessage("Alpha")).toBe("");
+		expect(cx.unresolvedMessage("nope")).toBe('Unknown connection "nope"');
+		expect(cx.unresolvedMessage({connection: "nope"})).toBe('Unknown connection "nope"');
+		expect(cx.unresolvedMessage("claude")).toBe('No connection of type "claude"');
+		expect(cx.unresolvedMessage({type: "claude"})).toBe('No connection of type "claude"');
+	});
+
+	it("the id comes from the title only, so lookups and listings agree", function() {
+		add(P + "T1", {tags: "$:/tags/rimir/llm-connect/connection", "connection-id": "OTHER", "connection-name": "T", "connection-type": "claude"});
+		expect(cx.getConnection("T1").id).toBe("T1");
+		expect(cx.listConnections().map(function(c) { return c.id; })).toContain("T1");
+		expect(cx.listConnections().map(function(c) { return c.id; })).not.toContain("OTHER");
+		expect(cx.resolveConnectionId("T")).toBe("T1");
+	});
+
 	it("getDefaultConnectionId falls back to first by name", function() {
 		setup();
 		add(DEF, {text: "GONE"});

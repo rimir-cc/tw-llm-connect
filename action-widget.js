@@ -34,7 +34,8 @@ LlmActionWidget.prototype.execute = function() {
 	this.toolsFilter = this.getAttribute("tools", "");
 	this.toolGroupAttr = this.getAttribute("toolGroup", "");
 	this.systemPromptAttr = this.getAttribute("systemPrompt", "");
-	this.connectionAttr = this.getAttribute("connection", "") || this.getAttribute("provider", "");
+	this.connectionAttr = this.getAttribute("connection", "");
+	this.providerAttr = this.getAttribute("provider", "");
 	this.modelAttr = this.getAttribute("model", "");
 	this.denyFilterAttr = this.getAttribute("denyFilter", "");
 	this.allowFilterAttr = this.getAttribute("allowFilter", "");
@@ -90,9 +91,19 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 		promptTemplate: this.promptTemplateAttr
 	});
 
-	// Get provider config (allow override via attributes)
-	var config = helpers.resolveProviderConfig(this.connectionAttr, this.modelAttr, this.systemPromptAttr);
-	var adapter = orchestrator.getAdapter(config.provider);
+	// Get provider config (allow override via attributes): connection by id/name, legacy provider by type
+	var config, adapter;
+	try {
+		config = helpers.resolveProviderConfig(this.connectionAttr ? {connection: this.connectionAttr} : {type: this.providerAttr},
+			this.modelAttr, this.systemPromptAttr);
+		adapter = orchestrator.getAdapter(config.provider);
+	} catch(e) {
+		this.wiki.addTiddler(new $tw.Tiddler({
+			title: statusTitle,
+			text: "Error: " + e.message
+		}));
+		return true;
+	}
 
 	// Get tools if specified (toolGroup narrows to group members)
 	var tools = helpers.resolveTools(this.toolsFilter, this.toolGroupAttr);

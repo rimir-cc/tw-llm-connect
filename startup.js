@@ -36,7 +36,7 @@ exports.startup = function() {
 	$tw.rootWidget.addEventListener("tm-llm-fetch-models", function(event) {
 		var p = event.paramObject || {};
 		var connections = require("$:/plugins/rimir/llm-connect/connections");
-		var id = p.connection || (p.provider && connections.resolveConnectionId(p.provider));
+		var id = p.connection || (p.provider && connections.resolveTypeConnectionId(p.provider));
 		if (!id) return;
 		var orchestrator = require("$:/plugins/rimir/llm-connect/orchestrator");
 		var statusTiddler = "$:/temp/rimir/llm-connect/fetch-status/" + id;

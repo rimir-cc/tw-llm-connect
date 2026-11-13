@@ -480,18 +480,26 @@ LlmChatWidget.prototype.execute = function() {
 	// Initialize default help context on first mount (idempotent via llm-help-context-init flag)
 	this.initDefaultHelpContext();
 
-	// Use chat tiddler's locked connection/model if conversation has started, otherwise default connection
+	this.resolveWidgetConnection();
+	this.contextInjected = false;
+	this.attachmentsInjected = false;
+};
+
+/*
+Use the chat tiddler's locked connection/model if the conversation has started, otherwise the default
+connection. A started chat keeps its own model; without one it uses its connection's model.
+*/
+LlmChatWidget.prototype.resolveWidgetConnection = function() {
 	var chatTid = this.chatTiddler ? this.wiki.getTiddler(this.chatTiddler) : null;
-	var hasMessages = chatTid && chatTid.fields["llm-messages"] && chatTid.fields["llm-messages"] !== "[]";
+	var f = chatTid ? chatTid.fields : {};
+	var hasMessages = f["llm-messages"] && f["llm-messages"] !== "[]";
 	this.connectionNotice = "";
-	if (hasMessages && chatTid.fields["llm-model"]) {
-		this.adoptChatConnection(chatTid.fields);
-		this.model = chatTid.fields["llm-model"];
+	if (hasMessages && (f["llm-connection"] || f["llm-connection-type"] || f["llm-provider"] || f["llm-model"])) {
+		this.adoptChatConnection(f);
+		this.model = f["llm-model"] || (this.connection ? this.getModule("connections").connectionConfig(this.connection).model : "");
 	} else {
 		this.useDefaultConnection();
 	}
-	this.contextInjected = false;
-	this.attachmentsInjected = false;
 };
 
 /*
@@ -746,6 +754,16 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 LlmChatWidget.prototype.sendMessage = function() {
 	var text = this.textarea.value.trim();
 	if (!text && !this.actionMode) return;
+	// The connection may have been deleted while the chat was open: re-resolve before any state change.
+	// A started chat that falls back to another connection shows the notice and waits for a resend.
+	if (this.connection && !this.getModule("connections").getConnection(this.connection)) {
+		this.resolveWidgetConnection();
+		this.updateModelDisplay();
+		if (this.connectionNotice) {
+			this.setStatus(this.connectionNotice);
+			return;
+		}
+	}
 	if (!this.connection) {
 		this.setStatus(this.connectionNotice || "No connection configured. Pick a connection.");
 		return;
@@ -792,7 +810,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 
 	var orchestrator = this.getOrchestratorModule();
 	var helpers = this.getWidgetHelpersModule();
-	var config = helpers.resolveProviderConfig(this.connection, this.model, null);
+	var config = helpers.resolveProviderConfig({connection: this.connection}, this.model, null);
 
 	if (this.systemPromptOverride) {
 		config.systemPrompt = this.systemPromptOverride;
@@ -1227,7 +1245,6 @@ LlmChatWidget.prototype.refreshDebugPanel = function() {
 };
 
 LlmChatWidget.prototype.buildPreview = function() {
-	var orchestrator = this.getOrchestratorModule();
 	var contextResolver = this.getContextResolverModule();
 
 	var preview = {};
@@ -1237,7 +1254,7 @@ LlmChatWidget.prototype.buildPreview = function() {
 	preview.model = this.model;
 
 	// System prompt
-	var config = orchestrator.getProviderConfig(this.connection);
+	var config = this.getModule("connections").connectionConfig(this.connection);
 	if (this.systemPromptOverride) {
 		preview.systemPrompt = this.systemPromptOverride;
 	} else if (this.systemPromptAttr) {
@@ -1955,14 +1972,15 @@ LlmChatWidget.prototype.populateModelDropdown = function() {
 	var hasModels = false;
 	for (var p = 0; p < ids.length; p++) {
 		var connId = ids[p];
+		var conn = connections.getConnection(connId);
 		var models = orchestrator.getCachedModels(connId);
 
-		if (models.length === 0) continue;
+		if (!conn || models.length === 0) continue;
 		hasModels = true;
 
 		var header = this.document.createElement("div");
 		header.className = "llm-model-selector-provider-header";
-		header.textContent = connections.getConnection(connId).name;
+		header.textContent = conn.name;
 		dropdown.appendChild(header);
 
 		for (var m = 0; m < models.length; m++) {
@@ -2134,11 +2152,11 @@ LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 	if (this.activeWikitextWidget) {
 		this.activeWikitextWidget.refresh(changedTiddlers);
 	}
-	// Update connection/model display if config changed — but only if chat is empty (not locked)
+	// Update connection/model display if any connection or the default changed — but only if chat is empty (not locked)
 	var msgs = this.getMessages();
 	if (msgs.length === 0 &&
 		(changedTiddlers["$:/config/rimir/llm-connect/default-connection"] ||
-		changedTiddlers["$:/config/rimir/llm-connect/connections/" + this.connection])) {
+		Object.keys(changedTiddlers).some(function(title) { return title.indexOf("$:/config/rimir/llm-connect/connections/") === 0; }))) {
 		this.useDefaultConnection();
 		this.updateModelDisplay();
 	}

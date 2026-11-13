@@ -60,6 +60,14 @@ describe("llm-connect: orchestrator", function() {
 			});
 		});
 
+		it("names a non-empty ref that resolves to nothing", function() {
+			conn("A1", "Main", "claude");
+			addTiddler(DEF, { text: "A1" });
+			expect(function() { orchestrator.getProviderConfig("nope"); }).toThrowError('Unknown connection "nope"');
+			expect(function() { orchestrator.getProviderConfig({connection: "nope"}); }).toThrowError('Unknown connection "nope"');
+			expect(function() { orchestrator.getProviderConfig({type: "azure"}); }).toThrowError('No connection of type "azure"');
+		});
+
 		it("should have empty provider when no connection exists", function() {
 			var saved = $tw.wiki.filterTiddlers("[all[tiddlers]tag[$:/tags/rimir/llm-connect/connection]]");
 			var tids = saved.map(function(t) { return $tw.wiki.getTiddler(t); });
