@@ -34,7 +34,7 @@ LlmActionWidget.prototype.execute = function() {
 	this.toolsFilter = this.getAttribute("tools", "");
 	this.toolGroupAttr = this.getAttribute("toolGroup", "");
 	this.systemPromptAttr = this.getAttribute("systemPrompt", "");
-	this.providerAttr = this.getAttribute("provider", "");
+	this.connectionAttr = this.getAttribute("connection", "") || this.getAttribute("provider", "");
 	this.modelAttr = this.getAttribute("model", "");
 	this.denyFilterAttr = this.getAttribute("denyFilter", "");
 	this.allowFilterAttr = this.getAttribute("allowFilter", "");
@@ -91,7 +91,7 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 	});
 
 	// Get provider config (allow override via attributes)
-	var config = helpers.resolveProviderConfig(this.providerAttr, this.modelAttr, this.systemPromptAttr);
+	var config = helpers.resolveProviderConfig(this.connectionAttr, this.modelAttr, this.systemPromptAttr);
 	var adapter = orchestrator.getAdapter(config.provider);
 
 	// Get tools if specified (toolGroup narrows to group members)

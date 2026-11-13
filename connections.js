@@ -14,6 +14,7 @@ var connectionTypes = require("$:/plugins/rimir/llm-connect/connection-types");
 
 var PREFIX = "$:/config/rimir/llm-connect/connections/";
 var KEY_PREFIX = "$:/config/rimir/llm-connect/keys/";
+exports.KEY_PREFIX = KEY_PREFIX;
 var DEFAULT_TITLE = "$:/config/rimir/llm-connect/default-connection";
 var TAG = "$:/tags/rimir/llm-connect/connection";
 
@@ -130,11 +131,11 @@ exports.resolveChatConnection = function(fields) {
 	var type = fields["llm-connection-type"] || fields["llm-provider"] || "";
 	var id = exports.resolveConnectionId(type);
 	if(!id) {
-		return {id: "", notice: "No connection of type " + type + " exists. Pick a connection."};
+		return {id: "", notice: type ? "No connection of type " + type + " exists. Pick a connection." : "No connection exists. Pick a connection."};
 	}
 	var notice = "";
 	if(stored) {
-		var was = fields["llm-connection-name"] || type;
+		var was = fields["llm-connection-name"] || type || stored;
 		notice = 'Connection "' + was + '" no longer exists, using "' + exports.getConnection(id).name + '".';
 	}
 	return {id: id, notice: notice};

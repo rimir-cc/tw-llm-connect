@@ -12,6 +12,16 @@ tool resolution, and provider config patterns.
 "use strict";
 
 /*
+Filter fragment that excludes connection API-key tiddlers for the given protection mode:
+removed from the allow set in allow mode, added to the deny set in deny mode.
+Append it last so nothing later in a filter can re-allow a key.
+*/
+var KEYS_FILTER = "[prefix[" + require("$:/plugins/rimir/llm-connect/connections").KEY_PREFIX + "]]";
+exports.keysExclusion = function(mode) {
+	return mode === "deny" ? " " + KEYS_FILTER : " -" + KEYS_FILTER;
+};
+
+/*
 Resolve protection from separate deny/allow filters and a mode.
 Returns { filter, mode } where filter is the effective combined filter for the active mode.
 options: { denyFilter, allowFilter, mode } — all optional, fall back to base config.
@@ -55,8 +65,7 @@ exports.resolveProtectionFilter = function(options) {
 			: " [subfilter{$:/config/rimir/llm-connect/hard-protection-filter}]";
 	}
 	// Connection keys — never readable by tools, regardless of mode or user filters
-	var keysFilter = "[prefix[$:/config/rimir/llm-connect/keys/]]";
-	var keysSuffix = mode === "allow" ? " -" + keysFilter : " " + keysFilter;
+	var keysSuffix = exports.keysExclusion(mode);
 	// Always grant access to llm-help pages so tools can read documentation
 	var helpSuffix = "";
 	if ($tw.wiki.isShadowTiddler("$:/plugins/rimir/llm-help/functions")) {

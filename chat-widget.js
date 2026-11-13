@@ -12,7 +12,7 @@ module-type: widget
 
 var Widget = require("$:/core/modules/widgets/widget.js").widget;
 
-var CHAT_STATE_FIELDS = ["llm-provider", "llm-model", "llm-active-tools", "llm-tools-init",
+var CHAT_STATE_FIELDS = ["llm-connection", "llm-connection-name", "llm-connection-type", "llm-model", "llm-active-tools", "llm-tools-init",
 	"llm-context-filter", "llm-protection-mode", "llm-allow-filter", "llm-deny-filter",
 	"llm-help-context", "llm-help-context-init"];
 
@@ -67,6 +67,13 @@ LlmChatWidget.prototype.render = function(parent, nextSibling) {
 	statusDiv.className = "llm-chat-status";
 	this.statusDiv = statusDiv;
 	container.appendChild(statusDiv);
+
+	// Connection notice (e.g. the chat's connection no longer exists)
+	var connectionNoticeDiv = this.document.createElement("div");
+	connectionNoticeDiv.className = "llm-chat-connection-notice";
+	this.connectionNoticeDiv = connectionNoticeDiv;
+	container.appendChild(connectionNoticeDiv);
+	this.updateConnectionNotice();
 
 	// Input area
 	var inputArea = this.document.createElement("div");
@@ -472,19 +479,51 @@ LlmChatWidget.prototype.execute = function() {
 	// Initialize default help context on first mount (idempotent via llm-help-context-init flag)
 	this.initDefaultHelpContext();
 
-	// Use chat tiddler's locked provider/model if conversation has started, otherwise global config
+	// Use chat tiddler's locked connection/model if conversation has started, otherwise default connection
 	var chatTid = this.chatTiddler ? this.wiki.getTiddler(this.chatTiddler) : null;
 	var hasMessages = chatTid && chatTid.fields["llm-messages"] && chatTid.fields["llm-messages"] !== "[]";
-	if (hasMessages && chatTid.fields["llm-provider"] && chatTid.fields["llm-model"]) {
-		this.provider = chatTid.fields["llm-provider"];
+	this.connectionNotice = "";
+	if (hasMessages && chatTid.fields["llm-model"]) {
+		this.adoptChatConnection(chatTid.fields);
 		this.model = chatTid.fields["llm-model"];
 	} else {
-		var config = this.getOrchestratorModule().getProviderConfig();
-		this.provider = config.provider;
-		this.model = config.model;
+		this.useDefaultConnection();
 	}
 	this.contextInjected = false;
 	this.attachmentsInjected = false;
+};
+
+/*
+Point the widget at the default connection and its model; clears any connection notice.
+*/
+LlmChatWidget.prototype.useDefaultConnection = function() {
+	var config = this.getOrchestratorModule().getProviderConfig();
+	this.connection = config.connection;
+	this.model = config.model;
+	this.connectionNotice = "";
+};
+
+/*
+Resolve a chat's stored connection fields (current or legacy llm-provider) to a connection id.
+Sets this.connection and this.connectionNotice; returns the connection fields to store on the chat.
+*/
+LlmChatWidget.prototype.adoptChatConnection = function(source) {
+	var resolved = this.getModule("connections").resolveChatConnection(source);
+	this.connection = resolved.id;
+	this.connectionNotice = resolved.notice;
+	return this.getConnectionFields();
+};
+
+/*
+The fields that lock a chat to the widget's connection (id, name snapshot, type).
+*/
+LlmChatWidget.prototype.getConnectionFields = function() {
+	var conn = this.connection ? this.getModule("connections").getConnection(this.connection) : null;
+	return {
+		"llm-connection": conn ? conn.id : "",
+		"llm-connection-name": conn ? conn.name : "",
+		"llm-connection-type": conn ? conn.type : ""
+	};
 };
 
 LlmChatWidget.prototype.initDefaultHelpContext = function() {
@@ -522,10 +561,10 @@ LlmChatWidget.prototype.saveMessages = function(messages) {
 	if (!this.chatTiddler) return;
 	this.wiki.addTiddler(new $tw.Tiddler(
 		this.wiki.getTiddler(this.chatTiddler) || {},
+		this.getConnectionFields(),
 		{
 			title: this.chatTiddler,
 			"llm-messages": JSON.stringify(messages),
-			"llm-provider": this.provider,
 			"llm-model": this.model,
 			tags: "$:/tags/rimir/llm-connect/chat"
 		}
@@ -743,7 +782,11 @@ LlmChatWidget.prototype.sendMessage = function() {
 
 	var orchestrator = this.getOrchestratorModule();
 	var helpers = this.getWidgetHelpersModule();
-	var config = helpers.resolveProviderConfig(this.provider, this.model, null);
+	if (!this.connection) {
+		this.setStatus(this.connectionNotice || "No connection exists. Pick a connection.");
+		return;
+	}
+	var config = helpers.resolveProviderConfig(this.connection, this.model, null);
 
 	if (this.systemPromptOverride) {
 		config.systemPrompt = this.systemPromptOverride;
@@ -751,7 +794,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 		config.systemPrompt = this.systemPromptAttr;
 	}
 
-	var adapter = orchestrator.getAdapter(this.provider);
+	var adapter = orchestrator.getAdapter(config.provider);
 	var tools = this.toolsFilter ? helpers.resolveTools(this.toolsFilter, this.toolGroupAttr, this.chatTiddler) : [];
 
 	var protection = this.resolveProtectionForChat(helpers);
@@ -767,7 +810,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 	protection.chatTiddler = this.chatTiddler || "";
 
 	// Log send details
-	this.log("send", "provider=" + this.provider + " model=" + this.model + " msgs=" + messages.length + " tools=" + tools.length);
+	this.log("send", "connection=" + this.connection + " type=" + config.provider + " model=" + this.model + " msgs=" + messages.length + " tools=" + tools.length);
 	this.log("send", "protection mode=" + protection.mode + " filter=" + (protection.filter || "(none)"));
 	if (helpCtx) this.log("send", "help-context keys=" + $tw.utils.parseStringArray(helpCtx).length);
 	if (tools.length > 0) this.log("send", "active tools: " + tools.map(function(t) { return t.name; }).join(", "));
@@ -788,7 +831,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 		},
 		onRequest: function(request) {
 			self.lastRequestBody = request.body;
-			self.log("request", "sent to " + self.provider);
+			self.log("request", "sent to " + self.connection);
 		},
 		onResponse: function(responseText) {
 			self.lastResponseBody = responseText;
@@ -876,10 +919,8 @@ LlmChatWidget.prototype.clearChat = function() {
 	this.systemPromptOverride = null;
 	this.lastRequestBody = null;
 	this.lastResponseBody = null;
-	// Reset to global config
-	var config = this.getOrchestratorModule().getProviderConfig();
-	this.provider = config.provider;
-	this.model = config.model;
+	// Reset to default connection
+	this.useDefaultConnection();
 	this.renderMessages(this.messagesDiv);
 	this.updateModelDisplay();
 	this.updateTokenDisplay();
@@ -1186,11 +1227,12 @@ LlmChatWidget.prototype.buildPreview = function() {
 	var preview = {};
 
 	// Provider + model
-	preview.provider = this.provider;
+	var previewConn = this.getConnectionFields();
+	preview.provider = previewConn["llm-connection-name"] || this.connection;
 	preview.model = this.model;
 
 	// System prompt
-	var config = orchestrator.getProviderConfig(this.provider);
+	var config = orchestrator.getProviderConfig(this.connection);
 	if (this.systemPromptOverride) {
 		preview.systemPrompt = this.systemPromptOverride;
 	} else if (this.systemPromptAttr) {
@@ -1352,7 +1394,7 @@ LlmChatWidget.prototype.exportChat = function() {
 		version: 1,
 		exported: new Date().toISOString(),
 		messages: messages,
-		provider: this.provider || "",
+		connection: this.connection || "",
 		model: this.model || ""
 	};
 	// Include all llm state fields
@@ -1473,8 +1515,13 @@ LlmChatWidget.prototype.processImport = function(text) {
 		setTimeout(function() { self.setStatus(""); }, 3000);
 		return;
 	}
-	// Restore provider/model
-	if (data.provider) this.provider = data.provider;
+	// Restore connection/model (legacy exports carry only a provider type)
+	var connectionFields = this.adoptChatConnection({
+		"llm-connection": data["llm-connection"],
+		"llm-connection-name": data["llm-connection-name"],
+		"llm-connection-type": data["llm-connection-type"],
+		"llm-provider": data["llm-provider"] || data.provider
+	});
 	if (data.model) this.model = data.model;
 	// Restore widget instance state
 	this.contextInjected = !!data["context-injected"];
@@ -1485,13 +1532,13 @@ LlmChatWidget.prototype.processImport = function(text) {
 		title: this.chatTiddler,
 		tags: "$:/tags/rimir/llm-connect/chat",
 		"llm-messages": JSON.stringify(data.messages),
-		"llm-provider": this.provider,
 		"llm-model": this.model
 	};
 	for (var i = 0; i < CHAT_STATE_FIELDS.length; i++) {
 		var key = CHAT_STATE_FIELDS[i];
 		if (data[key]) fields[key] = data[key];
 	}
+	$tw.utils.extend(fields, connectionFields);
 	this.wiki.addTiddler(new $tw.Tiddler(fields));
 	// Refresh UI
 	this.renderMessages(this.messagesDiv);
@@ -1523,8 +1570,9 @@ LlmChatWidget.prototype.restoreChat = function() {
 	}
 	this.wiki.addTiddler(new $tw.Tiddler(fields));
 
-	// Restore provider/model on widget
-	this.provider = savedTid.fields["llm-provider"] || this.provider;
+	// Restore connection/model on widget (saved data may predate connections: llm-provider only)
+	var restoredConnection = this.adoptChatConnection(savedTid.fields);
+	this.wiki.addTiddler(new $tw.Tiddler(this.wiki.getTiddler(this.chatTiddler), restoredConnection));
 	this.model = savedTid.fields["llm-model"] || this.model;
 
 	// Refresh UI
@@ -1858,6 +1906,8 @@ LlmChatWidget.prototype.resolveProtectionForChat = function(helpers) {
 		} else {
 			protection.filter = (protection.filter + " -" + escaped).trim();
 		}
+		// The source grant must never re-allow a connection key
+		protection.filter = (protection.filter + helpers.keysExclusion(protection.mode)).trim();
 		return protection;
 	}
 	return helpers.resolveProtectionFilter({ denyFilter: denyFilter, allowFilter: allowFilter, mode: protMode });
@@ -1889,42 +1939,44 @@ LlmChatWidget.prototype.populateModelDropdown = function() {
 	dropdown.innerHTML = "";
 
 	var orchestrator = this.getOrchestratorModule();
-	var providers = orchestrator.getConfiguredProviders();
+	var connections = this.getModule("connections");
+	var ids = orchestrator.getConfiguredConnections();
 
-	if (providers.length === 0) {
-		dropdown.textContent = "No providers configured";
+	if (ids.length === 0) {
+		dropdown.textContent = "No connections configured";
 		return;
 	}
 
 	var hasModels = false;
-	for (var p = 0; p < providers.length; p++) {
-		var provName = providers[p];
-		var models = orchestrator.getCachedModels(provName);
+	for (var p = 0; p < ids.length; p++) {
+		var connId = ids[p];
+		var models = orchestrator.getCachedModels(connId);
 
 		if (models.length === 0) continue;
 		hasModels = true;
 
 		var header = this.document.createElement("div");
 		header.className = "llm-model-selector-provider-header";
-		header.textContent = provName;
+		header.textContent = connections.getConnection(connId).name;
 		dropdown.appendChild(header);
 
 		for (var m = 0; m < models.length; m++) {
 			var item = this.document.createElement("div");
 			item.className = "llm-model-selector-item";
-			if (models[m].id === self.model && provName === self.provider) {
+			if (models[m].id === self.model && connId === self.connection) {
 				item.classList.add("llm-model-selector-item-active");
 			}
 			item.textContent = models[m].label;
-			item.setAttribute("data-provider", provName);
+			item.setAttribute("data-connection", connId);
 			item.setAttribute("data-model", models[m].id);
 			item.addEventListener("click", function() {
-				var prov = this.getAttribute("data-provider");
+				var conn = this.getAttribute("data-connection");
 				var mod = this.getAttribute("data-model");
-				self.wiki.setText("$:/config/rimir/llm-connect/provider", "text", null, prov);
-				self.wiki.setText("$:/config/rimir/llm-connect/providers/" + prov + "/model", "text", null, mod);
-				self.provider = prov;
+				self.wiki.setText("$:/config/rimir/llm-connect/default-connection", "text", null, conn);
+				self.wiki.setText("$:/config/rimir/llm-connect/connections/" + conn, "model", null, mod);
+				self.connection = conn;
 				self.model = mod;
+				self.connectionNotice = "";
 				self.updateModelDisplay();
 				self.modelDropdown.style.display = "none";
 			});
@@ -1935,15 +1987,15 @@ LlmChatWidget.prototype.populateModelDropdown = function() {
 	if (!hasModels) {
 		var fetchBtn = this.document.createElement("div");
 		fetchBtn.className = "llm-model-selector-empty llm-model-selector-fetch";
-		fetchBtn.textContent = "No models cached — click to fetch";
+		fetchBtn.textContent = "No models cached \u2014 click to fetch";
 		fetchBtn.style.cursor = "pointer";
 		fetchBtn.addEventListener("click", function(e) {
 			e.stopPropagation();
-			fetchBtn.textContent = "Fetching models…";
+			fetchBtn.textContent = "Fetching models\u2026";
 			fetchBtn.style.cursor = "default";
 			var promises = [];
-			for (var i = 0; i < providers.length; i++) {
-				promises.push(orchestrator.fetchModels(providers[i]));
+			for (var i = 0; i < ids.length; i++) {
+				promises.push(orchestrator.fetchModels(ids[i]));
 			}
 			Promise.all(promises).then(function() {
 				self.populateModelDropdown();
@@ -2019,10 +2071,12 @@ LlmChatWidget.prototype.updateProtectionLabels = function() {
 };
 
 LlmChatWidget.prototype.updateModelDisplay = function() {
+	this.updateConnectionNotice();
 	if (!this.modelBtn) return;
 	var msgs = this.getMessages();
 	var locked = msgs.length > 0;
-	this.modelBtn.textContent = this.provider + " / " + this.model + (locked ? " \uD83D\uDD12" : "");
+	var connName = this.getConnectionFields()["llm-connection-name"] || "No connection";
+	this.modelBtn.textContent = connName + " / " + this.model + (locked ? " \uD83D\uDD12" : "");
 	this.modelBtn.title = locked ? "Model locked for this conversation \u2014 clear chat to switch" : "Click to select model";
 	this.modelBtn.style.cursor = locked ? "default" : "pointer";
 	if (locked) {
@@ -2030,6 +2084,12 @@ LlmChatWidget.prototype.updateModelDisplay = function() {
 	} else {
 		this.modelBtn.classList.remove("llm-model-selector-btn-locked");
 	}
+};
+
+LlmChatWidget.prototype.updateConnectionNotice = function() {
+	if (!this.connectionNoticeDiv) return;
+	this.connectionNoticeDiv.textContent = this.connectionNotice || "";
+	this.connectionNoticeDiv.style.display = this.connectionNotice ? "" : "none";
 };
 
 LlmChatWidget.prototype.updateTokenDisplay = function() {
@@ -2069,14 +2129,12 @@ LlmChatWidget.prototype.refresh = function(changedTiddlers) {
 	if (this.activeWikitextWidget) {
 		this.activeWikitextWidget.refresh(changedTiddlers);
 	}
-	// Update provider/model display if config changed — but only if chat is empty (not locked)
+	// Update connection/model display if config changed — but only if chat is empty (not locked)
 	var msgs = this.getMessages();
 	if (msgs.length === 0 &&
-		(changedTiddlers["$:/config/rimir/llm-connect/provider"] ||
-		changedTiddlers["$:/config/rimir/llm-connect/providers/" + this.provider + "/model"])) {
-		var config = this.getOrchestratorModule().getProviderConfig();
-		this.provider = config.provider;
-		this.model = config.model;
+		(changedTiddlers["$:/config/rimir/llm-connect/default-connection"] ||
+		changedTiddlers["$:/config/rimir/llm-connect/connections/" + this.connection])) {
+		this.useDefaultConnection();
 		this.updateModelDisplay();
 	}
 	// Refresh accessible panel when protection-related config changes

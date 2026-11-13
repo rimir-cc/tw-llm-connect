@@ -141,5 +141,13 @@ describe("llm-connect: connections", function() {
 			expect(cx.resolveChatConnection({"llm-provider": "claude"}))
 				.toEqual({id: "", notice: "No connection of type claude exists. Pick a connection."});
 		});
+		it("missing connection with no name, type or provider falls back to the stored id", function() {
+			setup();
+			expect(cx.resolveChatConnection({"llm-connection": "GONE"}).notice)
+				.toBe('Connection "GONE" no longer exists, using "Zeta".');
+		});
+		it("no type and no connections at all gives the generic pick notice", function() {
+			expect(cx.resolveChatConnection({})).toEqual({id: "", notice: "No connection exists. Pick a connection."});
+		});
 	});
 });

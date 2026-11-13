@@ -27,6 +27,20 @@ describe("llm-connect: widget-helpers", function() {
 		addedTitles.push(title);
 	}
 
+	describe("keysExclusion", function() {
+		var KEYS = "[prefix[$:/config/rimir/llm-connect/keys/]]";
+		it("removes keys from the allow set in allow mode", function() {
+			expect(helpers.keysExclusion("allow")).toBe(" -" + KEYS);
+		});
+		it("adds keys to the deny set in deny mode", function() {
+			expect(helpers.keysExclusion("deny")).toBe(" " + KEYS);
+		});
+		it("is what resolveProtectionFilter appends for each mode", function() {
+			expect(helpers.resolveProtectionFilter({mode: "allow"}).filter).toContain(helpers.keysExclusion("allow").trim());
+			expect(helpers.resolveProtectionFilter({mode: "deny"}).filter).toContain(helpers.keysExclusion("deny").trim());
+		});
+	});
+
 	describe("resolveProtectionFilter", function() {
 		it("should default to allow mode", function() {
 			addTiddler("$:/config/rimir/llm-connect/protection-mode", { text: "allow" });

@@ -306,6 +306,14 @@ type: text/vnd.tiddlywiki
 	}
 }
 
+.llm-chat-connection-notice {
+	padding: 4px 12px;
+	font-size: 0.85em;
+	color: <<colour muted-foreground>>;
+	background: <<colour code-background>>;
+	border-left: 3px solid <<colour primary>>;
+}
+
 .llm-chat-status {
 	display: none;
 	padding: 4px 12px;

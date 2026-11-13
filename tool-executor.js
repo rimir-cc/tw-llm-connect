@@ -118,6 +118,9 @@ exports.executeTool = function(toolCall, protection) {
 	var effectiveProtection = protection;
 	if (toolCall.name === "create_tiddler" && toolCall.input) {
 		var createTitle = toolCall.input.title || toolCall.input.basetitle;
+		if (createTitle && String(createTitle).indexOf(require("$:/plugins/rimir/llm-connect/connections").KEY_PREFIX) === 0) {
+			return "Error: Access denied \u2014 tiddler '" + createTitle + "' is protected by filter rules";
+		}
 		if (createTitle && effectiveProtection.mode === "allow") {
 			effectiveProtection = { filter: protection.filter, mode: protection.mode };
 			// Only add titles that don't already exist (prevents overwriting protected tiddlers)

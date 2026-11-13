@@ -179,4 +179,25 @@ describe("llm-connect: tool-executor", function() {
 			expect(toolExecutor.resolveToolGroup(undefined)).toBeNull();
 		});
 	});
+
+	describe("executeTool create_tiddler", function() {
+		var KEY = "$:/config/rimir/llm-connect/keys/zz-test";
+		afterEach(function() {
+			$tw.wiki.deleteTiddler(KEY);
+			$tw.wiki.deleteTiddler(KEY + " 1");
+		});
+		it("refuses to create a tiddler under the connection keys prefix", function() {
+			var allowAll = { filter: "[all[tiddlers]]", mode: "allow" };
+			var result = toolExecutor.executeTool({ name: "create_tiddler", input: { title: KEY, text: "stolen" } }, allowAll);
+			expect(result).toContain("Access denied");
+			expect($tw.wiki.tiddlerExists(KEY)).toBe(false);
+		});
+		it("refuses a basetitle under the connection keys prefix", function() {
+			var allowAll = { filter: "[all[tiddlers]]", mode: "allow" };
+			var result = toolExecutor.executeTool({ name: "create_tiddler", input: { basetitle: KEY, text: "x" } }, allowAll);
+			expect(result).toContain("Access denied");
+			expect($tw.wiki.tiddlerExists(KEY)).toBe(false);
+			expect($tw.wiki.tiddlerExists(KEY + " 1")).toBe(false);
+		});
+	});
 });
