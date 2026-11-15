@@ -679,75 +679,90 @@ LlmChatWidget.prototype.sendMessage = function() {
 	if (this.actionMode && this.messagesDiv.style.display === "none") {
 		this.messagesDiv.style.display = "";
 	}
-	this.abortController = new AbortController();
+	// Any synchronous throw while preparing the run (e.g. an unknown provider) must reset the
+	// Stop button, or isRunning() would refuse every later send until a reload
+	var fail = function(err) {
+		self.setStatus("Error: " + err.message);
+		self.stopBtn.style.display = "none";
+		self.updateToolWorkingIndicator();
+		self.log("error", "conversation failed: " + err.message);
+	};
+	var run, protection, protectionFilterBefore;
+	try {
+		this.abortController = new AbortController();
 
-	var orchestrator = this.getOrchestratorModule();
-	var helpers = this.getWidgetHelpersModule();
-	var config = helpers.resolveProviderConfig({connection: this.connection}, this.model, null);
+		var orchestrator = this.getOrchestratorModule();
+		var helpers = this.getWidgetHelpersModule();
+		var config = helpers.resolveProviderConfig({connection: this.connection}, this.model, null);
 
-	if (this.systemPromptOverride) {
-		config.systemPrompt = this.systemPromptOverride;
-	} else if (this.systemPromptAttr) {
-		config.systemPrompt = this.systemPromptAttr;
-	}
-
-	var adapter = orchestrator.getAdapter(config.provider);
-	var tools = this.toolsFilter ? helpers.resolveTools(this.toolsFilter, this.toolGroupAttr, this.chatTiddler) : [];
-
-	var protection = this.resolveProtectionForChat(helpers);
-	var protectionFilterBefore = protection.filter;
-
-	// Ensure default help context is initialized
-	this.initDefaultHelpContext();
-	var chatTid = this.chatTiddler ? this.wiki.getTiddler(this.chatTiddler) : null;
-
-	// Pass help context directly to tool execution via protection object
-	var helpCtx = chatTid && chatTid.fields["llm-help-context"] || "";
-	protection.helpContext = helpCtx;
-	protection.chatTiddler = this.chatTiddler || "";
-	protection.askSource = this.askSourceLabel();
-
-	// Log send details
-	this.log("send", "connection=" + this.connection + " type=" + config.provider + " model=" + this.model + " msgs=" + messages.length + " tools=" + tools.length);
-	this.log("send", "protection mode=" + protection.mode + " filter=" + (protection.filter || "(none)"));
-	if (helpCtx) this.log("send", "help-context keys=" + $tw.utils.parseStringArray(helpCtx).length);
-	if (tools.length > 0) this.log("send", "active tools: " + tools.map(function(t) { return t.name; }).join(", "));
-	var tierEnabled = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/tier-routing-enabled");
-	this.log("config", "tier-routing=" + (tierEnabled === "yes" ? "ON" : "OFF"));
-	if (this.systemPromptOverride) this.log("config", "system prompt override active");
-
-	orchestrator.runConversation({
-		messages: messages,
-		tools: tools,
-		config: config,
-		adapter: adapter,
-		toolExecutor: this.getToolExecutorModule(),
-		protectionFilter: protection,
-		signal: this.abortController.signal,
-		onLog: function(category, message, data) {
-			self.log(category, message, data);
-			self.updateAskStatus(category, message);
-		},
-		onRequest: function(request) {
-			self.lastRequestBody = request.body;
-			self.log("request", "sent to " + self.connection);
-		},
-		onResponse: function(responseText) {
-			self.lastResponseBody = responseText;
-			var len = responseText ? responseText.length : 0;
-			self.log("response", "received " + len + " chars");
-		},
-		onUpdate: function(msgs) {
-			self.saveMessages(msgs);
-			self.renderMessages(self.messagesDiv);
-			self.updateTokenDisplay();
-			self.updateToolWorkingIndicator();
-		},
-		onError: function(err) {
-			self.setStatus("Error: " + err.message);
-			self.log("error", err.message);
+		if (this.systemPromptOverride) {
+			config.systemPrompt = this.systemPromptOverride;
+		} else if (this.systemPromptAttr) {
+			config.systemPrompt = this.systemPromptAttr;
 		}
-	}).then(function() {
+
+		var adapter = orchestrator.getAdapter(config.provider);
+		var tools = this.toolsFilter ? helpers.resolveTools(this.toolsFilter, this.toolGroupAttr, this.chatTiddler) : [];
+
+		protection = this.resolveProtectionForChat(helpers);
+		protectionFilterBefore = protection.filter;
+
+		// Ensure default help context is initialized
+		this.initDefaultHelpContext();
+		var chatTid = this.chatTiddler ? this.wiki.getTiddler(this.chatTiddler) : null;
+
+		// Pass help context directly to tool execution via protection object
+		var helpCtx = chatTid && chatTid.fields["llm-help-context"] || "";
+		protection.helpContext = helpCtx;
+		protection.chatTiddler = this.chatTiddler || "";
+		protection.askSource = this.askSourceLabel();
+
+		// Log send details
+		this.log("send", "connection=" + this.connection + " type=" + config.provider + " model=" + this.model + " msgs=" + messages.length + " tools=" + tools.length);
+		this.log("send", "protection mode=" + protection.mode + " filter=" + (protection.filter || "(none)"));
+		if (helpCtx) this.log("send", "help-context keys=" + $tw.utils.parseStringArray(helpCtx).length);
+		if (tools.length > 0) this.log("send", "active tools: " + tools.map(function(t) { return t.name; }).join(", "));
+		var tierEnabled = $tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/tier-routing-enabled");
+		this.log("config", "tier-routing=" + (tierEnabled === "yes" ? "ON" : "OFF"));
+		if (this.systemPromptOverride) this.log("config", "system prompt override active");
+
+		run = orchestrator.runConversation({
+			messages: messages,
+			tools: tools,
+			config: config,
+			adapter: adapter,
+			toolExecutor: this.getToolExecutorModule(),
+			protectionFilter: protection,
+			signal: this.abortController.signal,
+			onLog: function(category, message, data) {
+				self.log(category, message, data);
+				self.updateAskStatus(category, message);
+			},
+			onRequest: function(request) {
+				self.lastRequestBody = request.body;
+				self.log("request", "sent to " + self.connection);
+			},
+			onResponse: function(responseText) {
+				self.lastResponseBody = responseText;
+				var len = responseText ? responseText.length : 0;
+				self.log("response", "received " + len + " chars");
+			},
+			onUpdate: function(msgs) {
+				self.saveMessages(msgs);
+				self.renderMessages(self.messagesDiv);
+				self.updateTokenDisplay();
+				self.updateToolWorkingIndicator();
+			},
+			onError: function(err) {
+				self.setStatus("Error: " + err.message);
+				self.log("error", err.message);
+			}
+		});
+	} catch (err) {
+		fail(err);
+		return;
+	}
+	run.then(function() {
 		self.setStatus("");
 		self.stopBtn.style.display = "none";
 		self.updateToolWorkingIndicator();
@@ -757,12 +772,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 			self.persistProtectionUpdate(protection);
 			self.log("protection", "filter updated (tools created tiddlers)");
 		}
-	})["catch"](function(err) {
-		self.setStatus("Error: " + err.message);
-		self.stopBtn.style.display = "none";
-		self.updateToolWorkingIndicator();
-		self.log("error", "conversation failed: " + err.message);
-	});
+	})["catch"](fail);
 };
 
 LlmChatWidget.prototype.cycleToolDisplay = function() {

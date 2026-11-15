@@ -131,6 +131,24 @@ describe("llm-connect: chat-widget connection", function() {
 		expect(w.isRunning()).toBe(false);
 	});
 
+	it("sendMessage: a throw while preparing the run resets the Stop button so the next send works", function() {
+		conn("A1", "Main", "claude", "model-a");
+		$tw.wiki.addTiddler(new $tw.Tiddler({ title: DEF, text: "A1" }));
+		$tw.wiki.addTiddler(new $tw.Tiddler({ title: CHAT, "llm-messages": MESSAGES, "llm-connection": "A1", "llm-model": "model-a" }));
+		var w = makeWidget();
+		w.textarea = { value: "hello" };
+		w.stopBtn = { style: {} };
+		var status = "";
+		w.setStatus = function(text) { status = text; };
+		w.renderMessages = w.updateModelDisplay = w.updateTokenDisplay = w.updateToolWorkingIndicator = w.log = function() {};
+		w.getWidgetHelpersModule = function() { throw new Error("Unknown provider: bogus"); };
+		// (In the Jasmine sandbox `new AbortController()` already throws — also a setup throw)
+		expect(function() { w.sendMessage(); }).not.toThrow();
+		expect(status.indexOf("Error: ")).toBe(0);
+		expect(w.stopBtn.style.display).toBe("none");
+		expect(w.isRunning()).toBe(false);
+	});
+
 	it("ask_user source label: the pair-edit tiddler, else 'Chat'", function() {
 		var w = makeWidget();
 		expect(w.askSourceLabel()).toBe("Chat");
