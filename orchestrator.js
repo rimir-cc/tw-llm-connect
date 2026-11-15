@@ -179,67 +179,16 @@ exports.runConversation = function(options) {
 					messages.push(adapter.buildAssistantMessage(parsed));
 					onLog("tool", "LLM requested " + parsed.toolCalls.length + " tool call(s): " + parsed.toolCalls.map(function(c) { return c.name; }).join(", "));
 
-					// Execute each tool call (enforce allowed set)
-					for (var i = 0; i < parsed.toolCalls.length; i++) {
-						var tc = parsed.toolCalls[i];
-						var result;
-						if (allowedToolNames && !allowedToolNames[tc.name]) {
-							result = "Error: Tool not available in current chat: " + tc.name;
-							onLog("tool", "BLOCKED " + tc.name + " (not in active set)");
-						} else {
-							result = toolExecutor.executeTool(tc, protection);
-							var resultPreview = typeof result === "string" ? result.substring(0, 120) : String(result).substring(0, 120);
-							onLog("tool", "executed " + tc.name + " → " + resultPreview + (result.length > 120 ? "..." : ""));
-							// Auto-add created/modified tiddlers to protection filter for subsequent calls
-							if (tc.input && result.indexOf("Error:") !== 0) {
-								var createdTitle = tc.input.title;
-								if (!createdTitle && tc.input.basetitle) {
-									// Extract actual title from basetitle result
-									var match = result.match(/Done — created tiddler '(.+)'$/);
-									if (match) createdTitle = match[1];
-								}
-								if (createdTitle) {
-									// Note: [[title]] notation breaks if title contains "]]" — extremely rare in TiddlyWiki
-									var escaped = "[[" + createdTitle + "]]";
-									if (protection.mode === "allow") {
-										if (protection.filter.indexOf(escaped) === -1) {
-											protection.filter = (protection.filter + " " + escaped).trim();
-										}
-									} else {
-										var negated = "-" + escaped;
-										if (protection.filter.indexOf(negated) === -1) {
-											protection.filter = (protection.filter + " " + negated).trim();
-										}
-									}
-								}
-							}
-						}
-						messages.push(adapter.buildToolResult(tc.id, result));
-					}
-
-					onUpdate(messages);
-
-					// Model tier routing: switch model for next iteration based on tool tiers
-					if (tierConfig) {
-						var maxTier = getMaxTier(parsed.toolCalls, tools);
-						var prevModel = config.model;
-						config = applyTierConfig(baseConfig, maxTier);
-						onLog("tier", "max tool tier=" + maxTier + " → model=" + config.model);
-						if (config.model !== prevModel) {
-							onLog("tier", "SWITCHED from " + prevModel + " to " + config.model);
-							console.log("llm-connect: tier routing — switched from", prevModel, "to", config.model, "(tier:", maxTier + ")");
-						}
-					}
-
-					// Resolve pending attachments queued by attach_document tool
-					resolvePendingAttachments(protection, adapter).then(function(attachParts) {
-						if (attachParts && attachParts.length > 0) {
-							messages.push({ role: "user", content: attachParts });
-							onUpdate(messages);
-						}
-						doIteration();
-					})["catch"](function() {
-						doIteration();
+					// Execute tool calls one after another (enforce allowed set); awaiting tools block the chain
+					var timeoutMs = getAskTimeoutMs();
+					return parsed.toolCalls.reduce(function(chain, tc) {
+						return chain.then(function() {
+							return executeToolCall(tc, timeoutMs);
+						}).then(function(result) {
+							messages.push(adapter.buildToolResult(tc.id, result));
+						});
+					}, Promise.resolve()).then(function() {
+						afterToolRound(parsed);
 					});
 				}
 			})["catch"](function(err) {
@@ -248,8 +197,195 @@ exports.runConversation = function(options) {
 			});
 		}
 
+		// Run one tool call; resolves with its result string (after the user settles an awaiting tool)
+		function executeToolCall(tc, timeoutMs) {
+			if (allowedToolNames && !allowedToolNames[tc.name]) {
+				onLog("tool", "BLOCKED " + tc.name + " (not in active set)");
+				return Promise.resolve("Error: Tool not available in current chat: " + tc.name);
+			}
+			var outcome = toolExecutor.executeTool(tc, protection);
+			if (!outcome || typeof outcome !== "object" || !outcome.await) {
+				return Promise.resolve(finishToolCall(tc, outcome));
+			}
+			onLog("tool", "awaiting user: " + askLabel(outcome.await));
+			return exports.waitForSettle(outcome.await, options.signal, timeoutMs).then(function(status) {
+				onLog("tool", "user " + status);
+				if (status === "aborted") {
+					// Run stopped (signal or the form's "Stop run")
+					throw abortError();
+				}
+				return finishToolCall(tc, exports.renderAwaitResult(outcome.tool, outcome.await));
+			});
+		}
+
+		// Log a tool result and auto-add created/modified tiddlers to the protection filter
+		function finishToolCall(tc, result) {
+			result = typeof result === "string" ? result : String(result);
+			onLog("tool", "executed " + tc.name + " → " + result.substring(0, 120) + (result.length > 120 ? "..." : ""));
+			if (tc.input && result.indexOf("Error:") !== 0) {
+				var createdTitle = tc.input.title;
+				if (!createdTitle && tc.input.basetitle) {
+					// Extract actual title from basetitle result
+					var match = result.match(/Done — created tiddler '(.+)'$/);
+					if (match) createdTitle = match[1];
+				}
+				if (createdTitle) {
+					// Note: [[title]] notation breaks if title contains "]]" — extremely rare in TiddlyWiki
+					var escaped = "[[" + createdTitle + "]]";
+					if (protection.mode === "allow") {
+						if (protection.filter.indexOf(escaped) === -1) {
+							protection.filter = (protection.filter + " " + escaped).trim();
+						}
+					} else {
+						var negated = "-" + escaped;
+						if (protection.filter.indexOf(negated) === -1) {
+							protection.filter = (protection.filter + " " + negated).trim();
+						}
+					}
+				}
+			}
+			return result;
+		}
+
+		function afterToolRound(parsed) {
+			onUpdate(messages);
+
+			// Model tier routing: switch model for next iteration based on tool tiers
+			if (tierConfig) {
+				var maxTier = getMaxTier(parsed.toolCalls, tools);
+				var prevModel = config.model;
+				config = applyTierConfig(baseConfig, maxTier);
+				onLog("tier", "max tool tier=" + maxTier + " → model=" + config.model);
+				if (config.model !== prevModel) {
+					onLog("tier", "SWITCHED from " + prevModel + " to " + config.model);
+					console.log("llm-connect: tier routing — switched from", prevModel, "to", config.model, "(tier:", maxTier + ")");
+				}
+			}
+
+			// Resolve pending attachments queued by attach_document tool
+			resolvePendingAttachments(protection, adapter).then(function(attachParts) {
+				if (attachParts && attachParts.length > 0) {
+					messages.push({ role: "user", content: attachParts });
+					onUpdate(messages);
+				}
+				doIteration();
+			})["catch"](function() {
+				doIteration();
+			});
+		}
+
 		doIteration();
 	});
+};
+
+var ASK_TIMEOUT_CONFIG = "$:/config/rimir/llm-connect/ask-timeout";
+
+// Configured ask timeout in ms; 0 = wait forever (empty/invalid config)
+function getAskTimeoutMs() {
+	var minutes = parseFloat(($tw.wiki.getTiddlerText(ASK_TIMEOUT_CONFIG) || "").trim());
+	return minutes > 0 ? Math.round(minutes * 60000) : 0;
+}
+
+// Log label for a question tiddler: ask.title, else the first question prompt
+function askLabel(title) {
+	var tiddler = $tw.wiki.getTiddler(title);
+	if (!tiddler) return title;
+	if (tiddler.fields["ask.title"]) return tiddler.fields["ask.title"];
+	try {
+		var questions = JSON.parse(tiddler.fields.text || "[]");
+		if (questions[0] && questions[0].prompt) return questions[0].prompt;
+	} catch(e) {}
+	return title;
+}
+
+// Write a final status onto a still-existing question tiddler
+function setAskStatus(title, status) {
+	var tiddler = $tw.wiki.getTiddler(title);
+	if (!tiddler) return;
+	$tw.wiki.addTiddler(new $tw.Tiddler(tiddler, {
+		"ask.status": status,
+		"ask.settled": $tw.utils.stringifyDate(new Date())
+	}));
+}
+
+/*
+Wait until the question tiddler `title` leaves ask.status "pending".
+Resolves with the final status: the user's (answered/declined), "declined" when the tiddler is deleted,
+"aborted" on signal abort (or set by the form's "Stop run"), "timeout" after timeoutMs (0 = never).
+Aborted/timeout are written to the tiddler unless it was settled meanwhile (then that status wins).
+Listener and timer are always removed; resolves exactly once.
+*/
+exports.waitForSettle = function(title, signal, timeoutMs) {
+	return new Promise(function(resolve) {
+		var done = false, timer = null;
+
+		function currentStatus() {
+			var tiddler = $tw.wiki.getTiddler(title);
+			if (!tiddler) return "declined";
+			var status = tiddler.fields["ask.status"];
+			return status === "pending" ? null : (status || "declined");
+		}
+		function finish(status, write) {
+			if (done) return;
+			done = true;
+			$tw.wiki.removeEventListener("change", onChange);
+			if (signal && signal.removeEventListener) signal.removeEventListener("abort", onAbort);
+			if (timer) clearTimeout(timer);
+			if (write) {
+				// The user may have settled it just now (change event not yet delivered): theirs wins
+				var settled = currentStatus();
+				if (settled) {
+					status = settled;
+				} else {
+					setAskStatus(title, status);
+				}
+			}
+			resolve(status);
+		}
+		function onChange(changes) {
+			if (!changes[title]) return;
+			var status = currentStatus();
+			if (status) finish(status, false);
+		}
+		function onAbort() {
+			finish("aborted", true);
+		}
+
+		var initial = currentStatus();
+		if (initial) {
+			resolve(initial);
+			return;
+		}
+		if (signal && signal.aborted) {
+			setAskStatus(title, "aborted");
+			resolve("aborted");
+			return;
+		}
+		$tw.wiki.addEventListener("change", onChange);
+		if (signal) signal.addEventListener("abort", onAbort);
+		if (timeoutMs > 0) {
+			timer = setTimeout(function() { finish("timeout", true); }, timeoutMs);
+		}
+	});
+};
+
+/*
+Render the settled question tiddler as the tool result: the tool's `tool-result-template` with variable
+`awaitTitle`, as plain text (normal wiki), truncated like other tool results.
+*/
+exports.renderAwaitResult = function(toolTitle, awaitTitle) {
+	var tiddler = $tw.wiki.getTiddler(awaitTitle);
+	var toolTiddler = $tw.wiki.getTiddler(toolTitle);
+	var template = toolTiddler && toolTiddler.fields["tool-result-template"];
+	var result;
+	if (!tiddler) {
+		result = "status: declined";
+	} else if (!template) {
+		result = "status: " + tiddler.fields["ask.status"];
+	} else {
+		result = $tw.wiki.renderTiddler("text/plain", template, { variables: { awaitTitle: awaitTitle } }).trim();
+	}
+	return require("$:/plugins/rimir/llm-connect/tool-executor").truncateResult(result);
 };
 
 /*
@@ -262,7 +398,7 @@ options: {
   config: provider config,
   adapter: provider adapter,
   toolExecutor: tool-executor module,
-  signal: AbortSignal (optional) — aborting rejects with Error("Request aborted"),
+  signal: AbortSignal (optional) — aborting rejects with Error("Request aborted") (err.aborted = true),
   onUpdate(messages), onLog(category, message), onRequest(request), onResponse(responseText):
     optional progress callbacks, honoured on both the tool and single-call paths
     (single call: one onLog, then one onUpdate with the assistant reply appended)
@@ -518,10 +654,17 @@ function httpGetRequest(requestConfig) {
 	});
 }
 
+// The rejection for a stopped run; err.aborted marks it as a stop, not a failure
+function abortError() {
+	var err = new Error("Request aborted");
+	err.aborted = true;
+	return err;
+}
+
 function httpRequest(requestConfig, signal) {
 	return new Promise(function(resolve, reject) {
 		if (signal && signal.aborted) {
-			reject(new Error("Request aborted"));
+			reject(abortError());
 			return;
 		}
 		var xhr = new XMLHttpRequest();
@@ -535,7 +678,7 @@ function httpRequest(requestConfig, signal) {
 		if (signal) {
 			signal.addEventListener("abort", function() {
 				xhr.abort();
-				reject(new Error("Request aborted"));
+				reject(abortError());
 			});
 		}
 

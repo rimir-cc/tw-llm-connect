@@ -602,7 +602,29 @@ LlmChatWidget.prototype.renderOneMessage = function(msg) {
 	return messageRender.renderMessage(this.document, msg);
 };
 
+// A run is in progress while the Stop button is shown
+LlmChatWidget.prototype.isRunning = function() {
+	return !!(this.stopBtn && this.stopBtn.style.display && this.stopBtn.style.display !== "none");
+};
+
+// Label for ask_user modals raised by this chat: the pair-edit source tiddler, else "Chat"
+LlmChatWidget.prototype.askSourceLabel = function() {
+	return this.sourceTiddler || "Chat";
+};
+
+// Status line while an ask_user question waits (orchestrator logs "awaiting user: …" / "user <status>")
+LlmChatWidget.prototype.updateAskStatus = function(category, message) {
+	if (category !== "tool" || typeof message !== "string") return;
+	if (message.indexOf("awaiting user:") === 0) {
+		this.setStatus("Waiting for your answer…");
+	} else if (/^user (answered|declined|timeout)$/.test(message)) {
+		this.setStatus("Thinking...");
+	}
+};
+
 LlmChatWidget.prototype.sendMessage = function() {
+	// One run at a time: a second concurrent run would overwrite abortController and lose turns
+	if (this.isRunning()) return;
 	var text = this.textarea.value.trim();
 	if (!text && !this.actionMode) return;
 	// The connection may have been deleted while the chat was open: re-resolve before any state change.
@@ -683,6 +705,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 	var helpCtx = chatTid && chatTid.fields["llm-help-context"] || "";
 	protection.helpContext = helpCtx;
 	protection.chatTiddler = this.chatTiddler || "";
+	protection.askSource = this.askSourceLabel();
 
 	// Log send details
 	this.log("send", "connection=" + this.connection + " type=" + config.provider + " model=" + this.model + " msgs=" + messages.length + " tools=" + tools.length);
@@ -703,6 +726,7 @@ LlmChatWidget.prototype.sendMessage = function() {
 		signal: this.abortController.signal,
 		onLog: function(category, message, data) {
 			self.log(category, message, data);
+			self.updateAskStatus(category, message);
 		},
 		onRequest: function(request) {
 			self.lastRequestBody = request.body;
@@ -759,7 +783,7 @@ LlmChatWidget.prototype.updateToolWorkingIndicator = function() {
 	if (!this.messagesDiv) return;
 	var existing = this.messagesDiv.querySelector(".llm-chat-tool-working");
 	// Always show dots indicator when actively processing (tool loop running)
-	var isWorking = this.stopBtn && this.stopBtn.style.display !== "none";
+	var isWorking = this.isRunning();
 	if (isWorking) {
 		if (!existing) {
 			var indicator = this.document.createElement("div");

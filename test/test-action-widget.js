@@ -49,4 +49,21 @@ describe("llm-connect: action-widget", function() {
 		$tw.wiki.addTiddler(new $tw.Tiddler({ title: P + "A1", tags: TAG, "connection-name": "azure", "connection-type": "claude" }));
 		expect(invoke("provider=\"azure\"")).toBe('Error: No connection of type "azure"');
 	});
+	it("passes askSource = currentTiddler in the protection object", function() {
+		var orchestrator = require("$:/plugins/rimir/llm-connect/orchestrator");
+		var captured;
+		var orig = orchestrator.runAction;
+		orchestrator.runAction = function(opts) { captured = opts; return new Promise(function() {}); };
+		$tw.wiki.addTiddler(new $tw.Tiddler({ title: P + "A1", tags: TAG, "connection-name": "Main", "connection-type": "claude" }));
+		try {
+			var parser = $tw.wiki.parseText("text/vnd.tiddlywiki", "<$llm-action prompt=\"hi\" statusTiddler=\"" + STATUS + "\"/>");
+			var widget = $tw.wiki.makeWidget(parser, { document: $tw.fakeDocument, variables: { currentTiddler: "My Source" } });
+			widget.render($tw.fakeDocument.createElement("div"), null);
+			widget.invokeActions(widget, {});
+		} finally {
+			orchestrator.runAction = orig;
+		}
+		expect(captured).toBeDefined();
+		expect(captured.protectionFilter.askSource).toBe("My Source");
+	});
 });

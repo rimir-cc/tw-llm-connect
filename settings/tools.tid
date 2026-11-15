@@ -5,6 +5,12 @@ type: text/vnd.tiddlywiki
 
 \import [[$:/plugins/rimir/theme/procedures-settings]] [[$:/plugins/rimir/llm-connect/settings/procedures]]
 
+\procedure llm-ask-request-permission() <$action-sendmessage $message="tm-rimir-llm-connect-ask-permission"/>
+
+\procedure llm-ask-test-questions()
+[{"id":"color","prompt":"Which colour do you prefer?","kind":"choice","options":[{"value":"red","label":"Red"},{"value":"blue","label":"Blue","description":"A calm colour"}],"allow_other":true,"default":"blue"},{"id":"note","prompt":"Any comment?","kind":"text"}]
+\end
+
 <$transclude $variable="rr-settings-section" title="Tools" hint="Tools the LLM can call. Built-in tools first, then your own. Untick Active to hide a tool from all chats.">
 <$fill $name="body">
 <$let newToolState="$:/temp/rimir/llm-connect/new-tool-form">
@@ -138,5 +144,17 @@ Cancel
 </div>
 </$reveal>
 </$let>
+</$fill>
+</$transclude>
+
+<$transclude $variable="rr-settings-section" title="Ask user" hint="The ask_user tool lets the LLM ask you questions in a modal; the run waits for your answer.">
+<$fill $name="body">
+<$transclude $variable="rr-settings-row" label="Timeout (minutes)" hint="Empty = wait forever. After the timeout the LLM continues with the defaults."><$fill $name="body"><<rr-config-input tid:"$:/config/rimir/llm-connect/ask-timeout" placeholder:"never" size:"short">></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Notifications" hint="Desktop notification (and a (?) tab marker) when a question arrives while this tab is hidden or unfocused. The browser asks for permission when you click this checkbox or the Test button."><$fill $name="body"><$eventcatcher selector="input" $click=<<llm-ask-request-permission>>><<rr-config-checkbox tid:"$:/config/rimir/llm-connect/ask-notify" label:"Notify me about pending questions" default:"yes">></$eventcatcher></$fill></$transclude>
+<$transclude $variable="rr-settings-row" label="Test" hint="Raises a sample question so you can try the modal."><$fill $name="body"><$button class="tc-btn-big-green">
+<<llm-ask-request-permission>>
+<$action-createtiddler $basetitle="$:/temp/rimir/llm-connect/ask/settings-test/q" ask.status="pending" ask.source-label="Settings test" ask.created=<<now "[UTC]YYYY0MM0DD0hh0mm0ss0XXX">> ask.title="Sample questions" ask.answer-0="blue" text=<<llm-ask-test-questions>>/>
+Test
+</$button></$fill></$transclude>
 </$fill>
 </$transclude>

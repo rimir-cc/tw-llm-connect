@@ -1,0 +1,9 @@
+title: $:/plugins/rimir/llm-connect/ui/ask-functions
+type: text/vnd.tiddlywiki
+
+\function ask.pending() [subfilter{$:/plugins/rimir/llm-connect/ui/ask-pending-filter}]
+\function ask.answer-field(i) [[ask.answer-]addsuffix<i>]
+\function ask.other-field(i) [[ask.other-]addsuffix<i>]
+\function ask.timeout-minutes() [[$:/config/rimir/llm-connect/ask-timeout]get[text]trim[]minlength[1]]
+
+Shared definitions for the ask_user UI (`ui/ask-overlay`, `ui/ask-form`, `ui/ask-result`); `\import` this tiddler. The tool body `tools/ask-user` runs in the restricted tool wiki, which cannot `\import` plugin shadows, so it builds the `ask.answer-<i>` field name itself.

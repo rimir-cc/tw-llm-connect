@@ -134,6 +134,8 @@ LlmActionWidget.prototype.invokeAction = function(triggeringWidget, event) {
 
 	// Run the action
 	var protection = helpers.resolveProtectionFilter({ denyFilter: this.denyFilterAttr, allowFilter: this.allowFilterAttr, mode: this.protectionModeAttr });
+	// Label for ask_user modals raised by this run
+	protection.askSource = this.getVariable("currentTiddler") || "";
 
 	orchestrator.runAction({
 		prompt: prompt,

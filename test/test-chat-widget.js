@@ -111,6 +111,50 @@ describe("llm-connect: chat-widget connection", function() {
 		expect($tw.wiki.getTiddler(CHAT).fields["llm-messages"]).toBe(MESSAGES);
 	});
 
+	it("sendMessage: does nothing while a run is in progress (Stop button shown)", function() {
+		conn("A1", "Main", "claude", "model-a");
+		$tw.wiki.addTiddler(new $tw.Tiddler({ title: DEF, text: "A1" }));
+		$tw.wiki.addTiddler(new $tw.Tiddler({ title: CHAT, "llm-messages": MESSAGES, "llm-connection": "A1", "llm-model": "model-a" }));
+		var w = makeWidget();
+		w.textarea = { value: "second" };
+		w.stopBtn = { style: { display: "inline-block" } };
+		var statusCalls = 0;
+		w.setStatus = function() { statusCalls++; };
+		var controller = w.abortController = { marker: true };
+		expect(w.isRunning()).toBe(true);
+		w.sendMessage();
+		expect(w.textarea.value).toBe("second");
+		expect(statusCalls).toBe(0);
+		expect(w.abortController).toBe(controller);
+		expect($tw.wiki.getTiddler(CHAT).fields["llm-messages"]).toBe(MESSAGES);
+		w.stopBtn.style.display = "none";
+		expect(w.isRunning()).toBe(false);
+	});
+
+	it("ask_user source label: the pair-edit tiddler, else 'Chat'", function() {
+		var w = makeWidget();
+		expect(w.askSourceLabel()).toBe("Chat");
+		w.sourceTiddler = "My Note";
+		expect(w.askSourceLabel()).toBe("My Note");
+	});
+
+	it("status shows 'Waiting for your answer…' while ask_user waits and returns to Thinking after", function() {
+		var w = makeWidget();
+		var status = "Thinking...";
+		w.setStatus = function(text) { status = text; };
+		w.updateAskStatus("tool", "executed read_tiddler → x");
+		expect(status).toBe("Thinking...");
+		w.updateAskStatus("tool", "awaiting user: Pick one");
+		expect(status).toBe("Waiting for your answer…");
+		w.updateAskStatus("loop", "user answered");
+		expect(status).toBe("Waiting for your answer…");
+		w.updateAskStatus("tool", "user answered");
+		expect(status).toBe("Thinking...");
+		w.updateAskStatus("tool", "awaiting user: Next");
+		w.updateAskStatus("tool", "user timeout");
+		expect(status).toBe("Thinking...");
+	});
+
 	it("refresh: an empty chat picks up the first connection when it is added", function() {
 		$tw.wiki.addTiddler(new $tw.Tiddler({ title: CHAT }));
 		var w = makeWidget();

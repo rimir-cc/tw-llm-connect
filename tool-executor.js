@@ -11,6 +11,10 @@ Tool dispatch and execution — tools defined as wikitext in tiddler text fields
 "use strict";
 
 var TAG_TOOL = "$:/tags/rimir/llm-connect/tool";
+var ASK_PREFIX = "$:/temp/rimir/llm-connect/ask/";
+var runCounter = 0;
+
+exports.ASK_PREFIX = ASK_PREFIX;
 
 exports.findToolByName = function(name) {
 	var tools = $tw.wiki.filterTiddlers("[all[shadows+tiddlers]tag[" + TAG_TOOL + "]]");
@@ -114,8 +118,6 @@ exports.executeTool = function(toolCall, protection) {
 
 	var mode = toolTiddler.fields["tool-mode"] || "read";
 	var wikitext = toolTiddler.fields.text || "";
-	var maxLen = parseInt($tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/max-tool-result-length")) || 4000;
-
 	if (!wikitext) {
 		return "Error: Tool has no implementation: " + toolCall.name;
 	}
@@ -147,9 +149,26 @@ exports.executeTool = function(toolCall, protection) {
 		// Deny mode: no change needed — new titles aren't in the deny list
 	}
 
+	// Awaiting tools: per-call question tiddler the tool may write even in allow mode
+	var isAwait = toolTiddler.fields["tool-await"] === "yes";
+	var awaitTitle = null;
+	var extraVars = null;
+	if (isAwait) {
+		var runId = Date.now().toString(36) + (runCounter++).toString(36);
+		awaitTitle = ASK_PREFIX + runId + "/" + toolCall.id;
+		extraVars = {
+			__awaitTitle: awaitTitle,
+			__askSource: protection.askSource || protection.chatTiddler || "LLM"
+		};
+		if (effectiveProtection.mode === "allow") {
+			effectiveProtection = $tw.utils.extend({}, effectiveProtection);
+			effectiveProtection.filter = ((effectiveProtection.filter || "") + " [[" + awaitTitle + "]]").trim();
+		}
+	}
+
 	var result;
 	try {
-		result = executeWikitext(wikitext, toolCall.input, mode, effectiveProtection);
+		result = executeWikitext(wikitext, toolCall.input, mode, effectiveProtection, extraVars);
 	} catch(e) {
 		result = "Error: " + (e.message || String(e));
 	}
@@ -158,6 +177,19 @@ exports.executeTool = function(toolCall, protection) {
 		logWrite(toolCall.name, JSON.stringify(toolCall.input));
 	}
 
+	if (isAwait) {
+		var askTiddler = $tw.wiki.getTiddler(awaitTitle);
+		if (askTiddler && askTiddler.fields["ask.status"] === "pending") {
+			return { await: awaitTitle, tool: toolTiddler.fields.title };
+		}
+	}
+
+	return exports.truncateResult(result);
+};
+
+// Cap a tool result at the configured max-tool-result-length (default 4000)
+exports.truncateResult = function(result) {
+	var maxLen = parseInt($tw.wiki.getTiddlerText("$:/config/rimir/llm-connect/max-tool-result-length")) || 4000;
 	if (result.length > maxLen) {
 		result = result.substring(0, maxLen) + "\n... [truncated at " + maxLen + " chars]";
 	}
@@ -276,7 +308,7 @@ function createRestrictedWiki(protection) {
 	return wiki;
 }
 
-function executeWikitext(wikitext, input, mode, protection) {
+function executeWikitext(wikitext, input, mode, protection, extraVars) {
 	var variables = {};
 	for (var key in input) {
 		if (input.hasOwnProperty(key)) {
@@ -295,6 +327,8 @@ function executeWikitext(wikitext, input, mode, protection) {
 	variables.__model = (chatTid && chatTid.fields["llm-model"]) || connConfig.model || variables.__provider;
 	variables.__helpContext = (protection && protection.helpContext) || "";
 	variables.__chatTiddler = (protection && protection.chatTiddler) || "";
+
+	if (extraVars) $tw.utils.extend(variables, extraVars);
 
 	var wiki = createRestrictedWiki(protection);
 	var parser = wiki.parseText("text/vnd.tiddlywiki", wikitext);

@@ -1,0 +1,115 @@
+title: $:/plugins/rimir/llm-connect/ui/ask-form
+type: text/vnd.tiddlywiki
+
+\parsermode inline
+\whitespace trim
+\import [[$:/plugins/rimir/llm-connect/ui/ask-functions]]
+\function ask.answered(t,i) [function[ask.answer-field],<i>] [function[ask.other-field],<i>] :map[<t>get<currentTiddler>trim[]] +[!is[blank]]
+\function ask.missing(t,q) [<q>jsonindexes[]] :filter[<q>jsonget<currentTiddler>,[required]match[true]] :filter[function[ask.answered],<t>,<currentTiddler>count[]match[0]]
+
+\procedure ask-option-text()
+<span class="llm-ask-option-label"><$text text=<<label>>/></span>
+<$list filter="[<desc>!is[blank]]" variable="_">
+<span class="llm-ask-option-desc"><$text text=<<desc>>/></span>
+</$list>
+\end
+
+\procedure ask-options()
+<div class="llm-ask-options">
+<$list filter="[<q>jsonindexes<i>,[options]]" variable="o">
+<$let value={{{ [<q>jsonget<i>,[options],<o>,[value]] }}} label={{{ [<q>jsonget<i>,[options],<o>,[label]!is[blank]] :else[<q>jsonget<i>,[options],<o>,[value]] }}} desc={{{ [<q>jsonget<i>,[options],<o>,[description]] }}}>
+<%if [<kind>match[multi]] %>
+<$checkbox tiddler=<<askTitle>> listField=<<afield>> checked=<<value>> class="llm-ask-option"><<ask-option-text>></$checkbox>
+<%else%>
+<$radio tiddler=<<askTitle>> field=<<afield>> value=<<value>> class="llm-ask-option"><<ask-option-text>></$radio>
+<%endif%>
+</$let>
+</$list>
+<$list filter="[<q>jsonget<i>,[allow_other]match[true]]" variable="_">
+<$edit-text tiddler=<<askTitle>> field=<<ofield>> tag="input" class="llm-ask-other" placeholder="Other…"/>
+</$list>
+</div>
+\end
+
+\procedure ask-confirm-btn(value, label)
+<$button class={{{ [[llm-ask-btn llm-ask-]addsuffix<value>] [<askTitle>get<afield>match<value>then[llm-ask-selected]] +[join[ ]] }}}>
+<$action-setfield $tiddler=<<askTitle>> $field=<<afield>> $value=<<value>>/>
+<$text text=<<label>>/>
+</$button>
+\end
+
+\procedure ask-confirm()
+<div class="llm-ask-confirm">
+<<ask-confirm-btn yes Yes>>
+<<ask-confirm-btn no No>>
+</div>
+\end
+
+\procedure ask-settle(status)
+<$action-setfield $tiddler=<<askTitle>> ask.status=<<status>> ask.settled=<<now "[UTC]YYYY0MM0DD0hh0mm0ss0XXX">>/>
+<$action-deletetiddler $tiddler=<<declineState>>/>
+\end
+
+<$let q={{{ [<askTitle>get[text]] }}} intro={{{ [<askTitle>get[ask.intro]] }}} declineState={{{ [[$:/temp/rimir/llm-connect/ask-decline/]addsuffix<askTitle>] }}}>
+<div class="llm-ask-form">
+<div class="llm-ask-body">
+<$list filter="[<askTitle>get[ask.title]]" variable="heading">
+<div class="llm-ask-heading"><$text text=<<heading>>/></div>
+</$list>
+<$list filter="[<intro>!is[blank]]" variable="_">
+<div class="llm-ask-intro">
+<$transclude $variable="intro" $type="text/x-markdown" $mode="block"/>
+</div>
+</$list>
+<$list filter="[<q>jsonindexes[]]" variable="i">
+<$let kind={{{ [<q>jsonget<i>,[kind]] }}} prompt={{{ [<q>jsonget<i>,[prompt]] }}} afield={{{ [function[ask.answer-field],<i>] }}} ofield={{{ [function[ask.other-field],<i>] }}}>
+<div class={{{ [[llm-ask-question llm-ask-kind-]addsuffix<kind>] [<q>jsonget<i>,[required]match[true]then[llm-ask-required]] +[join[ ]] }}}>
+<div class="llm-ask-prompt">
+<$transclude $variable="prompt" $type="text/x-markdown" $mode="block"/>
+</div>
+<%if [<kind>match[choice]] [<kind>match[multi]] %>
+<<ask-options>>
+<%elseif [<kind>match[confirm]] %>
+<<ask-confirm>>
+<%else%>
+<$edit-text tiddler=<<askTitle>> field=<<afield>> tag="textarea" class="llm-ask-textarea"/>
+<%endif%>
+</div>
+</$let>
+</$list>
+</div>
+<div class="llm-ask-footer">
+<div class="llm-ask-footer-start">
+<$button class="llm-ask-btn llm-ask-btn-danger llm-ask-stop" tooltip="Stop the whole LLM run">
+<$transclude $variable="ask-settle" status="aborted"/>
+Stop run
+</$button>
+<$list filter="[function[ask.timeout-minutes]]" variable="mins">
+<span class="llm-ask-timeout"><$text text={{{ [[Answer within ]addsuffix<mins>addsuffix[ min]] }}}/></span>
+</$list>
+</div>
+<%if [<declineState>is[tiddler]] %>
+<div class="llm-ask-reason">
+<$edit-text tiddler=<<askTitle>> field="ask.decline-reason" tag="input" class="llm-ask-reason-input" placeholder="Reason (optional)"/>
+<$button class="llm-ask-btn llm-ask-decline-cancel">
+<$action-deletetiddler $tiddler=<<declineState>>/>
+Cancel
+</$button>
+<$button class="llm-ask-btn llm-ask-btn-danger llm-ask-decline-confirm">
+<$transclude $variable="ask-settle" status="declined"/>
+Decline
+</$button>
+</div>
+<%else%>
+<$button class="llm-ask-btn llm-ask-decline">
+<$action-setfield $tiddler=<<declineState>> text="yes"/>
+Decline
+</$button>
+<$button class="llm-ask-btn llm-ask-btn-primary llm-ask-submit" disabled={{{ [function[ask.missing],<askTitle>,<q>count[]compare:number:gt[0]then[yes]else[no]] }}}>
+<$transclude $variable="ask-settle" status="answered"/>
+Submit
+</$button>
+<%endif%>
+</div>
+</div>
+</$let>

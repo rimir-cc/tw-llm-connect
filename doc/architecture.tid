@@ -229,6 +229,18 @@ On restore, `restoreChat()` copies all fields back to the chat tiddler and resto
 
 `resolveProtectionForChat()` automatically adds the `sourceTiddler` (from the `tiddler` attribute) to the effective filter — `[[title]]` in allow mode, `-[[title]]` in deny mode. This ensures pair-edit always has tool access to the tiddler being edited.
 
+!! Await tools and ask_user
+
+Tools with `tool-await: yes` do not return a result directly. The executor creates a tiddler under `ASK_PREFIX` (`$:/temp/rimir/llm-connect/ask/<runId>/<toolCallId>`), injects `__awaitTitle` and `__askSource` (`protection.askSource`, else `protection.chatTiddler`, else "LLM") into the tool body, and the orchestrator calls `waitForSettle` until `ask.status` leaves `pending` (timeout from `ask-timeout`, abort via the run signal). `renderAwaitResult` then renders the tool's `tool-result-template` (`ui/ask-result`) to build the tool result.
+
+If the status is already settled when the timer or abort fires (the change event not yet delivered), `waitForSettle` keeps the user's status instead of overwriting it. `aborted` — from the run signal or from the form's "Stop run" button — rejects the run with `Error("Request aborted")` and `err.aborted = true` (the same error the HTTP request raises on abort).
+
+`ui/ask-overlay` (`$:/tags/PageTemplate`) shows the oldest pending question as a modal; its form `ui/ask-form` is the reusable part. Overlay, form and result template `\import` `ui/ask-functions` (pending list, `ask.answer-<i>` / `ask.other-<i>` field names, timeout config); the tool body `tools/ask-user` runs in the restricted tool wiki, which cannot import plugin shadows, so it builds the field name itself. The pending filter lives in `ui/ask-pending-filter` (field test before prefix, sorted by `ask.created`) and is read by both the overlay and `ask-attention.js`.
+
+`ask-attention.js` (browser startup) adds the `(?) ` tab-title prefix, re-applied after each core title refresh while a question is pending; moves keyboard focus into the dialog when a new question becomes the shown one (its listener runs after the page refresh, so the dialog exists); and shows an optional desktop notification when the tab is hidden or unfocused, if permission is granted. Permission is requested only from a user gesture: the root widget handles `tm-rimir-llm-connect-ask-permission`, sent by the settings' Notifications checkbox and Test button.
+
+The chat widget ignores `sendMessage` while a run is in progress (`isRunning()`: Stop button shown), sets `protection.askSource` to its pair-edit tiddler or "Chat", and switches its status line to "Waiting for your answer…" on the `awaiting user` log line and back to "Thinking..." on `user <status>`.
+
 !! Debug panel system
 
 The 🐛 button opens a dropdown menu listing inspection panels. The active panel renders inside `inputArea` above the button row (toolbar always stays at bottom). Architecture:

@@ -409,6 +409,26 @@ Saved tiddler fields include `llm-context-injected`, `llm-attachments-injected`,
 
 When the `tiddler` attribute is set (e.g. pair-edit mode), the source tiddler is automatically added to the allow filter (or exempted from the deny filter). This ensures the LLM can always read and modify the tiddler it is pair-editing.
 
+!! Tool: `ask_user`
+
+Lets the LLM ask the user questions in a modal; the run waits. Parameters: `heading`, `intro`, `questions[]` (`id`, `prompt`, `kind` = text/choice/multi/confirm, `options[]` {value,label,description}, `allow_other`, `default`, `required`). Results: answered, `declined` (with optional reason), `timeout` (defaults used), `aborted`.
+
+Question tiddlers live at `$:/temp/rimir/llm-connect/ask/<runId>/<toolCallId>` with fields `ask.status` (pending/answered/declined/timeout/aborted), `ask.title`, `ask.intro`, `ask.source-label`, `ask.created`, `ask.settled`, `ask.answer-<i>`, `ask.other-<i>`, `ask.decline-reason`; `text` holds the questions JSON.
+
+|!Config tiddler |!Meaning |
+|`$:/config/rimir/llm-connect/ask-timeout` |Minutes to wait; empty = never (default) |
+|`$:/config/rimir/llm-connect/ask-notify` |`yes` (default) = desktop notification when the tab is hidden/unfocused |
+
+For `multi` questions a `default` is a TiddlyWiki title list: option values separated by spaces, values containing spaces in `[[double brackets]]`.
+
+The modal: the oldest pending question with "1 of N" when several are waiting; backdrop click and Esc do nothing. Keyboard focus moves into the dialog (first text field, else first option) when a question appears. Footer buttons: ''Stop run'' (stops the whole run: status `aborted`, the run rejects with "Request aborted" and `err.aborted = true`; the chat shows it like its own Stop, an llm-inline slot ends as `stopped`), ''Decline'' (optional reason; the LLM continues) and ''Submit''.
+
+In the chat, the status line shows "Waiting for your answer…" while a question is open; Enter/Send is ignored while a run is in progress.
+
+Notifications: title = the heading (else "<source> asks"), body = the first question. The browser asks for permission only from a click — the Notifications checkbox or the Test button in the settings (message `tm-rimir-llm-connect-ask-permission`).
+
+Settings: Tools tab, section "Ask user" (timeout, notifications, Test button). The modal source label is the pair-edit tiddler of a chat (else "Chat"), or for `<$llm-action>` the widget's current tiddler.
+
 !! Upgrading from 0.1.56
 
 0.1.57 replaces the one-config-per-provider model with named connections. Existing provider config tiddlers are no longer read, so convert them once (create connections in Settings > Connections, or write the tiddlers directly):

@@ -186,61 +186,71 @@ describe("llm-connect: orchestrator", function() {
 			expect(function() { orchestrator.getAdapter("nonexistent"); }).toThrow();
 		});
 	});
+	// Modules run in TW's shared vm context; free identifiers resolve against it
+	var sandboxGlobal = $tw.utils.sandbox;
+	var origXHR, xhrs;
+	function stubXHR() {
+		origXHR = sandboxGlobal.XMLHttpRequest;
+		xhrs = [];
+		sandboxGlobal.XMLHttpRequest = function() {
+			this.aborted = false;
+			this.calls = [];
+			xhrs.push(this);
+		};
+		sandboxGlobal.XMLHttpRequest.prototype.open = function() { this.calls.push("open"); };
+		sandboxGlobal.XMLHttpRequest.prototype.setRequestHeader = function() { this.calls.push("setRequestHeader"); };
+		sandboxGlobal.XMLHttpRequest.prototype.send = function() { this.calls.push("send"); };
+		sandboxGlobal.XMLHttpRequest.prototype.abort = function() { this.aborted = true; };
+	}
+	function restoreXHR() {
+		sandboxGlobal.XMLHttpRequest = origXHR;
+	}
+	function completeWithOk() {
+		sandboxGlobal.XMLHttpRequest.prototype.send = function() {
+			var self = this;
+			this.status = 200;
+			this.responseText = "ok";
+			Promise.resolve().then(function() { self.onload(); });
+		};
+	}
+
+	// The TW module sandbox has no AbortController; minimal stand-in
+	function fakeController() {
+		var listeners = [];
+		var signal = {
+			aborted: false,
+			listeners: listeners,
+			addEventListener: function(type, fn) { listeners.push(fn); },
+			removeEventListener: function(type, fn) {
+				var i = listeners.indexOf(fn);
+				if (i !== -1) listeners.splice(i, 1);
+			}
+		};
+		return {
+			signal: signal,
+			abort: function() {
+				signal.aborted = true;
+				listeners.slice().forEach(function(fn) { fn(); });
+			}
+		};
+	}
+
+	function tick(n) {
+		var p = Promise.resolve();
+		for (var i = 0; i < n; i++) p = p.then(function() {});
+		return p;
+	}
+
 	describe("runAction signal", function() {
-		// Modules run in TW's shared vm context; free identifiers resolve against it
-		var sandboxGlobal = $tw.utils.sandbox;
-		var origXHR, xhrs, stubAdapter;
+		var stubAdapter;
 		beforeEach(function() {
-			origXHR = sandboxGlobal.XMLHttpRequest;
-			xhrs = [];
-			sandboxGlobal.XMLHttpRequest = function() {
-				this.aborted = false;
-				this.calls = [];
-				xhrs.push(this);
-			};
-			sandboxGlobal.XMLHttpRequest.prototype.open = function() { this.calls.push("open"); };
-			sandboxGlobal.XMLHttpRequest.prototype.setRequestHeader = function() { this.calls.push("setRequestHeader"); };
-			sandboxGlobal.XMLHttpRequest.prototype.send = function() { this.calls.push("send"); };
-			sandboxGlobal.XMLHttpRequest.prototype.abort = function() { this.aborted = true; };
+			stubXHR();
 			stubAdapter = {
 				buildRequest: function() { return { url: "http://x", headers: {}, body: "{}" }; },
 				parseResponse: function() { return { type: "text", content: "ok" }; }
 			};
 		});
-		afterEach(function() {
-			sandboxGlobal.XMLHttpRequest = origXHR;
-		});
-
-		// The TW module sandbox has no AbortController; minimal stand-in
-		function fakeController() {
-			var listeners = [];
-			var signal = {
-				aborted: false,
-				addEventListener: function(type, fn) { listeners.push(fn); }
-			};
-			return {
-				signal: signal,
-				abort: function() {
-					signal.aborted = true;
-					listeners.slice().forEach(function(fn) { fn(); });
-				}
-			};
-		}
-
-		function tick(n) {
-			var p = Promise.resolve();
-			for (var i = 0; i < n; i++) p = p.then(function() {});
-			return p;
-		}
-
-		function completeWithOk() {
-			sandboxGlobal.XMLHttpRequest.prototype.send = function() {
-				var self = this;
-				this.status = 200;
-				this.responseText = "ok";
-				Promise.resolve().then(function() { self.onload(); });
-			};
-		}
+		afterEach(restoreXHR);
 
 		it("single-call path reports onLog then onUpdate with the reply", function(done) {
 			completeWithOk();
@@ -325,6 +335,263 @@ describe("llm-connect: orchestrator", function() {
 			}, function(err) {
 				expect(err.message).toBe("Request aborted");
 				done();
+			});
+		});
+	});
+	describe("await tools", function() {
+		var ASK = "$:/temp/rimir/llm-connect/ask/test/";
+		var TOOL = "$:/temp/rimir/llm-connect/test/await-tool";
+		var TEMPLATE = "$:/temp/rimir/llm-connect/test/await-template";
+
+		function changeListenerCount() {
+			return (($tw.wiki.eventListeners || {}).change || []).length;
+		}
+		function wait(ms) {
+			return new Promise(function(r) { setTimeout(r, ms); });
+		}
+		function waitFor(cond) {
+			return new Promise(function(resolve, reject) {
+				var n = 0;
+				(function poll() {
+					if (cond()) return resolve();
+					if (++n > 200) return reject(new Error("waitFor timed out"));
+					setTimeout(poll, 5);
+				})();
+			});
+		}
+		function settle(title, status) {
+			$tw.wiki.addTiddler(new $tw.Tiddler($tw.wiki.getTiddler(title), { "ask.status": status }));
+		}
+		function pending(title) {
+			addTiddler(title, { "ask.status": "pending", "ask.title": "Pick " + title.split("/").pop() });
+		}
+
+		describe("waitForSettle", function() {
+			var T = ASK + "w1";
+			var baseline;
+			beforeEach(function() {
+				pending(T);
+				baseline = changeListenerCount();
+			});
+
+			it("resolves on status change", function(done) {
+				var p = orchestrator.waitForSettle(T, null, 30);
+				expect(changeListenerCount()).toBe(baseline + 1);
+				settle(T, "answered");
+				p.then(function(status) {
+					expect(status).toBe("answered");
+					expect(changeListenerCount()).toBe(baseline);
+					// a leftover timer would overwrite the status with "timeout"
+					return wait(60);
+				}).then(function() {
+					expect($tw.wiki.getTiddler(T).fields["ask.status"]).toBe("answered");
+					done();
+				}, done.fail);
+			});
+
+			it("resolves declined when the tiddler is deleted", function(done) {
+				var p = orchestrator.waitForSettle(T, null, 30);
+				$tw.wiki.deleteTiddler(T);
+				p.then(function(status) {
+					expect(status).toBe("declined");
+					expect(changeListenerCount()).toBe(baseline);
+					return wait(60);
+				}).then(function() {
+					expect($tw.wiki.getTiddler(T)).toBeUndefined();
+					done();
+				}, done.fail);
+			});
+
+			it("sets timeout after timeoutMs", function(done) {
+				orchestrator.waitForSettle(T, null, 20).then(function(status) {
+					expect(status).toBe("timeout");
+					var f = $tw.wiki.getTiddler(T).fields;
+					expect(f["ask.status"]).toBe("timeout");
+					expect(f["ask.settled"]).toBeTruthy();
+					expect(changeListenerCount()).toBe(baseline);
+					done();
+				}, done.fail);
+			});
+
+			it("sets aborted on signal abort", function(done) {
+				var ac = fakeController();
+				var p = orchestrator.waitForSettle(T, ac.signal, 30);
+				expect(ac.signal.listeners.length).toBe(1);
+				ac.abort();
+				p.then(function(status) {
+					expect(status).toBe("aborted");
+					expect($tw.wiki.getTiddler(T).fields["ask.status"]).toBe("aborted");
+					expect(changeListenerCount()).toBe(baseline);
+					expect(ac.signal.listeners.length).toBe(0);
+					return wait(60);
+				}).then(function() {
+					expect($tw.wiki.getTiddler(T).fields["ask.status"]).toBe("aborted");
+					done();
+				}, done.fail);
+			});
+
+			it("an abort right after the user settled keeps the user's status (change event not yet delivered)", function(done) {
+				var ac = fakeController();
+				var p = orchestrator.waitForSettle(T, ac.signal, 0);
+				settle(T, "answered");
+				ac.abort();
+				p.then(function(status) {
+					expect(status).toBe("answered");
+					expect($tw.wiki.getTiddler(T).fields["ask.status"]).toBe("answered");
+					expect(changeListenerCount()).toBe(baseline);
+					done();
+				}, done.fail);
+			});
+
+			it("resolves immediately when already settled", function(done) {
+				settle(T, "answered");
+				orchestrator.waitForSettle(T, null, 0).then(function(status) {
+					expect(status).toBe("answered");
+					expect(changeListenerCount()).toBe(baseline);
+					done();
+				}, done.fail);
+			});
+		});
+
+		describe("runConversation", function() {
+			var requests, responses, logs, updates, executed;
+			var adapter = {
+				buildRequest: function(messages) {
+					requests.push(JSON.parse(JSON.stringify(messages)));
+					return { url: "http://x", headers: {}, body: "{}" };
+				},
+				parseResponse: function() { return responses.shift(); },
+				buildAssistantMessage: function(parsed) { return { role: "assistant", toolCalls: parsed.toolCalls }; },
+				buildToolResult: function(id, result) { return { role: "tool", id: id, content: result }; }
+			};
+			var executor = {
+				executeTool: function(tc) {
+					executed.push(tc.id);
+					pending(ASK + tc.id);
+					return { await: ASK + tc.id, tool: TOOL };
+				}
+			};
+
+			beforeEach(function() {
+				stubXHR();
+				completeWithOk();
+				requests = []; logs = []; updates = []; executed = [];
+				addTiddler(TEMPLATE, { text: "status: <$text text={{{ [<awaitTitle>get[ask.status]] }}}/>" });
+				addTiddler(TOOL, { "tool-result-template": TEMPLATE });
+			});
+			afterEach(function() {
+				restoreXHR();
+				$tw.wiki.filterTiddlers("[all[tiddlers]prefix[" + ASK + "]]").forEach(function(t) {
+					$tw.wiki.deleteTiddler(t);
+				});
+			});
+
+			function run(calls, signal) {
+				responses = [
+					{ type: "tool_use", toolCalls: calls.map(function(id) { return { id: id, name: "ask", input: {} }; }) },
+					{ type: "text", content: "done" }
+				];
+				return orchestrator.runConversation({
+					messages: [{ role: "user", content: "hi" }],
+					tools: [{ name: "ask" }],
+					config: { model: "m" },
+					adapter: adapter,
+					toolExecutor: executor,
+					signal: signal,
+					onLog: function(c, m) { logs.push([c, m]); },
+					onUpdate: function(m) { updates.push(m); }
+				});
+			}
+			function toolResults(messages) {
+				return messages.filter(function(m) { return m.role === "tool"; }).map(function(m) { return m.content; });
+			}
+
+			it("waits, then sends the rendered result template as tool result", function(done) {
+				var p = run(["c1"]);
+				waitFor(function() { return !!$tw.wiki.getTiddler(ASK + "c1"); }).then(function() {
+					return wait(20);
+				}).then(function() {
+					expect(requests.length).toBe(1);
+					expect(updates.length).toBe(0);
+					settle(ASK + "c1", "answered");
+					return p;
+				}).then(function() {
+					expect(requests.length).toBe(2);
+					expect(toolResults(requests[1])).toEqual(["status: answered"]);
+					expect(logs).toContain(["tool", "awaiting user: Pick c1"]);
+					expect(logs).toContain(["tool", "user answered"]);
+					done();
+				}, done.fail);
+			});
+
+			it("two await calls in one round settle in order", function(done) {
+				var p = run(["c1", "c2"]);
+				waitFor(function() { return !!$tw.wiki.getTiddler(ASK + "c1"); }).then(function() {
+					return wait(20);
+				}).then(function() {
+					expect(executed).toEqual(["c1"]);
+					expect($tw.wiki.getTiddler(ASK + "c2")).toBeUndefined();
+					settle(ASK + "c1", "answered");
+					return waitFor(function() { return !!$tw.wiki.getTiddler(ASK + "c2"); });
+				}).then(function() {
+					settle(ASK + "c2", "declined");
+					return p;
+				}).then(function() {
+					expect(toolResults(requests[1])).toEqual(["status: answered", "status: declined"]);
+					expect(requests[1].filter(function(m) { return m.role === "tool"; }).map(function(m) { return m.id; })).toEqual(["c1", "c2"]);
+					done();
+				}, done.fail);
+			});
+
+			it("times out after the configured ask-timeout (minutes)", function(done) {
+				addTiddler("$:/config/rimir/llm-connect/ask-timeout", { text: " 0.0005 " });
+				run(["c1"]).then(function() {
+					expect(toolResults(requests[1])).toEqual(["status: timeout"]);
+					expect(logs).toContain(["tool", "user timeout"]);
+					done();
+				}, done.fail);
+			});
+
+			it("renderAwaitResult truncates by max-tool-result-length", function() {
+				pending(ASK + "r1");
+				addTiddler("$:/config/rimir/llm-connect/max-tool-result-length", { text: "8" });
+				expect(orchestrator.renderAwaitResult(TOOL, ASK + "r1")).toBe("status: \n... [truncated at 8 chars]");
+			});
+
+			it("abort while waiting rejects Request aborted without onUpdate", function(done) {
+				var ac = fakeController();
+				var p = run(["c1", "c2"], ac.signal);
+				waitFor(function() { return !!$tw.wiki.getTiddler(ASK + "c1"); }).then(function() {
+					ac.abort();
+					return p;
+				}).then(function() {
+					done.fail("expected rejection");
+				}, function(err) {
+					expect(err.message).toBe("Request aborted");
+					expect(updates.length).toBe(0);
+					expect(requests.length).toBe(1);
+					expect(executed).toEqual(["c1"]);
+					expect($tw.wiki.getTiddler(ASK + "c1").fields["ask.status"]).toBe("aborted");
+					done();
+				});
+			});
+
+			it("Stop run from the form (status aborted) rejects an abort error and skips the rest", function(done) {
+				var p = run(["c1", "c2"]);
+				waitFor(function() { return !!$tw.wiki.getTiddler(ASK + "c1"); }).then(function() {
+					settle(ASK + "c1", "aborted");
+					return p;
+				}).then(function() {
+					done.fail("expected rejection");
+				}, function(err) {
+					expect(err.message).toBe("Request aborted");
+					expect(err.aborted).toBe(true);
+					expect(logs).toContain(["tool", "user aborted"]);
+					expect(updates.length).toBe(0);
+					expect(requests.length).toBe(1);
+					expect(executed).toEqual(["c1"]);
+					done();
+				});
 			});
 		});
 	});

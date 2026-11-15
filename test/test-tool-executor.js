@@ -303,4 +303,71 @@ describe("llm-connect: tool-executor", function() {
 			expect(run("")).toBe("unknown|unknown");
 		});
 	});
+	describe("await tools", function() {
+		var ASK = toolExecutor.ASK_PREFIX;
+		function clearAsk() {
+			$tw.wiki.filterTiddlers("[prefix[" + ASK + "]]").forEach(function(title) {
+				$tw.wiki.deleteTiddler(title);
+			});
+		}
+		beforeEach(clearAsk);
+		afterEach(clearAsk);
+
+		var PENDING = "<$action-setfield $tiddler=<<__awaitTitle>> ask.status=\"pending\" ask.source-label=<<__askSource>>/>waiting";
+
+		function addAwait(text) {
+			addTool("$:/test/await-tool", {
+				"tool-name": "await_test",
+				"tool-mode": "action",
+				"tool-await": "yes",
+				text: text
+			});
+		}
+
+		it("exports ASK_PREFIX", function() {
+			expect(ASK).toBe("$:/temp/rimir/llm-connect/ask/");
+		});
+
+		it("await tool returns {await, tool} when it leaves a pending question", function() {
+			addAwait(PENDING);
+			var r = toolExecutor.executeTool({ id: "call_1", name: "await_test", input: {} }, { filter: "", mode: "deny" });
+			expect(typeof r).toBe("object");
+			expect(r.await.indexOf(ASK)).toBe(0);
+			expect(r.await.slice(-"/call_1".length)).toBe("/call_1");
+			expect(r.tool).toBe("$:/test/await-tool");
+			expect($tw.wiki.getTiddler(r.await).fields["ask.status"]).toBe("pending");
+		});
+
+		it("await tool returns the rendered string when nothing is pending", function() {
+			addAwait("Error: bad");
+			var r = toolExecutor.executeTool({ id: "call_2", name: "await_test", input: {} }, { filter: "", mode: "deny" });
+			expect(r).toBe("Error: bad");
+		});
+
+		it("__askSource falls back askSource, chatTiddler, LLM", function() {
+			addAwait(PENDING);
+			function label(prot, id) {
+				var r = toolExecutor.executeTool({ id: id, name: "await_test", input: {} }, prot);
+				return $tw.wiki.getTiddler(r.await).fields["ask.source-label"];
+			}
+			expect(label({ filter: "", mode: "deny", askSource: "Src", chatTiddler: "Chat" }, "a")).toBe("Src");
+			expect(label({ filter: "", mode: "deny", chatTiddler: "Chat" }, "b")).toBe("Chat");
+			expect(label({ filter: "", mode: "deny" }, "c")).toBe("LLM");
+		});
+
+		it("allow mode with empty filter: await tool can write its own question tiddler but not another title", function() {
+			addAwait(PENDING + "<$action-setfield $tiddler=\"Other\" text=\"hacked\"/>");
+			$tw.wiki.addTiddler(new $tw.Tiddler({ title: "Other", text: "orig" }));
+			addedTitles.push("Other");
+			var r = toolExecutor.executeTool({ id: "call_4", name: "await_test", input: {} }, { filter: "", mode: "allow" });
+			expect(typeof r).toBe("object");
+			expect($tw.wiki.getTiddler(r.await).fields["ask.status"]).toBe("pending");
+			expect($tw.wiki.getTiddler("Other").fields.text).toBe("orig");
+		});
+
+		it("non-await tools still return strings", function() {
+			addTool("$:/test/plain-tool", { "tool-name": "plain_test", "tool-mode": "read", text: "hello" });
+			expect(toolExecutor.executeTool({ id: "x", name: "plain_test", input: {} }, { filter: "", mode: "deny" })).toBe("hello");
+		});
+	});
 });

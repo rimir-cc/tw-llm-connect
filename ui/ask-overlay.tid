@@ -1,0 +1,21 @@
+title: $:/plugins/rimir/llm-connect/ui/ask-overlay
+tags: $:/tags/PageTemplate
+type: text/vnd.tiddlywiki
+
+\parsermode inline
+\whitespace trim
+\import [[$:/plugins/rimir/llm-connect/ui/ask-functions]]
+
+<$list filter="[ask.pending[]first[]]" variable="askTitle">
+<div class="llm-ask-backdrop">
+<div class="llm-ask-dialog" role="dialog" aria-modal="true" tabindex="-1">
+<div class="llm-ask-header">
+<span class="llm-ask-source"><$text text={{{ [<askTitle>get[ask.source-label]else[LLM]addsuffix[ asks]] }}}/></span>
+<$list filter="[ask.pending[]count[]compare:number:gt[1]]" variable="n">
+<span class="llm-ask-counter"><$text text={{{ [[1 of ]addsuffix<n>] }}}/></span>
+</$list>
+</div>
+<$transclude $tiddler="$:/plugins/rimir/llm-connect/ui/ask-form" $mode="block"/>
+</div>
+</div>
+</$list>

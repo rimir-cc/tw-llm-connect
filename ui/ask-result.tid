@@ -1,0 +1,45 @@
+title: $:/plugins/rimir/llm-connect/ui/ask-result
+type: text/vnd.tiddlywiki
+
+\whitespace trim
+\import [[$:/plugins/rimir/llm-connect/ui/ask-functions]]
+\procedure nlt() <$text text={{{ [charcode[10]] }}}/>
+
+\procedure qblock(label, skipEmpty)
+<$list filter="[<awaitTitle>get[text]jsonindexes[]]" variable="i">
+<$let q={{{ [<awaitTitle>get[text]] }}} afield={{{ [function[ask.answer-field],<i>] }}} ofield={{{ [function[ask.other-field],<i>] }}}>
+<$let qid={{{ [<q>jsonget<i>,[id]minlength[1]] :else[<i>add[1]] }}} kind={{{ [<q>jsonget<i>,[kind]] }}}>
+<$let raw={{{ [<awaitTitle>get<afield>] }}} other={{{ [<awaitTitle>get<ofield>] }}}>
+<$let answer={{{ [<kind>match[multi]] :then[<raw>enlist-input[]join[, ]] :else[<raw>] }}}>
+<$list filter="[<skipEmpty>match[yes]] :and[<answer>!match[]] :else[<skipEmpty>!match[yes]]" variable="_">
+<$text text="["/><$text text=<<qid>>/><$text text="] "/><$text text={{{ [<q>jsonget<i>,[prompt]] }}}/><<nlt>>
+<$text text="  "/><$text text=<<label>>/><$text text=": "/><$text text=<<answer>>/><<nlt>>
+<$list filter="[<other>minlength[1]]" variable="_">
+<$text text="  other: "/><$text text=<<other>>/><<nlt>>
+</$list>
+</$list>
+</$let>
+</$let>
+</$let>
+</$let>
+</$list>
+\end
+
+<$let status={{{ [<awaitTitle>get[ask.status]] }}}>
+<$text text="status: "/><$text text=<<status>>/>
+<$list filter="[<status>match[answered]]" variable="_">
+<<nlt>><<qblock label:"answer" skipEmpty:"no">>
+</$list>
+<$list filter="[<status>match[declined]]" variable="_">
+<$list filter="[<awaitTitle>get[ask.decline-reason]minlength[1]]" variable="reason">
+<$text text=" — reason: "/><$text text=<<reason>>/>
+</$list>
+</$list>
+<$list filter="[<status>match[timeout]]" variable="_">
+<$list filter="[function[ask.timeout-minutes]]" variable="mins">
+<$text text=" — user did not answer within "/><$text text=<<mins>>/><$text text=" min"/>
+</$list>
+<<nlt>><$text text="Defaults:"/><<nlt>><<qblock label:"default" skipEmpty:"yes">>
+<$text text="Proceed with the defaults or stop and summarise."/>
+</$list>
+</$let>
