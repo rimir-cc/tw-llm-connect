@@ -11,23 +11,11 @@ module-type: widget
 "use strict";
 
 var Widget = require("$:/core/modules/widgets/widget.js").widget;
+var messageRender = require("$:/plugins/rimir/llm-connect/message-render");
 
 var CHAT_STATE_FIELDS = ["llm-connection", "llm-connection-name", "llm-connection-type", "llm-model", "llm-active-tools", "llm-tools-init",
 	"llm-context-filter", "llm-protection-mode", "llm-allow-filter", "llm-deny-filter",
 	"llm-help-context", "llm-help-context-init"];
-
-/*
-Render markdown text to HTML using TW's markdown plugin (text/x-markdown parser).
-Falls back to plain text with escaped HTML if the parser is unavailable.
-*/
-function markdownToHtml(text) {
-	if (!text) return "";
-	try {
-		return $tw.wiki.renderText("text/html", "text/x-markdown", text);
-	} catch(e) {
-		return "<p>" + text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>") + "</p>";
-	}
-}
 
 var LlmChatWidget = function(parseTreeNode, options) {
 	this.initialise(parseTreeNode, options);
@@ -603,13 +591,7 @@ LlmChatWidget.prototype.renderMessages = function(container) {
 		}
 	}
 	// Click-to-toggle individual tool messages (delegated, attach once)
-	if (!container._toolClickBound) {
-		container.addEventListener("click", function(e) {
-			var el = e.target.closest(".llm-chat-message-tool");
-			if (el) el.classList.toggle("llm-chat-tool-expanded");
-		});
-		container._toolClickBound = true;
-	}
+	messageRender.bindToolToggle(container);
 
 	// Re-apply working indicator (innerHTML wipes it)
 	this.updateToolWorkingIndicator();
@@ -617,138 +599,7 @@ LlmChatWidget.prototype.renderMessages = function(container) {
 };
 
 LlmChatWidget.prototype.renderOneMessage = function(msg) {
-	var elements = [];
-	var doc = this.document;
-
-
-	// User message with tool_result content (Claude format)
-	if (msg.role === "user" && Array.isArray(msg.content)) {
-		for (var i = 0; i < msg.content.length; i++) {
-			var block = msg.content[i];
-			if (block.type === "tool_result") {
-				var toolDiv = doc.createElement("div");
-				toolDiv.className = "llm-chat-message llm-chat-message-tool";
-				var preview = typeof block.content === "string" ? block.content : JSON.stringify(block.content);
-				if (preview.length > 300) preview = preview.substring(0, 300) + "...";
-				toolDiv.textContent = preview;
-				elements.push(toolDiv);
-			} else if (typeof block === "string") {
-				var userDiv = doc.createElement("div");
-				userDiv.className = "llm-chat-message llm-chat-message-user";
-				userDiv.textContent = block;
-				elements.push(userDiv);
-			}
-		}
-		return elements;
-	}
-
-	// Plain user message
-	if (msg.role === "user") {
-		var userDiv = doc.createElement("div");
-		if (msg._context) {
-			userDiv.className = "llm-chat-message llm-chat-message-context";
-			// Build summary for context messages (may contain file_ref blocks)
-			var contextSummary = "\u{1F4CB} Context injected";
-			var contextDetail = "";
-			if (Array.isArray(msg.content)) {
-				var fileCount = 0;
-				var textCount = 0;
-				for (var ci = 0; ci < msg.content.length; ci++) {
-					var cb = msg.content[ci];
-					if (cb.type === "file_ref" || cb.type === "image" || cb.type === "document" || cb.type === "image_url" || cb.type === "file") {
-						fileCount++;
-					} else if (cb.type === "text") {
-						textCount++;
-						contextDetail += cb.text + "\n";
-					}
-				}
-				var parts = [];
-				if (textCount > 0) parts.push(textCount + " text");
-				if (fileCount > 0) parts.push(fileCount + " file" + (fileCount > 1 ? "s" : ""));
-				contextSummary += " (" + parts.join(", ") + ")";
-				// Add file badges
-				for (var fi = 0; fi < msg.content.length; fi++) {
-					var fb = msg.content[fi];
-					if (fb.type === "file_ref") {
-						var cat = fb.mediaType && fb.mediaType.indexOf("image/") === 0 ? "IMG" : "PDF";
-						contextSummary += " [" + cat + " " + fb.filename + "]";
-					}
-				}
-			} else {
-				contextDetail = typeof msg.content === "string" ? msg.content : "";
-			}
-			contextSummary += " (click to expand)";
-			userDiv.textContent = contextSummary;
-			userDiv.title = contextDetail.substring(0, 500);
-			userDiv.addEventListener("click", function() {
-				if (userDiv.classList.contains("llm-chat-context-expanded")) {
-					userDiv.classList.remove("llm-chat-context-expanded");
-					userDiv.textContent = contextSummary;
-				} else {
-					userDiv.classList.add("llm-chat-context-expanded");
-					userDiv.textContent = contextDetail || contextSummary;
-				}
-			});
-		} else {
-			userDiv.className = "llm-chat-message llm-chat-message-user";
-			userDiv.textContent = typeof msg.content === "string" ? msg.content : "";
-		}
-		elements.push(userDiv);
-		return elements;
-	}
-
-	// Assistant message — may contain text + tool_use blocks
-	if (msg.role === "assistant") {
-		if (Array.isArray(msg.content)) {
-			var textParts = [];
-			for (var j = 0; j < msg.content.length; j++) {
-				var aBlock = msg.content[j];
-				if (aBlock.type === "text" && aBlock.text) {
-					textParts.push(aBlock.text);
-				} else if (aBlock.type === "tool_use") {
-					// Render any text before this tool call
-					if (textParts.length > 0) {
-						var textDiv = doc.createElement("div");
-						textDiv.className = "llm-chat-message llm-chat-message-assistant llm-chat-md";
-						textDiv.innerHTML = markdownToHtml(textParts.join("\n"));
-						elements.push(textDiv);
-						textParts = [];
-					}
-					var toolCallDiv = doc.createElement("div");
-					toolCallDiv.className = "llm-chat-message llm-chat-message-tool";
-					var inputPreview = JSON.stringify(aBlock.input);
-					if (inputPreview.length > 100) inputPreview = inputPreview.substring(0, 100) + "...";
-					toolCallDiv.textContent = "\u{1F527} " + aBlock.name + "(" + inputPreview + ")";
-					elements.push(toolCallDiv);
-				}
-			}
-			if (textParts.length > 0) {
-				var remainingDiv = doc.createElement("div");
-				remainingDiv.className = "llm-chat-message llm-chat-message-assistant llm-chat-md";
-				remainingDiv.innerHTML = markdownToHtml(textParts.join("\n"));
-				elements.push(remainingDiv);
-			}
-		} else if (typeof msg.content === "string" && msg.content) {
-			var assistDiv = doc.createElement("div");
-			assistDiv.className = "llm-chat-message llm-chat-message-assistant llm-chat-md";
-			assistDiv.innerHTML = markdownToHtml(msg.content);
-			elements.push(assistDiv);
-		}
-		return elements;
-	}
-
-	// OpenAI tool result
-	if (msg.role === "tool") {
-		var toolResDiv = doc.createElement("div");
-		toolResDiv.className = "llm-chat-message llm-chat-message-tool";
-		var content = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
-		if (content.length > 300) content = content.substring(0, 300) + "...";
-		toolResDiv.textContent = content;
-		elements.push(toolResDiv);
-		return elements;
-	}
-
-	return elements;
+	return messageRender.renderMessage(this.document, msg);
 };
 
 LlmChatWidget.prototype.sendMessage = function() {

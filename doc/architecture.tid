@@ -66,6 +66,8 @@ Write response to output target (field / new tiddler / display / filter)
 |`file-resolver.js` |library |File detection (`_canonical_uri`), classification (image/document), base64 fetching |
 |`chat-widget.js` |widget |`<$llm-chat>` — chat UI, message management, debug panel |
 |`action-widget.js` |widget |`<$llm-action>` — one-shot invocation, output writing |
+|`message-render.js` |library |Shared message renderer (`renderMessage`, `bindToolToggle`, `markdownToHtml`): tool previews, full text on click |
+|`messages-widget.js` |widget |`<$llm-messages>` — renders a JSON message array from a tiddler field with the chat renderer |
 |`startup.js` |startup |Module verification on browser load |
 |`ui/chat-panel.tid` |PageTemplate |Global chat panel, toggled from page toolbar |
 |`ui/pair-edit.tid` |ViewToolbar |Per-tiddler pair-edit toggle button |

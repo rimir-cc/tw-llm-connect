@@ -149,8 +149,10 @@ describe("llm-connect: orchestrator", function() {
 
 		it("should return empty array for invalid JSON cache", function() {
 			addTiddler("$:/temp/rimir/llm-connect/models/broken", { text: "not json" });
+			spyOn(console, "warn");
 			var result = orchestrator.getCachedModels("broken");
 			expect(result.length).toBe(0);
+			expect(console.warn).toHaveBeenCalled();
 		});
 	});
 
@@ -230,6 +232,59 @@ describe("llm-connect: orchestrator", function() {
 			for (var i = 0; i < n; i++) p = p.then(function() {});
 			return p;
 		}
+
+		function completeWithOk() {
+			sandboxGlobal.XMLHttpRequest.prototype.send = function() {
+				var self = this;
+				this.status = 200;
+				this.responseText = "ok";
+				Promise.resolve().then(function() { self.onload(); });
+			};
+		}
+
+		it("single-call path reports onLog then onUpdate with the reply", function(done) {
+			completeWithOk();
+			var logs = [], updates = [];
+			orchestrator.runAction({ prompt: "x", config: { model: "m1" }, adapter: stubAdapter,
+				onLog: function(c, m) { logs.push([c, m]); },
+				onUpdate: function(msgs) { updates.push(msgs); }
+			}).then(function(r) {
+				expect(r).toBe("ok");
+				expect(logs.length).toBe(1);
+				expect(logs[0][0]).toBe("loop");
+				expect(logs[0][1]).toBe("single call \u2014 model=m1");
+				expect(updates.length).toBe(1);
+				expect(updates[0][updates[0].length - 1]).toEqual({ role: "assistant", content: "ok" });
+				done();
+			}, done.fail);
+		});
+
+		it("tool path passes onUpdate/onLog/onRequest/onResponse through to runConversation", function(done) {
+			var spy = spyOn(orchestrator, "runConversation").and.returnValue(Promise.resolve([]));
+			var cbs = { onUpdate: function() {}, onLog: function() {}, onRequest: function() {}, onResponse: function() {} };
+			orchestrator.runAction({ prompt: "x", config: {}, adapter: stubAdapter, tools: [{}],
+				onUpdate: cbs.onUpdate, onLog: cbs.onLog, onRequest: cbs.onRequest, onResponse: cbs.onResponse
+			}).then(function() {
+				var o = spy.calls.mostRecent().args[0];
+				expect(o.onUpdate).toBe(cbs.onUpdate);
+				expect(o.onLog).toBe(cbs.onLog);
+				expect(o.onRequest).toBe(cbs.onRequest);
+				expect(o.onResponse).toBe(cbs.onResponse);
+				done();
+			}, done.fail);
+		});
+
+		it("a throwing onUpdate/onLog does not fail the run", function(done) {
+			completeWithOk();
+			spyOn(console, "warn");
+			orchestrator.runAction({ prompt: "x", config: {}, adapter: stubAdapter,
+				onLog: function() { throw new Error("boom"); },
+				onUpdate: function() { throw new Error("boom"); }
+			}).then(function(r) {
+				expect(r).toBe("ok");
+				done();
+			}, done.fail);
+		});
 
 		it("aborts the single-turn request", function(done) {
 			var ac = fakeController();

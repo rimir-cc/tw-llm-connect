@@ -253,6 +253,21 @@ type: text/vnd.tiddlywiki
 	text-overflow: unset;
 }
 
+/* Tool text: preview (cut) vs full — expanded or details mode shows full */
+.llm-chat-tool-full {
+	display: none;
+}
+
+.llm-chat-tool-expanded > .llm-chat-tool-full,
+.llm-chat-tools-details .llm-chat-tool-full {
+	display: inline;
+}
+
+.llm-chat-tool-expanded > .llm-chat-tool-preview,
+.llm-chat-tools-details .llm-chat-tool-preview {
+	display: none;
+}
+
 /* Tool display modes (tristate: none / brief / details) */
 .llm-chat-tools-none .llm-chat-message-tool {
 	display: none;

@@ -50,6 +50,22 @@ type: text/vnd.tiddlywiki
 |`statusTiddler` |Custom tiddler for status text (enables per-instance status) |`$:/temp/rimir/llm-connect/action-status` |
 |`resultTiddler` |Custom tiddler for result output (enables per-instance results) |`$:/temp/rimir/llm-connect/action-result` |
 
+!! Widget: `<$llm-messages>`
+
+Read-only renderer for a JSON message array stored in a tiddler field, using the same renderer as the chat (`message-render.js`).
+
+|!Attribute |!Description |!Default |
+|`tiddler` |Tiddler holding the messages |current tiddler |
+|`field` |Field containing the JSON message array |`llm-messages` |
+|`tool-display` |`brief` (collapsed previews, click for full text), `details` (full text from the start) or `none` (tool messages hidden) |`brief` |
+|`class` |Extra CSS class on the container |none |
+
+Expanded tool messages stay expanded across re-renders (e.g. while the field is updated live), and the scroll position is kept (a container scrolled to the bottom stays at the bottom). It re-renders only when its field's value changes, not on changes to other fields of the tiddler. Assistant tool calls are shown in both the Claude (`tool_use` blocks) and the OpenAI (`tool_calls`) format.
+
+!! `orchestrator.runAction` callbacks
+
+`runAction(options)` accepts optional progress callbacks, honoured on both paths: `onUpdate(messages)`, `onLog(category, message)`, `onRequest(request)`, `onResponse(responseText)`. With tools they are passed to `runConversation`. A single call emits `onLog("loop", "single call — model=…")` and then one `onUpdate` with the reply appended as an assistant message. Throwing callbacks are caught and logged with `console.warn`; they never fail the run.
+
 !! Context template fields
 
 Tag: `$:/tags/rimir/llm-connect/context-template`
@@ -195,8 +211,8 @@ The debug button (🐛) in the bottom toolbar opens a dropdown menu listing all 
 The ''No Tool-Calls'' / ''Brief Tool-Calls'' / ''Detailed Tool-Calls'' entry cycles through three display modes for tool-call messages in the chat history:
 
 * ''No Tool-Calls'' (default) — tool messages hidden. An animated `...` indicator appears while tools are executing in the background.
-* ''Brief Tool-Calls'' — collapsed one-line summaries visible. Click individual messages to expand.
-* ''Detailed Tool-Calls'' — all tool messages fully expanded.
+* ''Brief Tool-Calls'' — collapsed one-line summaries visible (call args 100 chars, results 300 chars). Click individual messages to show the full text.
+* ''Detailed Tool-Calls'' — all tool messages show their full text from the start.
 
 !!! Wikitext panels (extensibility)
 

@@ -262,10 +262,19 @@ options: {
   config: provider config,
   adapter: provider adapter,
   toolExecutor: tool-executor module,
-  signal: AbortSignal (optional) — aborting rejects with Error("Request aborted")
+  signal: AbortSignal (optional) — aborting rejects with Error("Request aborted"),
+  onUpdate(messages), onLog(category, message), onRequest(request), onResponse(responseText):
+    optional progress callbacks, honoured on both the tool and single-call paths
+    (single call: one onLog, then one onUpdate with the assistant reply appended)
 }
 Returns a promise that resolves with the response text.
 */
+// Invoke an optional progress callback; a throwing hook never fails the run
+function callHook(fn) {
+	if (!fn) return;
+	try { fn.apply(null, Array.prototype.slice.call(arguments, 1)); } catch(e) { console.warn("llm-connect: hook error:", e); }
+}
+
 exports.runAction = function(options) {
 	var messages = [];
 	var config = $tw.utils.extend({}, options.config);
@@ -312,8 +321,11 @@ exports.runAction = function(options) {
 			toolExecutor: options.toolExecutor,
 			protectionFilter: options.protectionFilter || { filter: "", mode: "allow" },
 			signal: options.signal,
-			onUpdate: function() {},
-			onError: function() {}
+			onUpdate: options.onUpdate || function() {},
+			onError: function() {},
+			onLog: options.onLog,
+			onRequest: options.onRequest,
+			onResponse: options.onResponse
 		}).then(function(msgs) {
 			// Find the last assistant message
 			for (var i = msgs.length - 1; i >= 0; i--) {
@@ -330,13 +342,15 @@ exports.runAction = function(options) {
 
 	return exports.resolveFileRefs(messages, adapter).then(function(resolvedMessages) {
 		var request = adapter.buildRequest(resolvedMessages, [], config);
-		if (options.onRequest) {
-			try { options.onRequest(request); } catch(e) { console.warn("llm-connect: hook error:", e); }
-		}
+		callHook(options.onLog, "loop", "single call \u2014 model=" + config.model);
+		callHook(options.onRequest, request);
 		return httpRequest(request, options.signal);
 	}).then(function(responseText) {
+		callHook(options.onResponse, responseText);
 		var parsed = adapter.parseResponse(responseText);
-		return parsed.content || "";
+		var reply = parsed.content || "";
+		callHook(options.onUpdate, messages.concat([{ role: "assistant", content: reply }]));
+		return reply;
 	});
 };
 
